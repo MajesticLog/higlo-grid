@@ -1,0 +1,51 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f1ea;
+  color: #333;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  padding: 16px;
+  text-align: center;
+}
+
+/* 11 x 11 squares; the grid fits the smaller side of the screen. */
+#grid {
+  --size: 11;
+  width: min(90vw, 80vh);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--size), 1fr);
+  grid-template-rows: repeat(var(--size), 1fr);
+  background-color: #fff;
+  /* Grid lines drawn as a background, so cells and circles can share the same grid. */
+  background-image:
+    linear-gradient(to right, #ddd 1px, transparent 1px),
+    linear-gradient(to bottom, #ddd 1px, transparent 1px);
+  background-size: calc(100% / 11) calc(100% / 11);
+  border: 1px solid #ccc;
+}
+
+.circle {
+  width: 80%;
+  height: 80%;
+  place-self: center;
+  border-radius: 50%;
+}
+
+/* Your own circle gets an outline so you know which one is yours. */
+.circle.me {
+  outline: 3px solid #333;
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+#share {
+  font-size: 14px;
+  word-break: break-all;
+}
