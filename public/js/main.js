@@ -1,15 +1,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getDatabase, ref, push, set, update, get, onValue, onDisconnect,
+  getDatabase, ref, push, set, update, get, onValue, onDisconnect, runTransaction,
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const SIZE = 11;
 const CENTRE = Math.floor(SIZE / 2);
+const STEP_MS = 150; // walking speed when you tap a square
 const PALETTE = [
   "#e4572e", "#2e86ab", "#f4c430", "#4caf50", "#9c27b0", "#ff8c42",
   "#17bebb", "#e91e63", "#795548", "#3f51b5", "#8bc34a", "#607d8b",
 ];
+// Past the palette, spread hues by the golden angle so they stay distinct.
+const colourFor = (i) => PALETTE[i] ?? `hsl(${Math.round(i * 137.5) % 360}, 65%, 50%)`;
 
 // --- Session: read it from the path, or start a new one ---
 function newSessionId() {
@@ -29,24 +32,60 @@ document.getElementById("link").textContent = location.href;
 
 // --- Firebase ---
 const db = getDatabase(initializeApp(firebaseConfig));
-const playersRef = ref(db, `sessions/${sessionId}/players`);
+const sessionPath = `sessions/${sessionId}`;
+const playersRef = ref(db, `${sessionPath}/players`);
 const myRef = push(playersRef); // unique key generated locally, nothing written yet
 
 // Where I am. Kept locally so a reconnect can write it back.
 const me = { x: CENTRE, y: CENTRE, color: null };
+let myColourIndex = 0;
 
-async function pickColour() {
-  const snap = await get(playersRef);
-  const used = new Set(Object.values(snap.val() || {}).map((p) => p.color));
-  return PALETTE.find((c) => !used.has(c))
-    ?? `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+// Claim a colour slot with a transaction: the database accepts the write only
+// if the slot is still empty (or already mine), so two players joining at the
+// same moment can never get the same colour. Released when I disconnect.
+async function claimColour(start) {
+  for (let i = start; ; i++) {
+    const slot = ref(db, `${sessionPath}/colors/${i}`);
+    const result = await runTransaction(slot, (owner) =>
+      owner === null || owner === myRef.key ? myRef.key : undefined // undefined = abort
+    );
+    if (result.committed) {
+      await onDisconnect(slot).remove();
+      return i;
+    }
+  }
+}
+
+// Free square closest to the centre, ring by ring, so nobody spawns on top of anyone.
+function spawnSquare(players) {
+  const taken = new Set(Object.values(players).map((p) => `${p.x},${p.y}`));
+  for (let ring = 0; ring <= CENTRE; ring++) {
+    const squares = [];
+    for (let y = CENTRE - ring; y <= CENTRE + ring; y++) {
+      for (let x = CENTRE - ring; x <= CENTRE + ring; x++) {
+        if (Math.max(Math.abs(x - CENTRE), Math.abs(y - CENTRE)) === ring) squares.push({ x, y });
+      }
+    }
+    // Within a ring, prefer straight neighbours over diagonal ones.
+    squares.sort((a, b) =>
+      Math.abs(a.x - CENTRE) + Math.abs(a.y - CENTRE) - Math.abs(b.x - CENTRE) - Math.abs(b.y - CENTRE));
+    const free = squares.find((s) => !taken.has(`${s.x},${s.y}`));
+    if (free) return free;
+  }
+  return { x: CENTRE, y: CENTRE }; // grid full: share the centre
 }
 
 // Every time the connection comes up (first load or after a network drop),
 // write myself into the session and ask the server to remove me when I go.
+let joined = false;
 onValue(ref(db, ".info/connected"), async (snap) => {
   if (snap.val() !== true) return;
-  if (!me.color) me.color = await pickColour();
+  myColourIndex = await claimColour(myColourIndex);
+  me.color = colourFor(myColourIndex);
+  if (!joined) {
+    Object.assign(me, spawnSquare((await get(playersRef)).val() || {}));
+    joined = true;
+  }
   await onDisconnect(myRef).remove();
   await set(myRef, me);
 });
@@ -55,33 +94,87 @@ onValue(ref(db, ".info/connected"), async (snap) => {
 const grid = document.getElementById("grid");
 
 onValue(playersRef, (snap) => {
-  grid.replaceChildren();
+  // Group players by square; several on one square are drawn side by side.
+  const squares = new Map();
   snap.forEach((child) => {
     const p = child.val();
-    const el = document.createElement("div");
-    el.className = "circle" + (child.key === myRef.key ? " me" : "");
-    el.style.background = p.color;
-    el.style.gridColumn = p.x + 1; // CSS grid lines start at 1
-    el.style.gridRow = p.y + 1;
-    grid.append(el);
+    const key = `${p.x},${p.y}`;
+    if (!squares.has(key)) squares.set(key, []);
+    squares.get(key).push({ id: child.key, ...p });
   });
+
+  grid.replaceChildren();
+  for (const group of squares.values()) {
+    const square = document.createElement("div");
+    square.className = "square";
+    square.style.gridColumn = group[0].x + 1; // CSS grid lines start at 1
+    square.style.gridRow = group[0].y + 1;
+    square.style.setProperty("--cols", Math.ceil(Math.sqrt(group.length)));
+    for (const p of group) {
+      const el = document.createElement("div");
+      el.className = "circle" + (p.id === myRef.key ? " me" : "");
+      el.style.background = p.color;
+      square.append(el);
+    }
+    grid.append(square);
+  }
 });
 
-// --- Arrow keys: one square at a time, clamped to the grid ---
+// --- Moving ---
+const clamp = (n) => Math.max(0, Math.min(SIZE - 1, n));
+
+function moveTo(x, y) {
+  x = clamp(x);
+  y = clamp(y);
+  if (x === me.x && y === me.y) return; // against an edge: nothing to send
+  me.x = x;
+  me.y = y;
+  update(myRef, { x, y });
+}
+
+// Arrow keys: one square at a time.
 const MOVES = {
   ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
 };
-const clamp = (n) => Math.max(0, Math.min(SIZE - 1, n));
 
 document.addEventListener("keydown", (e) => {
   const move = MOVES[e.key];
   if (!move) return;
   e.preventDefault(); // stop the arrows from scrolling the page
-  if (!me.color) return; // not joined yet
-  const x = clamp(me.x + move[0]);
-  const y = clamp(me.y + move[1]);
-  if (x === me.x && y === me.y) return; // against an edge: nothing to send
-  me.x = x;
-  me.y = y;
-  update(myRef, { x, y });
+  if (!joined) return;
+  stopWalking();
+  moveTo(me.x + move[0], me.y + move[1]);
+});
+
+// Tap or click a square: walk there one square at a time, so others see the path.
+// Pointer events cover mouse, finger and pen with one listener.
+let walkTarget = null;
+let walkTimer = null;
+
+function stopWalking() {
+  clearInterval(walkTimer);
+  walkTimer = null;
+  walkTarget = null;
+}
+
+function step() {
+  const dx = walkTarget.x - me.x;
+  const dy = walkTarget.y - me.y;
+  if (dx === 0 && dy === 0) return stopWalking();
+  // Step along the axis with the most distance left: a natural staircase path.
+  if (Math.abs(dx) >= Math.abs(dy)) moveTo(me.x + Math.sign(dx), me.y);
+  else moveTo(me.x, me.y + Math.sign(dy));
+}
+
+grid.addEventListener("pointerdown", (e) => {
+  if (!joined) return;
+  const rect = grid.getBoundingClientRect();
+  walkTarget = {
+    x: clamp(Math.floor(((e.clientX - rect.left) / rect.width) * SIZE)),
+    y: clamp(Math.floor(((e.clientY - rect.top) / rect.height) * SIZE)),
+  };
+  if (!walkTimer) {
+    step();
+    if (walkTarget) walkTimer = setInterval(step, STEP_MS);
+  }
 });

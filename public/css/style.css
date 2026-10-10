@@ -7,6 +7,7 @@ body {
   background: #f4f1ea;
   color: #333;
   font-family: system-ui, sans-serif;
+  touch-action: manipulation; /* no double-tap zoom on iOS */
 }
 
 main {
@@ -23,18 +24,32 @@ main {
   grid-template-columns: repeat(var(--size), 1fr);
   grid-template-rows: repeat(var(--size), 1fr);
   background-color: #fff;
-  /* Grid lines drawn as a background, so cells and circles can share the same grid. */
+  /* Grid lines drawn as a background, so the squares stay free for circles. */
   background-image:
     linear-gradient(to right, #ddd 1px, transparent 1px),
     linear-gradient(to bottom, #ddd 1px, transparent 1px);
   background-size: calc(100% / 11) calc(100% / 11);
   border: 1px solid #ccc;
+  cursor: pointer;
+  touch-action: none; /* taps on the grid move you, never scroll or zoom */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* One square holding one or more circles; --cols is set in main.js
+   (1 circle: full size, 2-4: a 2x2 layout, 5-9: 3x3...). */
+.square {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  place-items: center;
+  padding: 8%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .circle {
-  width: 80%;
-  height: 80%;
-  place-self: center;
+  width: 88%;
+  aspect-ratio: 1;
   border-radius: 50%;
 }
 
@@ -42,6 +57,7 @@ main {
 .circle.me {
   outline: 3px solid #333;
   outline-offset: 2px;
+  position: relative;
   z-index: 1;
 }
 
