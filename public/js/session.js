@@ -20,7 +20,7 @@ if (!/^[a-z0-9]{4,20}$/.test(id)) {
 }
 export const sessionId = id;
 
-// A reference to a path inside this session, e.g. sessionRef("targets").
+// A reference to a path inside this session, e.g. sessionRef("players").
 export const sessionRef = (path) => ref(db, `sessions/${sessionId}/${path}`);
 
 export const playersRef = sessionRef("players");

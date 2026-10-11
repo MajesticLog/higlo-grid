@@ -2,9 +2,8 @@
 import { db, ref, get, set, onValue, onDisconnect, runTransaction } from "./firebase.js";
 import { SIZE, CENTRE, sessionRef, playersRef, myRef, myId } from "./session.js";
 import { state } from "./state.js";
-import { render, renderBanner } from "./render.js";
-import { assignTarget } from "./targets.js";
-import { tryMove, walkTo, stopWalking, ensureTurn, maybePass } from "./turns.js";
+import { render } from "./render.js";
+import { tryMove, walkTo, stopWalking } from "./moves.js";
 import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
@@ -73,24 +72,18 @@ onValue(ref(db, ".info/connected"), async (snap) => {
     spawned = true;
   }
   await onDisconnect(myRef).remove();
-  await onDisconnect(sessionRef(`hints/${myId}`)).remove();
   await set(myRef, state.me);
   state.joined = true;
-  await assignTarget(); // my target was removed if I was disconnected
-  ensureTurn();
 });
 
 onValue(playersRef, (snap) => {
   state.players = [];
   snap.forEach((child) => { state.players.push({ id: child.key, ...child.val() }); });
   render();
-  renderBanner(); // a banner may have been waiting for its player's details
-  ensureTurn(); // the player whose turn it was may have left
-  maybePass(); // ...or the last player I was waiting for
 });
 
 // --- Controls ---
-// Arrow keys: one square per press, on your turn.
+// Arrow keys: one square per press.
 const MOVES = {
   ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
 };
@@ -104,7 +97,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Tap or click: on someone else's circle, send a heart; anywhere else, walk
-// to that square on your turn. Pointer events cover mouse, finger and pen.
+// to that square. Pointer events cover mouse, finger and pen.
 const grid = document.getElementById("grid");
 const clamp = (n) => Math.max(0, Math.min(SIZE - 1, n));
 

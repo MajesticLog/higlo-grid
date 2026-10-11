@@ -36,7 +36,7 @@ main {
   -webkit-user-select: none;
 }
 
-/* One square holding one or more circles; --cols is set in main.js
+/* One square holding one or more circles; --cols is set in render.js
    (1 circle: full size, 2-4: a 2x2 layout, 5-9: 3x3...). */
 .square {
   display: grid;
@@ -51,7 +51,7 @@ main {
   width: 88%;
   aspect-ratio: 1;
   border-radius: 50%;
-  position: relative; /* anchors floats and hint badges */
+  position: relative; /* anchors floats */
   /* A white ring keeps neighbouring circles apart, whatever their colours. */
   box-shadow: 0 0 0 2px #fff, 0 1px 3px 2px rgba(0, 0, 0, 0.25);
   display: grid;
@@ -67,8 +67,8 @@ main {
   pointer-events: none;
 }
 
-/* A big ❤️ / 🔥 / ❄️ over a circle, on a white disc so it reads by shape on
-   any background: pops in, floats up a little, stays a second, fades.
+/* A big ❤️ over a circle, on a white disc so it reads by shape on any
+   background: pops in, floats up a little, stays a second, fades.
    1.4s total; keep in sync with FLOAT_MS in render.js. */
 .float {
   position: absolute;
@@ -99,195 +99,6 @@ main {
   outline-offset: 2px;
   position: relative;
   z-index: 1;
-}
-
-/* A target: a rounded tile in its owner's colour with their animal, pulsing
-   gently. 1.6s cycle; keep in sync with PULSE_MS in main.js. */
-.target {
-  --c: #999;
-  margin: 8%;
-  border-radius: 22%;
-  border: 3px solid var(--c);
-  background: color-mix(in srgb, var(--c) 30%, transparent);
-  display: grid;
-  place-items: center;
-  container-type: inline-size;
-  animation: pulse 1.6s ease-in-out infinite;
-}
-
-.target .animal {
-  font-size: 50cqi;
-  opacity: 0.7;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(0.85); opacity: 0.55; }
-  50%      { transform: scale(1);    opacity: 1; }
-}
-
-/* Found: solid and still, shown to everyone, owner included. */
-.target.found {
-  animation: none;
-  background: var(--c);
-}
-
-.target.found .animal {
-  opacity: 1;
-}
-
-/* No pulsing for people who asked their device for less motion. */
-@media (prefers-reduced-motion: reduce) {
-  .target { animation: none; border-style: dashed; }
-}
-
-/* "Found it!" banner, fixed at the top so the grid never shifts. */
-#banner {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.found {
-  --c: #999;
-  padding: 10px 22px;
-  border-radius: 999px;
-  border: 4px solid var(--c);
-  background: #fff;
-  color: #222;
-  font-size: max(20px, 4vmin);
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  animation: pop-in 0.35s ease-out;
-}
-
-@keyframes pop-in {
-  from { transform: scale(0.6); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
-}
-
-/* Whose turn it is, with the buttons that apply to you. */
-#turnbar {
-  --c: #ccc;
-  margin: 0 auto 12px;
-  max-width: min(92vw, 640px);
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: #fff;
-  border: 4px solid var(--c);
-}
-
-#turn-text {
-  margin: 0;
-  font-size: max(18px, 2.6vmin);
-  font-weight: 600;
-}
-
-/* Fixed height, so the grid doesn't jump when buttons come and go. */
-#turn-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  min-height: 56px;
-  margin-top: 8px;
-}
-
-#turn-buttons button {
-  min-height: 56px;
-  min-width: 130px;
-  padding: 0 18px;
-  font: inherit;
-  font-size: 20px;
-  font-weight: 600;
-  border-radius: 14px;
-  border: 3px solid #bbb;
-  background: #fff;
-  color: #222;
-  cursor: pointer;
-}
-
-#hot { border-color: #e4572e; }
-#cold { border-color: #2e86ab; }
-#hot[aria-pressed="true"] { background: #fde3dc; }
-#cold[aria-pressed="true"] { background: #dcecf5; }
-
-#turnbar.nudge {
-  animation: nudge 0.4s ease-in-out;
-}
-
-@keyframes nudge {
-  0%, 100% { transform: translateX(0); }
-  25%      { transform: translateX(-6px); }
-  75%      { transform: translateX(6px); }
-}
-
-/* Squares you can move to on your turn. */
-.reach {
-  --c: #999;
-  margin: 34%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--c) 45%, transparent);
-}
-
-/* Where the mover started this turn: a faint dashed circle with their animal. */
-.ghost {
-  --c: #999;
-  margin: 14%;
-  border-radius: 50%;
-  border: 3px dashed var(--c);
-  background: color-mix(in srgb, var(--c) 15%, #fff);
-  display: grid;
-  place-items: center;
-  container-type: inline-size;
-  opacity: 0.8;
-}
-
-.ghost .animal {
-  font-size: 55cqi;
-  opacity: 0.5;
-}
-
-/* Footprints along the mover's path; opacity is set in render.js. */
-.step {
-  --c: #999;
-  margin: 40%;
-  border-radius: 50%;
-  background: var(--c);
-}
-
-/* The player whose turn it is gets a soft glow. */
-.circle.turn {
-  box-shadow: 0 0 0 2px #fff, 0 0 10px 4px rgba(255, 200, 0, 0.8);
-}
-
-/* Who-said-what badges under a circle ("🐶🔥"), on white so the icons read
-   by shape as much as by colour. */
-.hints {
-  position: absolute;
-  top: 82%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 2px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.hint {
-  font-size: 30cqi;
-  line-height: 1;
-  padding: 3cqi 6cqi;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid #bbb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  white-space: nowrap;
 }
 
 #share {
