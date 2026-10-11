@@ -36,7 +36,12 @@ export function updateReplay(arriving) {
   const reveal = new Map(); // "x_y" -> when it turns over
   const walks = new Map(); // playerId -> {from, path, start}
   const grazes = new Map(); // run index -> start
-  const at = (k, t) => { if (!reveal.has(k) || reveal.get(k) > t) reveal.set(k, t); };
+  // Only squares turned over in this round; the ones from earlier rounds stay as they are.
+  const fresh = replay.fresh ?? {};
+  const at = (k, t) => {
+    if (!fresh[k]) return;
+    if (!reveal.has(k) || reveal.get(k) > t) reveal.set(k, t);
+  };
   let t = start + 3 * COUNT_MS;
   for (const action of replay.actions ?? []) {
     if (action.kind === "walk") {

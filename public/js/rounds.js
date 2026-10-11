@@ -202,6 +202,7 @@ export function maybeResolve() {
     const walked = []; // squares walked through on the way
     const sheep = [];
     const actions = []; // the order the replay plays things in (replay.js)
+    const before = new Set(Object.keys(game.revealed)); // turned over in earlier rounds
     for (const p of state.players) {
       const pick = game.picks[p.id];
       const used = game.sheepUsed[p.id] ?? 0;
@@ -240,7 +241,10 @@ export function maybeResolve() {
     checkEnd(game);
     game.moves = moves; // each device moves its own player (see applyMyMove)
     game.round += 1;
-    game.replay = { tag: `${game.id}:${game.round}`, actions };
+    // Only squares turned over in this round are replayed: walking over old
+    // ones (or old traps) must not hide them again or undo the night.
+    const fresh = Object.keys(game.revealed).filter((k) => !before.has(k));
+    game.replay = { tag: `${game.id}:${game.round}`, actions, fresh: Object.fromEntries(fresh.map((k) => [k, true])) };
     game.picks = null;
     game.deadline = null;
     game.updatedAt = now();
