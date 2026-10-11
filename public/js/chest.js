@@ -2,6 +2,8 @@
 // first, to read again together or save as a page to keep. It lives on the
 // family link, so it grows from one game to the next.
 import { state } from "./state.js";
+import { onValue } from "./firebase.js";
+import { sessionRef } from "./session.js";
 
 const button = document.getElementById("chest");
 const count = document.getElementById("chest-count");
@@ -10,6 +12,13 @@ const list = document.getElementById("chest-list");
 const hiddenNote = document.getElementById("chest-hidden");
 const saveButton = document.getElementById("chest-save");
 
+// Who played each game (game.js records it): gameId -> {players: {...}}.
+let history = {};
+onValue(sessionRef("history"), (snap) => {
+  history = snap.val() || {};
+  if (!panel.hidden) fill();
+});
+
 // A memory with clues is in the chest once it's been guessed (or revealed),
 // never before: that would spoil the guess.
 const found = () => Object.values(state.memories).filter((m) => m.foundAt && (!m.clues || m.revealedAt));
@@ -17,13 +26,13 @@ const found = () => Object.values(state.memories).filter((m) => m.foundAt && (!m
 // Found memories grouped by the game they were found in, newest game first,
 // each group in the order its memories turned up.
 function byGame() {
-  const games = new Map();
+  const games = new Map(); // gameId -> memories
   for (const m of found().sort((a, b) => a.foundAt - b.foundAt)) {
     const id = m.gameId ?? "earlier";
     if (!games.has(id)) games.set(id, []);
     games.get(id).push(m);
   }
-  return [...games.values()].sort((a, b) => b[0].foundAt - a[0].foundAt);
+  return [...games.entries()].sort(([, a], [, b]) => b[0].foundAt - a[0].foundAt);
 }
 
 const dateOf = (time) => new Date(time).toLocaleString(undefined, {
@@ -49,10 +58,16 @@ function fill() {
     empty.textContent = "The chest is empty for now. Memories you find in the field will be kept here.";
     list.append(empty);
   }
-  for (const memories of games) {
+  for (const [gameId, memories] of games) {
     const section = document.createElement("section");
     const heading = document.createElement("h3");
     heading.textContent = dateOf(memories[0].foundAt);
+    // Who played: their animals and names.
+    const players = Object.values(history[gameId]?.players ?? {});
+    const who = document.createElement("p");
+    who.className = "chest-players";
+    who.textContent = players.length
+      ? `Played by ${players.map((p) => `${p.animal} ${p.name}`.trim()).join(", ")}` : "";
     const items = document.createElement("ul");
     for (const m of memories) {
       const item = document.createElement("li");
@@ -65,7 +80,7 @@ function fill() {
       }
       items.append(item);
     }
-    section.append(heading, items);
+    section.append(heading, who, items);
     list.append(section);
   }
   const waiting = Object.values(state.memories).filter((m) => m.clues && !m.revealedAt).length;
@@ -93,9 +108,11 @@ const escape = (text) => String(text).replace(/[&<>"']/g, (c) => ({
 })[c]);
 
 function savePage() {
-  const sections = byGame().map((memories) => `
+  const sections = byGame().map(([gameId, memories]) => `
     <section>
       <h2>${escape(dateOf(memories[0].foundAt))}</h2>
+      <p class="players">${escape(Object.values(history[gameId]?.players ?? {})
+        .map((p) => `${p.animal} ${p.name}`.trim()).join(", "))}</p>
       ${memories.map((m) => `
         <article style="border-color:${escape(m.color ?? "#999")}">
           <p class="prompt">${escape(m.prompt ?? "")}</p>
@@ -118,6 +135,7 @@ function savePage() {
   .prompt { margin: 0; font-style: italic; color: #666; font-size: 14px; }
   .text { margin: 6px 0; font-size: 18px; white-space: pre-wrap; }
   .by { margin: 0; font-weight: 700; }
+  .players { margin: -4px 0 8px; color: #777; font-size: 14px; }
 </style>
 </head>
 <body><main><h1>🧺 Our family memories</h1>${sections}</main></body>

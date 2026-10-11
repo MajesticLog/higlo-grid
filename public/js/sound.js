@@ -253,6 +253,17 @@ export function playBleat() {
   }
 }
 
+// Sheep munching grass: a few soft, crunchy nibbles.
+export function playMunch() {
+  if (!ready()) return;
+  const start = ctx.currentTime + 0.02;
+  for (let i = 0; i < 3; i++) {
+    const t = start + i * 0.14 + Math.random() * 0.03;
+    noiseSource(t, 0.08).connect(filter("bandpass", 1400 + Math.random() * 600, 2))
+      .connect(envelope(t, 0.07, 0.005, 0.03, 0.04));
+  }
+}
+
 // --- The sound on/off button ---
 const button = document.getElementById("sound");
 

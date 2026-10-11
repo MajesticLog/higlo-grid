@@ -253,6 +253,7 @@ onValue(gameRef, (snap) => {
     applyMyMove();
   }
   markFound();
+  recordPlayer();
   render();
   gameChanged(previous, state.game);
   eventChanged(state.game);
@@ -290,3 +291,17 @@ onValue(memoriesRef, (snap) => {
   markFound();
   syncGame();
 });
+
+// Who played each game, for the memory chest: each player adds themselves
+// once per game (keyed by tab, so a refresh doesn't add them twice).
+let recordedFor = null;
+
+function recordPlayer() {
+  const game = state.game;
+  if (!state.joined || !game || recordedFor === game.id || !state.me.tab) return;
+  recordedFor = game.id;
+  update(sessionRef(`history/${game.id}`), {
+    [`players/${state.me.tab}`]: { name: state.me.name ?? "", animal: state.me.animal ?? "", color: state.me.color ?? "" },
+    startedAt: game.updatedAt ?? now(),
+  });
+}

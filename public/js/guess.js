@@ -61,7 +61,7 @@ function changeGuess(edit) {
     // The device that finishes a guess records it on the memory, for the
     // chest and the end screen. (Others may too; the writes agree.)
     const last = snapshot.val()?.lastGuess;
-    if (committed && last?.memory === seen.memory) {
+    if (committed && last?.memory === seen.memory && !(last.early && !last.guessed)) {
       update(sessionRef(`memories/${seen.memory}`), { revealedAt: last.at, guessed: last.guessed });
     }
   });
@@ -70,11 +70,26 @@ function changeGuess(edit) {
 // Over: everyone sees the result; the rounds resume (or the next memory's
 // guessing starts, or the game ends).
 function finish(game, guessed) {
-  const { memory, answers = null, verdicts = null } = game.guess;
+  const { memory, early = false, answers = null, verdicts = null } = game.guess;
+  game.lastGuess = { memory, guessed, early, answers, verdicts, at: now() };
+  game.guess = null;
+  if (early && !guessed) {
+    // Not yet: the memory stays secret and the search goes on.
+    nextGuess(game);
+    checkEnd(game);
+    game.updatedAt = now();
+    return;
+  }
   game.guessed ??= {};
   game.guessed[memory] = guessed ? "guessed" : "revealed";
-  game.lastGuess = { memory, guessed, answers, verdicts, at: now() };
-  game.guess = null;
+  // Guessed before all its clues were found: the rest no longer need
+  // finding, so they go back to plain grass.
+  for (const [k, hidden] of Object.entries(game.board)) {
+    if (hidden.memory !== memory || game.revealed?.[k]) continue;
+    delete game.board[k];
+    if (game.sniffed) delete game.sniffed[k];
+    if (game.spotted) delete game.spotted[k];
+  }
   nextGuess(game);
   checkEnd(game);
   game.updatedAt = now();
@@ -117,6 +132,7 @@ form.addEventListener("submit", (e) => {
   answer({ text });
 });
 document.getElementById("guess-aloud").addEventListener("click", () => answer({ aloud: true }));
+document.getElementById("guess-pass").addEventListener("click", () => answer({ pass: true }));
 
 // The author (or anyone, if the author has left) shows the guesses early.
 earlyButton.addEventListener("click", () => changeGuess((game) => {
@@ -132,7 +148,7 @@ function judge(playerId, yes) {
     if (yes) return finish(game, true);
     game.guess.verdicts[playerId] = false;
     const answers = Object.entries(game.guess.answers);
-    const open = answers.some(([id, a]) => a.aloud || game.guess.verdicts[id] !== false);
+    const open = answers.some(([id, a]) => a.aloud || (!a.pass && game.guess.verdicts[id] !== false));
     if (!open) finish(game, false);
   });
 }
@@ -180,11 +196,17 @@ export function renderGuess() {
   arrived = true;
 }
 
-function drawClues(memory) {
+// The clues found so far for a memory, as numbers (0, 1, 2).
+const foundClues = (memoryId) => [...new Set(Object.values(state.game?.revealed ?? {})
+  .filter((t) => t.show === "clue" && t.memory === memoryId).map((t) => t.n))].sort();
+
+function drawClues(memory, memoryId, all = false) {
   theme.textContent = memory.prompt ?? "";
-  clueList.replaceChildren(...(memory.clues ?? []).map((c) => {
+  const numbers = all ? (memory.clues ?? []).map((_, n) => n) : foundClues(memoryId);
+  clueList.replaceChildren(...numbers.map((n) => {
     const li = document.createElement("li");
-    li.textContent = c;
+    li.value = n + 1; // keep each clue's own number
+    li.textContent = memory.clues?.[n] ?? "";
     return li;
   }));
 }
@@ -194,10 +216,11 @@ function drawAnswers(answers = {}, verdicts = {}, judging = false) {
     const li = document.createElement("li");
     const text = document.createElement("span");
     text.className = "guess-text";
-    text.textContent = a.aloud ? `${a.animal} ${a.name} 🗣️ says it out loud` : `${a.animal} ${a.name}: “${a.text}”`;
+    text.textContent = a.pass ? `${a.animal} ${a.name} 🤷 isn't sure yet`
+      : a.aloud ? `${a.animal} ${a.name} 🗣️ says it out loud` : `${a.animal} ${a.name}: “${a.text}”`;
     li.append(text);
     if (verdicts?.[id] === false) li.append(mark("❌"));
-    if (judging && !a.aloud && verdicts?.[id] !== false) {
+    if (judging && !a.aloud && !a.pass && verdicts?.[id] !== false) {
       for (const [label, yes] of [["✅", true], ["❌", false]]) {
         const b = document.createElement("button");
         b.type = "button";
@@ -227,10 +250,13 @@ function drawGuess(guess, memory) {
   const mine = amAuthor(memory);
   const answers = guess.answers ?? {};
   const count = `${Object.keys(answers).length} of ${guessers(memory).length}`;
+  const starter = guess.by ? `${guess.by.animal} ${guess.by.name}`.trim() : "Someone";
   title.textContent = mine
     ? "🎉 The others are guessing your memory now!"
-    : `🔍 All ${CLUES} of ${who(memory)}'s clues are found!`;
-  drawClues(memory);
+    : guess.early
+      ? `💡 ${starter} thinks they know ${who(memory)}'s memory!`
+      : `🔍 All ${CLUES} of ${who(memory)}'s clues are found!`;
+  drawClues(memory, guess.memory);
   reveal.hidden = true;
   closeButton.hidden = true;
   if (guess.phase === "guessing") {
@@ -274,13 +300,15 @@ function drawResult(game, last, memory) {
     cheered.add(tag);
     playTwinkle();
   }
-  title.textContent = last.guessed ? "🎉 You guessed it!" : "Nobody guessed it this time";
-  drawClues(memory);
+  const notYet = last.early && !last.guessed; // the memory stays secret
+  title.textContent = last.guessed ? "🎉 You guessed it!"
+    : notYet ? "Not yet! Keep looking 🔍" : "Nobody guessed it this time";
+  drawClues(memory, last.memory, !notYet);
   form.hidden = true;
   earlyButton.hidden = true;
   judgeButtons.hidden = true;
-  statusText.textContent = "";
-  reveal.hidden = false;
+  statusText.textContent = notYet ? "The memory stays a secret until you find more clues." : "";
+  reveal.hidden = notYet;
   reveal.querySelector(".guess-it-was").textContent = "It was…";
   reveal.querySelector(".guess-memory").textContent = memory.text;
   reveal.querySelector(".guess-by").textContent = who(memory);
@@ -295,4 +323,77 @@ closeButton.addEventListener("click", () => {
   closedResult = `${state.game?.id}:${state.game?.lastGuess?.at}`;
   box.hidden = true;
   renderGuess(); // the next guess, if one is waiting
+});
+
+// --- 💡 Clues found, and "Ready to guess!" ---
+const cluesPanel = document.getElementById("clues-panel");
+const cluesList = document.getElementById("clues-list");
+
+// Start guessing a memory before all its clues are found. Anyone but its
+// author, while nothing else is being guessed.
+function readyToGuess(memoryId) {
+  const seen = state.game?.id;
+  runTransaction(gameRef, (game) => {
+    if (!game || game.id !== seen || game.status !== "playing" || game.guess || game.guessed?.[memoryId]) return;
+    game.guess = {
+      memory: memoryId, phase: "guessing", early: true, startedAt: now(),
+      by: { name: state.me.name ?? "", animal: state.me.animal ?? "" },
+    };
+    return game;
+  });
+  cluesPanel.hidden = true;
+}
+
+function drawCluesPanel() {
+  const game = state.game;
+  const ids = [...new Set(Object.values(game?.revealed ?? {})
+    .filter((t) => t.show === "clue").map((t) => t.memory))];
+  cluesList.replaceChildren();
+  if (ids.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "No clues found yet. Keep exploring the field!";
+    cluesList.append(empty);
+  }
+  for (const id of ids) {
+    const memory = state.memories[id];
+    if (!memory) continue;
+    const box = document.createElement("section");
+    box.className = "clues-memory";
+    box.style.setProperty("--c", memory.color ?? "#999");
+    const heading = document.createElement("h3");
+    heading.textContent = `${who(memory)}'s memory · ${memory.prompt ?? ""}`;
+    const list = document.createElement("ol");
+    for (const n of foundClues(id)) {
+      const li = document.createElement("li");
+      li.value = n + 1;
+      li.textContent = memory.clues?.[n] ?? "";
+      list.append(li);
+    }
+    const done = game.guessed?.[id];
+    const status = document.createElement("p");
+    status.className = "clues-state";
+    status.textContent = done === "guessed" ? `✅ Guessed: “${memory.text}”`
+      : done === "revealed" ? `It was: “${memory.text}”`
+        : `${foundClues(id).length} of ${CLUES} clues found`;
+    box.append(heading, list, status);
+    const canGuess = !done && !amAuthor(memory) && game.status === "playing" && !game.guess;
+    if (canGuess) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "💡 Ready to guess!";
+      button.addEventListener("click", () => readyToGuess(id));
+      box.append(button);
+    }
+    cluesList.append(box);
+  }
+}
+
+document.getElementById("clues").addEventListener("click", () => {
+  drawCluesPanel();
+  cluesPanel.hidden = false;
+  document.getElementById("clues-close").focus();
+});
+document.getElementById("clues-close").addEventListener("click", () => { cluesPanel.hidden = true; });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !cluesPanel.hidden) cluesPanel.hidden = true;
 });

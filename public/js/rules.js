@@ -30,7 +30,8 @@ const CARDS = [
     picture: "💭 🗣️ ✅",
     title: "Guess the memory",
     text: `When all ${CLUES} clues of a memory are found, everyone guesses what it is: `
-      + "type it, or say it out loud. The person who wrote it says if you got it!",
+      + "type it, or say it out loud. The person who wrote it says if you got it! "
+      + "Think you know sooner? Open 💡 and tap Ready to guess.",
   },
   {
     picture: "🪤 ☀️ 🌅 🌙 🐺",

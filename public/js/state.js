@@ -10,6 +10,7 @@ export const state = {
   game: null, // {id, status, night, board, revealed}: see game.js
   memories: {}, // memoryId -> {text, prompt, name, animal, color, createdAt, foundAt?}
   floats: new Map(), // playerId -> {icon, startedAt}: a ❤️ floating above them
+  bubbles: new Map(), // playerId -> {text, startedAt}: a message above them (messages.js)
 };
 
 // Where I stand in the current game, kept for this tab only, so a refresh

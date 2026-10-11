@@ -6,7 +6,7 @@ import {
   READY_WAIT_MS, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH, pathBetween,
 } from "./rounds.js";
 import { queueCard, explainOnce } from "./card.js";
-import { playBleat } from "./sound.js";
+import { playBleat, playMunch } from "./sound.js";
 import {
   updateReplay, setReplayTick, replayActive, countdown, notYet, replayPosition, grazeStartFor, nightShown,
 } from "./replay.js";
@@ -222,10 +222,12 @@ function drawGrazing() {
     grazeSeen = tag;
     if (!justArrived) {
       runs.forEach((run, i) => {
-        for (const k of run.refused ?? []) {
-          const at = startOf(i) + (run.line.indexOf(k) + 1) * SHEEP_STEP_MS - 300;
-          setTimeout(playBleat, Math.max(0, at - performance.now()));
-        }
+        // A munch at each square it eats, a bleat at each it refuses.
+        run.line.forEach((k, n) => {
+          const at = startOf(i) + (n + 1) * SHEEP_STEP_MS - 300;
+          const sound = (run.refused ?? []).includes(k) ? playBleat : playMunch;
+          setTimeout(sound, Math.max(0, at - performance.now()));
+        });
       });
     }
   }
@@ -416,6 +418,8 @@ function drawPlayers() {
     squares.get(key).push({ ...p, ...at });
   }
 
+  celebrateMeetings(squares);
+
   for (const group of squares.values()) {
     const square = document.createElement("div");
     square.className = "square";
@@ -429,10 +433,39 @@ function drawPlayers() {
       if (p.name) el.title = p.name; // on hover, for mouse users
       el.append(animalSpan(p.animal));
       if (state.floats.has(p.id)) el.append(floatElement(state.floats.get(p.id)));
+      if (state.bubbles.has(p.id)) el.append(bubbleElement(state.bubbles.get(p.id)));
       square.append(el);
     }
     grid.append(square);
   }
+}
+
+// Players who end up on the same square, even just walking through, get a
+// heart each, once per meeting. Every device sees the same meetings, so it
+// works out its own hearts (nothing to send).
+let together = new Set(); // "x,y:idA,idB" of meetings on screen right now
+
+function celebrateMeetings(squares) {
+  const now = new Set();
+  for (const [where, group] of squares) {
+    if (group.length < 2) continue;
+    const meeting = `${where}:${group.map((p) => p.id).sort().join(",")}`;
+    now.add(meeting);
+    if (!together.has(meeting)) {
+      setTimeout(() => { for (const p of group) showFloat(p.id, "❤️"); }, 0); // after this redraw
+    }
+  }
+  together = now;
+}
+
+// A message bubble above a player (messages.js); like floats, it carries on
+// through redraws.
+function bubbleElement({ text, startedAt }) {
+  const el = document.createElement("span");
+  el.className = "bubble";
+  el.textContent = text;
+  el.style.animationDelay = `${startedAt - performance.now()}ms`;
+  return el;
 }
 
 // A big icon (❤️) floating above a player for a moment; everyone sees it.

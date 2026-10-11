@@ -11,6 +11,7 @@ import { gameChanged, maybeStartAgain } from "./end.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
 import { rulesOnce } from "./rules.js";
 import { sendHeart } from "./hearts.js";
+import "./messages.js";
 
 document.getElementById("link").textContent = location.href;
 

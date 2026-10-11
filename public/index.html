@@ -46,6 +46,7 @@
     </section>
     <main id="field" hidden>
       <button id="help" type="button" aria-label="How to play">❔</button>
+      <button id="clues" type="button" aria-label="Clues found">💡</button>
       <button id="chest" type="button" aria-label="Memory chest">
         <svg viewBox="0 0 48 40" aria-hidden="true">
             <path d="M4 16c0-8 9-13 20-13s20 5 20 13v2H4z" fill="#a1662f"/>
@@ -71,6 +72,11 @@
         <div id="fireflies" aria-hidden="true" hidden></div>
         <div id="countdown" aria-live="polite" hidden></div>
       </div>
+      <form id="say" autocomplete="off">
+        <input id="say-text" type="text" maxlength="40" enterkeyhint="send"
+               aria-label="Message for everyone" placeholder="💬 Say something to everyone…">
+        <button type="submit">Send</button>
+      </form>
       <div id="new-game">
         <button id="new-game-ask" type="button">🔄 New game</button>
         <button id="sound" type="button">🔊 Sound on</button>
@@ -129,6 +135,7 @@
           <div class="end-buttons">
             <button class="primary" type="submit">Send my guess</button>
             <button id="guess-aloud" type="button">🗣️ I'll say it out loud</button>
+            <button id="guess-pass" type="button">🤷 Not sure yet</button>
           </div>
         </form>
         <p id="guess-status"></p>
@@ -140,6 +147,16 @@
         <div class="end-buttons">
           <button id="guess-early" type="button" hidden>Everyone's done? Show the guesses</button>
           <button id="guess-close" class="primary" type="button" hidden>Back to the field</button>
+        </div>
+      </div>
+    </div>
+    <div id="clues-panel" role="dialog" aria-modal="true" aria-labelledby="clues-title" hidden>
+      <div class="chest-body">
+        <h2 id="clues-title">💡 Clues found</h2>
+        <p class="chest-intro">Think you know a memory already? Tap "Ready to guess!" and everyone guesses together.</p>
+        <div id="clues-list"></div>
+        <div class="end-buttons">
+          <button id="clues-close" type="button">Close</button>
         </div>
       </div>
     </div>
