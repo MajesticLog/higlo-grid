@@ -9,6 +9,7 @@ import { render, nudgeTurnBar, showFloat, HINT_ICON } from "./render.js";
 import { checkFound } from "./targets.js";
 
 const STEP_MS = 150; // walking speed when you tap a square
+const MAX_PATH = 40; // squares remembered per turn, start included
 
 const turnRef = sessionRef("turn");
 const hintsRef = sessionRef("hints");
@@ -88,17 +89,22 @@ export function tryMove(dx, dy) {
     stopWalking();
     return nudgeTurnBar();
   }
+  const from = { x: state.me.x, y: state.me.y };
   const x = clamp(state.me.x + dx);
   const y = clamp(state.me.y + dy);
-  if (x === state.me.x && y === state.me.y) return; // against an edge
+  if (x === from.x && y === from.y) return; // against an edge
   state.me.x = x;
   state.me.y = y;
   update(myRef, { x, y });
   remove(myHintsRef); // old hints were about where I was
-  if (!state.turn.moved) {
-    runTransaction(turnRef, (t) =>
-      t && t.player === myId && !t.moved ? { ...t, moved: true } : undefined);
-  }
+  // Record the step in the turn's path, so guides who looked away can still
+  // see where I started. Only while the turn is still mine.
+  runTransaction(turnRef, (t) => {
+    if (!t || t.player !== myId) return; // abort
+    let path = [...(t.path ?? [from]), { x, y }];
+    if (path.length > MAX_PATH) path = [path[0], ...path.slice(-(MAX_PATH - 1))]; // keep the start
+    return { ...t, moved: true, path };
+  });
   if (checkFound()) { // found it: no hints needed
     stopWalking();
     passTurn(myId);

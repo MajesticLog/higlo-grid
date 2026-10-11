@@ -235,6 +235,32 @@ main {
   background: color-mix(in srgb, var(--c) 45%, transparent);
 }
 
+/* Where the mover started this turn: a faint dashed circle with their animal. */
+.ghost {
+  --c: #999;
+  margin: 14%;
+  border-radius: 50%;
+  border: 3px dashed var(--c);
+  background: color-mix(in srgb, var(--c) 15%, #fff);
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  opacity: 0.8;
+}
+
+.ghost .animal {
+  font-size: 55cqi;
+  opacity: 0.5;
+}
+
+/* Footprints along the mover's path; opacity is set in render.js. */
+.step {
+  --c: #999;
+  margin: 40%;
+  border-radius: 50%;
+  background: var(--c);
+}
+
 /* The player whose turn it is gets a soft glow. */
 .circle.turn {
   box-shadow: 0 0 0 2px #fff, 0 0 10px 4px rgba(255, 200, 0, 0.8);

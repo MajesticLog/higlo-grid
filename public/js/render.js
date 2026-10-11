@@ -17,6 +17,7 @@ const nextButton = document.getElementById("next");
 export function render() {
   grid.replaceChildren();
   drawTargets();
+  drawPath();
   drawReachable();
   drawPlayers();
   renderTurnBar();
@@ -49,6 +50,30 @@ function drawTargets() {
     el.append(animalSpan(owner.animal));
     grid.append(el);
   }
+}
+
+// The mover's path this turn, for guides who looked away: a ghost where the
+// turn started, then footprints that get stronger toward where they are now.
+// The path lives in the turn, so it clears when the turn passes.
+function drawPath() {
+  const path = state.turn?.path;
+  const mover = state.turn && playerById(state.turn.player);
+  if (!path || path.length < 2 || !mover) return;
+  const last = path.length - 1;
+  path.forEach(({ x, y }, i) => {
+    if (i === last) return; // the mover's circle is there
+    const el = document.createElement("div");
+    el.style.setProperty("--c", mover.color);
+    place(el, x, y);
+    if (i === 0) {
+      el.className = "ghost";
+      el.append(animalSpan(mover.animal));
+    } else {
+      el.className = "step";
+      el.style.opacity = (0.3 + 0.6 * (i / last)).toFixed(2);
+    }
+    grid.append(el);
+  });
 }
 
 // On my turn, soft dots on the squares I can move to.
@@ -152,7 +177,7 @@ function renderTurnBar() {
       text = t.moved ? `${mover.animal} Listen for 🔥 warmer or ❄️ colder…` : `${mover.animal} Your turn: move as far as you like`;
       next = t.moved;
     } else {
-      text = t.moved ? `Is ${mover.animal} getting warmer or colder?` : `${mover.animal}'s turn to move`;
+      text = t.moved ? `Is ${mover.animal} warmer or colder than where they started?` : `${mover.animal}'s turn to move`;
       signals = t.moved;
     }
   }
