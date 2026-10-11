@@ -9,17 +9,91 @@ body {
   color: #333;
   font-family: system-ui, sans-serif;
   touch-action: manipulation; /* no double-tap zoom on iOS */
+  transition: background-color 2s ease, color 2s ease;
 }
 
 main {
+  /* One width for the board, shared by the grid and the bars around it. */
+  --board: min(92vw, calc(100vh - 290px)); /* room for the status bar above and buttons below */
   padding: 16px;
   text-align: center;
+}
+
+/* Everything sits above the sky layer. */
+main, #lobby, #share {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- The sky: one step darker per trap (data-night 0..6, set in render.js) --- */
+body[data-night="1"] { background: #f6e7c8; }
+body[data-night="2"] { background: #f3c99b; }
+body[data-night="3"] { background: #d98c7a; }
+body[data-night="4"] { background: #6b5b95; color: #eee; }
+body[data-night="5"] { background: #2e3560; color: #eee; }
+body[data-night="6"] { background: #0e1a3a; color: #eee; }
+
+#sky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#sky-icon {
+  position: absolute;
+  right: 6%;
+  top: 6%;
+  font-size: 44px;
+  line-height: 1;
+  transition: top 2s ease;
+}
+
+/* On phones and portrait screens the grid fills the middle of the screen and
+   would hide the corner sun and moon. There, they travel sideways along a
+   thin strip above the status bar instead, left to right as night falls. */
+#sky-strip {
+  display: none;
+  position: relative;
+  width: var(--board);
+  height: 34px;
+  margin: 0 auto 6px;
+}
+
+#sky-strip-icon {
+  position: absolute;
+  top: 0;
+  left: 4%;
+  font-size: 30px;
+  line-height: 1;
+  transform: translateX(-50%);
+  transition: left 2s ease;
+}
+
+@media (max-width: 700px), (orientation: portrait) {
+  #sky-icon { display: none; }
+  #sky-strip { display: block; }
+}
+
+.star {
+  position: absolute;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50%      { opacity: 1;    transform: scale(1.1); }
 }
 
 /* 11 x 11 squares; the grid fits the smaller side of the screen. */
 #grid {
   --size: 11;
-  width: min(92vw, calc(100vh - 290px)); /* room for the status bar above and buttons below */
+  width: var(--board);
+  margin: 0 auto;
   aspect-ratio: 1;
   display: grid;
   grid-template-columns: repeat(var(--size), 1fr);
@@ -36,6 +110,11 @@ main {
   background-size: calc(100% / 11) calc(100% / 11);
   border: 3px solid #689f38;
   border-radius: 6px;
+  position: relative; /* anchors the wolf */
+  /* Night over the grass: an inset shadow paints over the background but
+     under the tiles and circles, so players stay easy to see. */
+  box-shadow: inset 0 0 0 100vmax rgba(15, 25, 70, calc(var(--night, 0) * 0.55));
+  transition: box-shadow 2s ease;
   cursor: pointer;
   touch-action: none; /* taps on the grid move you, never scroll or zoom */
   user-select: none;
@@ -46,7 +125,7 @@ main {
 .tile {
   margin: 4%;
   border-radius: 18%;
-  background: #f3e9d2;
+  background: color-mix(in srgb, #f3e9d2, #4a5070 calc(var(--night, 0) * 50%));
   box-shadow: inset 0 0 0 1px rgba(120, 90, 40, 0.25);
   display: grid;
   place-items: center;
@@ -57,6 +136,13 @@ main {
   font-size: 58cqi;
   line-height: 1;
   pointer-events: none;
+}
+
+/* A found memory: framed in its author's colour. Tap it to read it again. */
+.tile.memory {
+  --c: #999;
+  border: 3px solid var(--c);
+  background: #fff;
 }
 
 /* Squares turned over while you watch: a quick flip.
@@ -254,11 +340,13 @@ main {
 
 /* What to do this round, with the Ready button and the timer bar. */
 #status {
+  box-sizing: border-box;
   margin: 0 auto 12px;
-  max-width: min(92vw, 640px);
+  width: var(--board); /* exactly as wide as the grid */
   padding: 10px 14px;
   border-radius: 16px;
   background: #fff;
+  color: #222; /* stays dark on the white bar when the page text turns light at night */
   border: 3px solid #8bc34a;
 }
 
@@ -442,3 +530,102 @@ main {
 }
 
 #here { color: #666; margin-top: 20px; }
+
+/* --- Full night: the wolf trots in and howls --- */
+.wolf {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.wolf-icon {
+  font-size: min(28vw, 20vh);
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+  animation: wolf-in 1.6s ease-out both;
+}
+
+.howl {
+  margin-top: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #222;
+  font-size: max(20px, 3.5vmin);
+  font-weight: 700;
+  animation: pop-in 0.4s ease-out 1.4s both;
+}
+
+@keyframes wolf-in {
+  0%   { transform: translateX(60vw); opacity: 0; }
+  60%  { transform: translateX(-4%) translateY(-6%); opacity: 1; }
+  75%  { transform: translateX(2%) translateY(0); }
+  100% { transform: translateX(0) translateY(0); }
+}
+
+@keyframes pop-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* --- Memory card: opens for everyone when a memory turns over --- */
+#card {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+#card[hidden] { display: none; }
+
+.card-body {
+  box-sizing: border-box;
+  width: min(100%, 480px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 20px;
+  border: 6px solid var(--c);
+  background: #fff;
+  color: #222;
+  text-align: center;
+  animation: pop-in 0.35s ease-out;
+}
+
+#card { --c: #999; } /* the author's colour, set in card.js */
+
+.card-found { margin: 0; font-size: 18px; color: #666; }
+#card-prompt { margin: 12px 0 0; font-style: italic; color: #555; }
+#card-text {
+  margin: 16px 0;
+  font-size: max(22px, 3vmin);
+  line-height: 1.4;
+  white-space: pre-wrap; /* keep the author's line breaks */
+  overflow-wrap: anywhere;
+}
+#card-author { margin: 0 0 20px; font-size: 20px; font-weight: 700; }
+
+#card-close {
+  min-height: 52px;
+  min-width: 140px;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  border-radius: 14px;
+  border: none;
+  background: #2f7d32;
+  color: #fff;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star, .wolf-icon, .howl, .card-body { animation: none; }
+}

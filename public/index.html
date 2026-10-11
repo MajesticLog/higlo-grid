@@ -31,6 +31,7 @@
       <p id="here"></p>
     </section>
     <main id="field" hidden>
+      <div id="sky-strip" aria-hidden="true"><span id="sky-strip-icon">☀️</span></div>
       <div id="status" aria-live="polite">
         <p id="status-text">Joining…</p>
         <button id="ready" type="button" hidden>✓ Ready</button>
@@ -46,6 +47,16 @@
         </span>
       </div>
     </main>
+    <div id="card" role="dialog" aria-modal="true" aria-labelledby="card-text" hidden>
+      <div class="card-body">
+        <p class="card-found">📜 A memory!</p>
+        <p id="card-prompt"></p>
+        <p id="card-text"></p>
+        <p id="card-author"></p>
+        <button id="card-close" type="button">Close</button>
+      </div>
+    </div>
+    <div id="sky" aria-hidden="true"><span id="sky-icon">☀️</span></div>
     <p id="share">Share this link to play together: <span id="link"></span></p>
     <script type="module" src="/js/main.js"></script>
   </body>

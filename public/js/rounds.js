@@ -6,7 +6,7 @@ import { update, runTransaction } from "./firebase.js";
 import { SIZE, sessionRef, myRef, myId } from "./session.js";
 import { state } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
-import { key, now, revealSquare } from "./game.js";
+import { key, now, revealSquare, checkEnd } from "./game.js";
 
 export const REACH = 3; // steps up, down, left or right; no diagonals
 const READY_WAIT_MS = 20000; // after the first Ready, how long the others have
@@ -80,6 +80,7 @@ export function maybeResolve() {
       squares.add(key(to.x, to.y));
     }
     for (const k of squares) revealSquare(game, k);
+    checkEnd(game);
     game.moves = moves; // each device moves its own player (see applyMyMove)
     game.round += 1;
     game.picks = null;

@@ -27,13 +27,43 @@ const pick = (list) => list[Math.floor(Math.random() * list.length)];
 export const flower = () => ({ show: "flower", icon: pick(FLOWERS) });
 
 // Turn a square over, inside a round's transaction. Already turned over: nothing.
+// Each trap brings the night one step closer.
 export function revealSquare(game, k) {
   if (game.revealed[k]) return;
   const hidden = game.board[k];
-  if (hidden?.kind === "trap") game.revealed[k] = { show: "trap", icon: "🪤" };
-  else if (hidden?.kind === "memory") game.revealed[k] = { show: "memory", icon: "📜", memory: hidden.memory };
-  else if (Math.random() < INSECT_CHANCE) game.revealed[k] = { show: "insect", icon: pick(INSECTS) };
-  else game.revealed[k] = flower();
+  if (hidden?.kind === "trap") {
+    game.revealed[k] = { show: "trap", icon: "🪤" };
+    game.night += 1;
+  } else if (hidden?.kind === "memory") {
+    game.revealed[k] = { show: "memory", icon: "📜", memory: hidden.memory };
+  } else if (Math.random() < INSECT_CHANCE) {
+    game.revealed[k] = { show: "insect", icon: pick(INSECTS) };
+  } else {
+    game.revealed[k] = flower();
+  }
+}
+
+// After a round: every memory found means a win (even if night fell in the
+// same round: be kind); full night means the wolf comes out.
+export function checkEnd(game) {
+  const memorySquares = Object.keys(game.board).filter((k) => game.board[k].kind === "memory");
+  if (memorySquares.length > 0 && memorySquares.every((k) => game.revealed[k])) game.status = "won";
+  else if (game.night >= NIGHT_STEPS) game.status = "lost";
+}
+
+// A memory turned over is found for good: it won't be hidden again next game.
+// Every device that sees it may write this; the writes agree, so that's fine.
+const markedFound = new Set();
+
+function markFound() {
+  const game = state.game;
+  if (!game) return;
+  for (const tile of Object.values(game.revealed ?? {})) {
+    const id = tile.memory;
+    if (!id || markedFound.has(id) || !state.memories[id] || state.memories[id].foundAt) continue;
+    markedFound.add(id);
+    update(sessionRef(`memories/${id}`), { foundAt: now(), gameId: game.id });
+  }
 }
 
 // Server time, so devices with different clocks agree on when a game went quiet.
@@ -131,6 +161,7 @@ onValue(gameRef, (snap) => {
   state.game = snap.val();
   if (previousId && state.game && state.game.id !== previousId) backToStart();
   else applyMyMove();
+  markFound();
   render();
   maybeResolve();
 });
@@ -158,5 +189,6 @@ document.getElementById("new-game-yes").addEventListener("click", () => {
 
 onValue(memoriesRef, (snap) => {
   state.memories = snap.val() || {};
+  markFound();
   syncGame();
 });

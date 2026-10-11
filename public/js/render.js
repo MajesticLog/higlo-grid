@@ -1,8 +1,9 @@
 // Drawing: everything on screen comes from `state`.
 import { myId } from "./session.js";
 import { state } from "./state.js";
-import { now } from "./game.js";
+import { now, NIGHT_STEPS } from "./game.js";
 import { REACH, READY_WAIT_MS, inReach, choosing } from "./rounds.js";
+import { queueCard } from "./card.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const FLIP_MS = 600; // must match the flip animation in style.css
@@ -20,6 +21,8 @@ export function render() {
   drawPicks();
   drawPlayers();
   drawPops();
+  drawWolf();
+  renderSky();
   renderStatus();
   renderTimer();
 }
@@ -47,8 +50,15 @@ function drawTiles() {
     el.className = `tile ${tile.show}`;
     place(el, ...squareOf(k));
     if (tile.show !== "insect") el.append(iconSpan(tile.icon)); // insects leave
+    if (tile.show === "memory") {
+      el.style.setProperty("--c", state.memories[tile.memory]?.color ?? "#999"); // the author's colour
+      el.dataset.memory = tile.memory; // tap it to read it again
+    }
     const id = `${game.id}:${k}`;
-    if (!firstSeen.has(id)) firstSeen.set(id, arriving ? -Infinity : performance.now());
+    if (!firstSeen.has(id)) {
+      firstSeen.set(id, arriving ? -Infinity : performance.now());
+      if (!arriving && tile.show === "memory") queueCard(tile.memory);
+    }
     const age = performance.now() - firstSeen.get(id);
     if (age < FLIP_MS) {
       el.classList.add("flip");
@@ -129,6 +139,50 @@ function drawPops() {
   }
 }
 
+// Full night: the wolf comes out onto the field (nothing scary).
+function drawWolf() {
+  if (state.game?.status !== "lost") return;
+  const el = document.createElement("div");
+  el.className = "wolf";
+  el.innerHTML = '<span class="wolf-icon">🐺</span><span class="howl">Ahouuu!</span>';
+  grid.append(el);
+}
+
+// --- The sky: each trap brings the night one step closer ---
+// Stars appear from dusk and twinkle; the sun goes down, the moon comes up.
+const sky = document.getElementById("sky");
+const skyIcon = document.getElementById("sky-icon"); // laptop: top-right corner
+const stripIcon = document.getElementById("sky-strip-icon"); // phone: strip above the bar
+const stars = [];
+for (let i = 0; i < 45; i++) {
+  const star = document.createElement("span");
+  star.className = "star";
+  star.textContent = i % 5 ? "·" : "✦";
+  star.style.left = `${Math.random() * 100}%`;
+  star.style.top = `${Math.random() * 100}%`;
+  star.style.animationDelay = `-${(Math.random() * 3).toFixed(2)}s`;
+  star.dataset.from = String(3 + (i % 4)); // more stars each step from 3 to 6
+  sky.append(star);
+  stars.push(star);
+}
+// For each night step 0..6: sun or moon, how high it is in the corner (%
+// from the top), and how far along the phone strip (% from the left).
+const SKY = [
+  ["☀️", 6, 6], ["☀️", 14, 20], ["☀️", 24, 34], ["🌅", 34, 50],
+  ["🌙", 22, 66], ["🌙", 12, 80], ["🌕", 6, 94],
+];
+
+function renderSky() {
+  const night = Math.min(state.game?.night ?? 0, NIGHT_STEPS);
+  document.body.dataset.night = night;
+  document.body.style.setProperty("--night", (night / NIGHT_STEPS).toFixed(3));
+  for (const star of stars) star.hidden = night < Number(star.dataset.from);
+  const [icon, top, along] = SKY[Math.round((night / NIGHT_STEPS) * 6)];
+  skyIcon.textContent = stripIcon.textContent = icon;
+  skyIcon.style.top = `${top}%`;
+  stripIcon.style.left = `${along}%`;
+}
+
 function iconSpan(icon) {
   const el = document.createElement("span");
   el.className = "icon";
@@ -207,8 +261,13 @@ const timerFill = timer.firstElementChild;
 
 function renderStatus() {
   const game = state.game;
+  if (game?.status === "lost") {
+    statusText.textContent = "🐺 The wolf is out, let's go to bed! The memories still hidden will wait for next time.";
+  } else if (game?.status === "won") {
+    statusText.textContent = "✨ Every memory found!";
+  }
   if (!choosing()) {
-    statusText.textContent = "Joining…";
+    if (!game || game.status === "playing") statusText.textContent = "Joining…";
     readyButton.hidden = true;
     return;
   }

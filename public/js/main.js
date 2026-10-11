@@ -5,7 +5,8 @@ import { runLobby } from "./lobby.js";
 import { syncGame, spawnSquare } from "./game.js";
 import { state } from "./state.js";
 import { render } from "./render.js";
-import { pickSquare, movePick, inReach, maybeResolve } from "./rounds.js";
+import { pickSquare, movePick, inReach, choosing, maybeResolve } from "./rounds.js";
+import { openCard } from "./card.js";
 import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
@@ -45,8 +46,8 @@ document.addEventListener("keydown", (e) => {
   movePick(...move);
 });
 
-// Tap or click a square within reach: that's my pick. On someone else's
-// circle out of reach: send them a heart. Pointer events cover mouse,
+// Tap or click a square within reach: that's my pick. Out of reach: a found
+// memory opens again, and someone else's circle gets a heart. Pointer events cover mouse,
 // finger and pen.
 const grid = document.getElementById("grid");
 const clamp = (n) => Math.max(0, Math.min(SIZE - 1, n));
@@ -56,6 +57,10 @@ grid.addEventListener("pointerdown", (e) => {
   const rect = grid.getBoundingClientRect();
   const x = clamp(Math.floor(((e.clientX - rect.left) / rect.width) * SIZE));
   const y = clamp(Math.floor(((e.clientY - rect.top) / rect.height) * SIZE));
+  // A found memory, not something I'm picking: open it again.
+  const memoryTile = [...grid.querySelectorAll(".tile.memory")]
+    .find((el) => Number(el.style.gridColumn) === x + 1 && Number(el.style.gridRow) === y + 1);
+  if (memoryTile && !(choosing() && inReach(x, y))) return openCard(memoryTile.dataset.memory);
   const circle = e.target.closest(".circle");
   if (circle && circle.dataset.id !== myId && !inReach(x, y)) return sendHeart(circle.dataset.id);
   pickSquare(x, y);
