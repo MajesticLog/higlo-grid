@@ -69,9 +69,12 @@ grid.addEventListener("pointerdown", (e) => {
   const x = clamp(Math.floor(((e.clientX - rect.left) / rect.width) * SIZE));
   const y = clamp(Math.floor(((e.clientY - rect.top) / rect.height) * SIZE));
   // A found memory, not something I'm picking: open it again.
-  const memoryTile = [...grid.querySelectorAll(".tile.memory")]
+  const memoryTile = [...grid.querySelectorAll(".tile.clue, .tile.memory")]
     .find((el) => Number(el.style.gridColumn) === x + 1 && Number(el.style.gridRow) === y + 1);
-  if (memoryTile && !(choosing() && inReach(x, y))) return openCard(memoryTile.dataset.memory);
+  if (memoryTile && !(choosing() && inReach(x, y))) {
+    const n = memoryTile.dataset.clue;
+    return openCard({ memory: memoryTile.dataset.memory, n: n == null ? undefined : Number(n) });
+  }
   const circle = e.target.closest(".circle");
   if (circle && circle.dataset.id !== myId && !inReach(x, y)) return sendHeart(circle.dataset.id);
   pickSquare(x, y);

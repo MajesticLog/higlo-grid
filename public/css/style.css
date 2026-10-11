@@ -145,6 +145,31 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   background: #fff;
 }
 
+/* A found clue: the author's animal, framed in their colour, with which of
+   their 3 clues it is in the corner. Tap it to read it again. */
+.tile.clue {
+  --c: #999;
+  position: relative;
+  border: 3px solid var(--c);
+  background: color-mix(in srgb, var(--c) 18%, #fff);
+}
+
+.clue-number {
+  position: absolute;
+  right: -6%;
+  bottom: -6%;
+  min-width: 34cqi;
+  height: 34cqi;
+  border-radius: 999px;
+  background: var(--c);
+  color: #fff;
+  font-size: 24cqi;
+  font-weight: 700;
+  line-height: 34cqi;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+}
+
 /* Squares turned over while you watch: a quick flip.
    0.6s; keep in sync with FLIP_MS in render.js. */
 .tile.flip {

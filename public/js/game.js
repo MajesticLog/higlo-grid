@@ -9,9 +9,10 @@ import { applyMyMove, maybeResolve } from "./rounds.js";
 import { gameChanged } from "./end.js";
 import { eventChanged, firstEventAt } from "./events.js";
 import { renderChest } from "./chest.js";
+import { CLUES } from "./lobby.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
-export const TRAPS = 12;
+export const TRAPS = 8; // was 12: with 3 clues per player, 12 made winning nearly impossible
 export const NIGHT_STEPS = 6; // traps turned over before the wolf comes
 export const START_ROW = SIZE - 1;
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
@@ -37,7 +38,12 @@ export function revealSquare(game, k) {
   if (hidden?.kind === "trap") {
     game.revealed[k] = { show: "trap", icon: "🪤" };
     game.night += 1;
-  } else if (hidden?.kind === "memory") {
+  } else if (hidden?.kind === "clue") {
+    // Shows the author's animal, framed in their colour, so everyone knows
+    // whose memory it's a clue to.
+    const animal = state.memories[hidden.memory]?.animal ?? "🔍";
+    game.revealed[k] = { show: "clue", icon: animal, memory: hidden.memory, n: hidden.n };
+  } else if (hidden?.kind === "memory") { // games from before clues
     game.revealed[k] = { show: "memory", icon: "📜", memory: hidden.memory };
   } else if (Math.random() < INSECT_CHANCE) {
     game.revealed[k] = { show: "insect", icon: pick(INSECTS) };
@@ -46,24 +52,31 @@ export function revealSquare(game, k) {
   }
 }
 
-// After a round: every memory found means a win (even if night fell in the
+// After a round: every clue found means a win (even if night fell in the
 // same round: be kind); full night means the wolf comes out.
+const isTarget = (hidden) => hidden.kind === "clue" || hidden.kind === "memory";
+
 export function checkEnd(game) {
-  const memorySquares = Object.keys(game.board).filter((k) => game.board[k].kind === "memory");
-  if (memorySquares.length > 0 && memorySquares.every((k) => game.revealed[k])) game.status = "won";
+  const targets = Object.keys(game.board).filter((k) => isTarget(game.board[k]));
+  if (targets.length > 0 && targets.every((k) => game.revealed[k])) game.status = "won";
   else if (game.night >= NIGHT_STEPS) game.status = "lost";
 }
 
-// A memory turned over is found for good: it won't be hidden again next game.
-// Every device that sees it may write this; the writes agree, so that's fine.
+// A memory is found once all its clues have turned over: it won't be hidden
+// again next game. Every device that sees it may write this; the writes
+// agree, so that's fine.
 const markedFound = new Set();
 
 function markFound() {
   const game = state.game;
   if (!game) return;
-  for (const tile of Object.values(game.revealed ?? {})) {
-    const id = tile.memory;
-    if (!id || markedFound.has(id) || !state.memories[id] || state.memories[id].foundAt) continue;
+  const squaresOf = {}; // memoryId -> its squares on the board
+  for (const [k, hidden] of Object.entries(game.board ?? {})) {
+    if (isTarget(hidden)) (squaresOf[hidden.memory] ??= []).push(k);
+  }
+  for (const [id, squares] of Object.entries(squaresOf)) {
+    if (markedFound.has(id) || !state.memories[id] || state.memories[id].foundAt) continue;
+    if (!squares.every((k) => game.revealed?.[k])) continue;
     markedFound.add(id);
     update(sessionRef(`memories/${id}`), { foundAt: now(), gameId: game.id });
   }
@@ -118,16 +131,43 @@ function freeSquare(game) {
   return options.length ? pick(options) : null;
 }
 
-// Hide any memory that isn't in the field yet: a new one written in the
-// lobby, or one left unfound in an earlier game. Returns how many it hid.
+// A memory's clues go close together: within a 3×3 area, so finding one
+// tells the group the others are near (the quest). Falls back to anywhere
+// if the field is too crowded.
+function clueSquares(game) {
+  const free = (k) => !game.board[k] && !game.revealed[k];
+  for (let tries = 0; tries < 200; tries++) {
+    const cx = 1 + Math.floor(Math.random() * (SIZE - 2));
+    const cy = 1 + Math.floor(Math.random() * (START_ROW - 1));
+    const area = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (free(key(cx + dx, cy + dy))) area.push(key(cx + dx, cy + dy));
+      }
+    }
+    if (area.length >= CLUES) return area.sort(() => Math.random() - 0.5).slice(0, CLUES);
+  }
+  const squares = [];
+  for (let n = 0; n < CLUES; n++) {
+    const k = freeSquare(game);
+    if (!k) break;
+    squares.push(k);
+    game.board[k] = { kind: "taken" }; // so the next pick avoids it; replaced below
+  }
+  return squares;
+}
+
+// Hide the clues of any memory that isn't in the field yet: a new one
+// written in the lobby, or one left unfound in an earlier game. Memories
+// from before clues existed stay in the chest but aren't hidden any more.
+// Returns how many it hid.
 function hideMissingMemories(game) {
   const hidden = new Set(Object.values(game.board).map((c) => c.memory).filter(Boolean));
   const missing = Object.entries(state.memories)
-    .filter(([id, m]) => !m.foundAt && !hidden.has(id))
+    .filter(([id, m]) => !m.foundAt && m.clues?.length === CLUES && !hidden.has(id))
     .map(([id]) => id);
   for (const id of missing) {
-    const square = freeSquare(game);
-    if (square) game.board[square] = { kind: "memory", memory: id };
+    clueSquares(game).forEach((k, n) => { game.board[k] = { kind: "clue", memory: id, n }; });
   }
   return missing.length;
 }

@@ -1,45 +1,59 @@
-// Memory cards: when a memory turns over, it opens for everyone, with who
-// wrote it. Each device closes its own card. Found memories reopen with a tap.
+// Cards: when a clue turns over, it opens for everyone, saying whose memory
+// it belongs to ("🐶 Mathilde's clue, 2 of 3"). Each device closes its own.
+// Found clues reopen with a tap. (Games from before clues hid whole
+// memories; those still open as memory cards.)
 import { state } from "./state.js";
+import { CLUES } from "./lobby.js";
 
-const CARD_DELAY_MS = 900; // let the 📜 pop up first
+const CARD_DELAY_MS = 900; // let the clue pop up first
 
 const card = document.getElementById("card");
+const heading = document.getElementById("card-found");
 const promptText = document.getElementById("card-prompt");
 const text = document.getElementById("card-text");
 const author = document.getElementById("card-author");
 const closeButton = document.getElementById("card-close");
 
-const queue = []; // memory ids waiting, if several turn over in one round
+const queue = []; // {memory, n?} waiting, if several turn over in one round
 const shown = new Set();
 
-// A memory just turned over while I was watching: show it once.
-export function queueCard(id) {
-  if (!state.joined || shown.has(id)) return; // not over the lobby
-  shown.add(id);
+// A clue (or an old-style memory) just turned over while I was watching:
+// show it once.
+export function queueCard(item) {
+  const tag = `${item.memory}:${item.n}`;
+  if (!state.joined || shown.has(tag)) return; // not over the lobby
+  shown.add(tag);
   setTimeout(() => {
-    queue.push(id);
+    queue.push(item);
     if (card.hidden) showNext();
   }, CARD_DELAY_MS);
 }
 
-// Tapping a found memory on the grid opens it again.
-export function openCard(id) {
-  queue.unshift(id);
+// Tapping a found clue on the grid opens it again.
+export function openCard(item) {
+  queue.unshift(item);
   showNext();
 }
 
 function showNext() {
-  const id = queue.shift();
-  const memory = id && state.memories[id];
+  const item = queue.shift();
+  const memory = item && state.memories[item.memory];
   if (!memory) {
     card.hidden = true;
     return;
   }
+  const who = `${memory.animal ?? ""} ${memory.name ?? ""}`.trim();
   promptText.textContent = memory.prompt ?? "";
-  text.textContent = memory.text;
-  author.textContent = `${memory.animal ?? ""} ${memory.name ?? ""}`.trim();
   card.style.setProperty("--c", memory.color ?? "#999");
+  if (item.n == null) {
+    heading.textContent = "📜 A memory!";
+    text.textContent = memory.text;
+    author.textContent = who;
+  } else {
+    heading.textContent = `🔍 ${who}'s clue, ${item.n + 1} of ${CLUES}`;
+    text.textContent = memory.clues?.[item.n] ?? "";
+    author.textContent = "";
+  }
   card.hidden = false;
   closeButton.focus();
 }

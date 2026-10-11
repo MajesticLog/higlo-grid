@@ -59,14 +59,23 @@ function drawTiles() {
     el.className = `tile ${tile.show}`;
     place(el, ...squareOf(k));
     if (tile.show !== "insect") el.append(iconSpan(tile.icon)); // insects leave
-    if (tile.show === "memory") {
+    if (tile.show === "memory" || tile.show === "clue") {
       el.style.setProperty("--c", state.memories[tile.memory]?.color ?? "#999"); // the author's colour
       el.dataset.memory = tile.memory; // tap it to read it again
+    }
+    if (tile.show === "clue") {
+      el.dataset.clue = tile.n;
+      const number = document.createElement("span");
+      number.className = "clue-number"; // which of the 3 clues
+      number.textContent = tile.n + 1;
+      el.append(number);
     }
     const id = `${game.id}:${k}`;
     if (!firstSeen.has(id)) {
       firstSeen.set(id, arriving ? -Infinity : performance.now());
-      if (!arriving && tile.show === "memory") queueCard(tile.memory);
+      if (!arriving && (tile.show === "memory" || tile.show === "clue")) {
+        queueCard({ memory: tile.memory, n: tile.n });
+      }
     }
     const age = performance.now() - firstSeen.get(id);
     if (age < FLIP_MS) {
@@ -82,7 +91,7 @@ function drawTiles() {
     const el = document.createElement("div");
     el.className = "peek";
     place(el, ...squareOf(k));
-    el.append(iconSpan(hidden.kind === "trap" ? "🪤" : "📜"));
+    el.append(iconSpan({ trap: "🪤", clue: "🔍" }[hidden.kind] ?? "📜"));
     grid.append(el);
   }
 }
@@ -139,7 +148,7 @@ function drawPicks() {
 
 const pickSquares = (p) => (p.sheep ? sheepLine(p.x, p.y, p.sheep) : [[p.x, p.y]]);
 
-// Squares a sheep refused: something is hiding there (a memory or a trap).
+// Squares a sheep refused: something is hiding there (a clue or a trap).
 function drawSniffed() {
   const game = state.game;
   if (!game) return;

@@ -66,7 +66,7 @@ function fill() {
     section.append(heading, items);
     list.append(section);
   }
-  const waiting = Object.values(state.memories).length - found().length;
+  const waiting = Object.values(state.memories).filter((m) => m.clues && !m.foundAt).length;
   hiddenNote.textContent = waiting > 0
     ? `🌱 ${waiting} ${waiting === 1 ? "memory is" : "memories are"} still hidden in the field.`
     : "";
