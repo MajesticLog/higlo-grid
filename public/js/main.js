@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getDatabase, ref, push, set, update, get, onValue, onDisconnect, runTransaction,
+  getDatabase, ref, push, set, update, get, remove, onValue, onChildAdded,
+  onDisconnect, runTransaction,
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -92,16 +93,23 @@ onValue(ref(db, ".info/connected"), async (snap) => {
 
 // --- Drawing: the database is the source of truth ---
 const grid = document.getElementById("grid");
+let players = []; // latest snapshot, kept so hearts can trigger a redraw
+const hearts = new Map(); // playerId -> time the heart started showing
 
 onValue(playersRef, (snap) => {
+  players = [];
+  snap.forEach((child) => { players.push({ id: child.key, ...child.val() }); });
+  render();
+});
+
+function render() {
   // Group players by square; several on one square are drawn side by side.
   const squares = new Map();
-  snap.forEach((child) => {
-    const p = child.val();
+  for (const p of players) {
     const key = `${p.x},${p.y}`;
     if (!squares.has(key)) squares.set(key, []);
-    squares.get(key).push({ id: child.key, ...p });
-  });
+    squares.get(key).push(p);
+  }
 
   grid.replaceChildren();
   for (const group of squares.values()) {
@@ -114,10 +122,45 @@ onValue(playersRef, (snap) => {
       const el = document.createElement("div");
       el.className = "circle" + (p.id === myRef.key ? " me" : "");
       el.style.background = p.color;
+      el.dataset.id = p.id;
+      if (hearts.has(p.id)) el.append(heartElement(hearts.get(p.id)));
       square.append(el);
     }
     grid.append(square);
   }
+}
+
+// --- Hearts: tap someone else's circle to send them one ---
+const HEART_MS = 1400; // must match the heart animation in style.css
+const heartsRef = ref(db, `${sessionPath}/hearts`);
+
+function heartElement(startedAt) {
+  const el = document.createElement("span");
+  el.className = "heart";
+  el.textContent = "❤️";
+  // Redraws rebuild the circles; a negative delay resumes the animation
+  // where it was instead of restarting it.
+  el.style.animationDelay = `${startedAt - performance.now()}ms`;
+  return el;
+}
+
+function sendHeart(to) {
+  const heartRef = push(heartsRef, { to, from: myRef.key });
+  // The sender cleans up, so hearts don't pile up in the database.
+  onDisconnect(heartRef).remove();
+  setTimeout(() => remove(heartRef), HEART_MS);
+}
+
+onChildAdded(heartsRef, (snap) => {
+  const { to } = snap.val();
+  const startedAt = performance.now();
+  hearts.set(to, startedAt);
+  render();
+  setTimeout(() => {
+    if (hearts.get(to) !== startedAt) return; // a newer heart took over
+    hearts.delete(to);
+    render();
+  }, HEART_MS);
 });
 
 // --- Moving ---
@@ -168,6 +211,9 @@ function step() {
 
 grid.addEventListener("pointerdown", (e) => {
   if (!joined) return;
+  // On someone else's circle: send a heart instead of walking.
+  const target = e.target.closest(".circle");
+  if (target && target.dataset.id !== myRef.key) return sendHeart(target.dataset.id);
   const rect = grid.getBoundingClientRect();
   walkTarget = {
     x: clamp(Math.floor(((e.clientX - rect.left) / rect.width) * SIZE)),
