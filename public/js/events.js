@@ -14,8 +14,8 @@ import {
 // Test aid: with ?peek in the link, only 10 to 15 seconds of calm between
 // events after the first one.
 const fast = new URLSearchParams(location.search).has("peek");
-const FIRST_EVENT_MS = fast ? [30000, 40000] : [30000, 90000]; // never in a game's first 30 seconds
-const CALM_MS = fast ? [10000, 15000] : [45000, 120000]; // calm after each event ends: 45 s to 2 min
+const FIRST_EVENT_MS = fast ? [30000, 40000] : [45000, 60000]; // the first one 45 s to 1 min into a game
+const CALM_MS = fast ? [10000, 15000] : [40000, 55000]; // calm after each event: one every 45 s to 1 min
 const NIGHT_FROM = 3; // night step from which the night events take over
 const DAY = ["balloon", "birds", "rain"];
 const NIGHT = ["owl", "star", "ufo"];
