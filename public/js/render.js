@@ -7,6 +7,9 @@ import {
 } from "./rounds.js";
 import { queueCard, explainOnce } from "./card.js";
 import { playBleat } from "./sound.js";
+import {
+  updateReplay, setReplayTick, replayActive, countdown, notYet, replayPosition, grazeStartFor, nightShown,
+} from "./replay.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const FLIP_MS = 600; // must match the flip animation in style.css
@@ -18,7 +21,12 @@ const grid = document.getElementById("grid");
 // Test aid: add ?peek to the link to see what's hidden under the grass.
 const peek = new URLSearchParams(location.search).has("peek");
 
+setReplayTick(() => render());
+const countdownEl = document.getElementById("countdown");
+
 export function render() {
+  // A new round result: start its replay (unless I've only just arrived).
+  if (state.game) updateReplay(gameSeen !== state.game.id);
   grid.replaceChildren();
   drawTiles();
   drawSniffed();
@@ -27,7 +35,15 @@ export function render() {
   drawPops();
   drawGrazing();
   drawWolf();
-  fireflies.hidden = state.game?.status !== "won";
+  fireflies.hidden = state.game?.status !== "won" || replayActive();
+  const count = countdown();
+  countdownEl.hidden = count === null;
+  if (count !== null && countdownEl.textContent !== String(count)) {
+    countdownEl.textContent = count; // a new number: restart its pop
+    countdownEl.style.animation = "none";
+    void countdownEl.offsetWidth;
+    countdownEl.style.animation = "";
+  }
   renderSky();
   renderStatus();
   renderTimer();
@@ -54,6 +70,7 @@ function drawTiles() {
   justArrived = arriving;
   gameSeen = game.id;
   for (const [k, tile] of Object.entries(game.revealed ?? {})) {
+    if (notYet(k)) continue; // the replay hasn't reached it: still tall grass
     const el = document.createElement("div");
     el.className = `tile ${tile.show}`;
     place(el, ...squareOf(k));
@@ -197,56 +214,59 @@ function drawGrazing() {
   const runs = game?.grazed;
   if (!runs) return;
   const tag = `${game.id}:${game.round}`;
+  const startOf = (i) => grazeStartFor(i) ?? grazeStart; // when the replay gets to this sheep
   if (grazeSeen !== tag) {
     // First time I see this grazing: animate it, unless I just arrived,
     // with a "bêêê" at each square a sheep refuses.
     grazeStart = justArrived ? -Infinity : performance.now();
     grazeSeen = tag;
     if (!justArrived) {
-      for (const run of runs) {
+      runs.forEach((run, i) => {
         for (const k of run.refused ?? []) {
-          setTimeout(playBleat, (run.line.indexOf(k) + 1) * SHEEP_STEP_MS - 300);
+          const at = startOf(i) + (run.line.indexOf(k) + 1) * SHEEP_STEP_MS - 300;
+          setTimeout(playBleat, Math.max(0, at - performance.now()));
         }
-      }
+      });
     }
   }
-  const age = performance.now() - grazeStart;
-  if (age > SHEEP_STEP_MS * (SHEEP_LENGTH + 2)) return; // the walk plus the last "Baa?"
-  for (const run of runs) {
-    // The lane covers the sheep's squares; the sheep walks it from its first
-    // square, backwards along the lane when it goes left or up.
-    const squares = run.line.map(squareOf);
-    const left = Math.min(...squares.map(([x]) => x));
-    const top = Math.min(...squares.map(([, y]) => y));
-    const across = ["right", "left", "h"].includes(run.dir);
-    const lane = document.createElement("div");
-    lane.className = `graze ${across ? "h" : "v"}`;
-    if (run.dir === "left" || run.dir === "up") lane.classList.add("reverse");
-    if (run.dir === "right" || run.dir === "h") lane.classList.add("face-right");
-    if (across) {
-      lane.style.gridColumn = `${left + 1} / span ${SHEEP_LENGTH}`;
-      lane.style.gridRow = top + 1;
-    } else {
-      lane.style.gridColumn = left + 1;
-      lane.style.gridRow = `${top + 1} / span ${SHEEP_LENGTH}`;
-    }
-    const walker = document.createElement("span");
-    walker.className = "walker";
-    walker.append(iconSpan("🐑"));
-    walker.style.animationDelay = `${-age}ms`;
-    lane.append(walker);
-    grid.append(lane);
-    for (const k of run.refused ?? []) {
-      const i = run.line.indexOf(k);
-      const baa = document.createElement("div");
-      baa.className = "baa";
-      place(baa, ...squareOf(k));
-      const bubble = document.createElement("span");
-      bubble.textContent = "Baa?";
-      bubble.style.animationDelay = `${(i + 1) * SHEEP_STEP_MS - 300 - age}ms`; // as the sheep gets there
-      baa.append(bubble);
-      grid.append(baa);
-    }
+  runs.forEach((run, i) => drawRun(run, performance.now() - startOf(i)));
+}
+
+function drawRun(run, age) {
+  if (age < 0 || age > SHEEP_STEP_MS * (SHEEP_LENGTH + 2)) return; // not yet, or done
+  // The lane covers the sheep's squares; the sheep walks it from its first
+  // square, backwards along the lane when it goes left or up.
+  const squares = run.line.map(squareOf);
+  const left = Math.min(...squares.map(([x]) => x));
+  const top = Math.min(...squares.map(([, y]) => y));
+  const across = ["right", "left", "h"].includes(run.dir);
+  const lane = document.createElement("div");
+  lane.className = `graze ${across ? "h" : "v"}`;
+  if (run.dir === "left" || run.dir === "up") lane.classList.add("reverse");
+  if (run.dir === "right" || run.dir === "h") lane.classList.add("face-right");
+  if (across) {
+    lane.style.gridColumn = `${left + 1} / span ${SHEEP_LENGTH}`;
+    lane.style.gridRow = top + 1;
+  } else {
+    lane.style.gridColumn = left + 1;
+    lane.style.gridRow = `${top + 1} / span ${SHEEP_LENGTH}`;
+  }
+  const walker = document.createElement("span");
+  walker.className = "walker";
+  walker.append(iconSpan("🐑"));
+  walker.style.animationDelay = `${-age}ms`;
+  lane.append(walker);
+  grid.append(lane);
+  for (const k of run.refused ?? []) {
+    const i = run.line.indexOf(k);
+    const baa = document.createElement("div");
+    baa.className = "baa";
+    place(baa, ...squareOf(k));
+    const bubble = document.createElement("span");
+    bubble.textContent = "Baa?";
+    bubble.style.animationDelay = `${(i + 1) * SHEEP_STEP_MS - 300 - age}ms`; // as the sheep gets there
+    baa.append(bubble);
+    grid.append(baa);
   }
 }
 
@@ -271,7 +291,7 @@ function drawPops() {
 
 // Full night: the wolf comes out onto the field (nothing scary).
 function drawWolf() {
-  if (state.game?.status !== "lost") return;
+  if (state.game?.status !== "lost" || replayActive()) return; // after the replay
   const el = document.createElement("div");
   el.className = "wolf";
   el.innerHTML = '<span class="wolf-icon">🐺</span><span class="howl">Ahouuu!</span>';
@@ -317,7 +337,7 @@ const SKY = [
 ];
 
 function renderSky() {
-  const night = Math.min(state.game?.night ?? 0, NIGHT_STEPS);
+  const night = nightShown(Math.min(state.game?.night ?? 0, NIGHT_STEPS)); // traps go off as reached
   document.body.dataset.night = night;
   document.body.style.setProperty("--night", (night / NIGHT_STEPS).toFixed(3));
   for (const star of stars) star.hidden = night < Number(star.dataset.from);
@@ -374,6 +394,11 @@ function stepWalkers() {
 }
 
 function drawnAt(p) {
+  const replayed = replayPosition(p.id); // during a replay, the replay walks them
+  if (replayed) {
+    shown.set(p.id, replayed);
+    return replayed;
+  }
   if (!shown.has(p.id)) shown.set(p.id, { x: p.x, y: p.y }); // just arrived: no walk
   const at = shown.get(p.id);
   if ((at.x !== p.x || at.y !== p.y) && !walker) walker = setInterval(stepWalkers, WALK_STEP_MS);
@@ -453,6 +478,12 @@ function renderStatus() {
   const game = state.game;
   if (state.joined && !state.online) {
     say("📶 Connection lost, reconnecting…");
+    readyButton.hidden = sheepButton.hidden = endOpen.hidden = true;
+    return;
+  }
+  // During a replay, nothing else yet: not the wolf, not the end, not guessing.
+  if (replayActive()) {
+    say("👀 Watch what happens…", "Each move plays one after the other");
     readyButton.hidden = sheepButton.hidden = endOpen.hidden = true;
     return;
   }

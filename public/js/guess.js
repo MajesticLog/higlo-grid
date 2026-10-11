@@ -13,6 +13,7 @@ import { state } from "./state.js";
 import { now, nextGuess, checkEnd } from "./game.js";
 import { CLUES } from "./lobby.js";
 import { playTwinkle } from "./sound.js";
+import { replayEndsAt } from "./replay.js";
 
 const SHOW_DELAY_MS = 2500; // let the last clue's card show first
 const gameRef = sessionRef("game");
@@ -161,7 +162,11 @@ export function renderGuess() {
   const guess = game.guess;
   const last = game.lastGuess;
   const lastTag = last && `${game.id}:${last.at}`;
-  const guessReady = guess && memoryOf(guess) && seenFor(`${game.id}:${guess.memory}`) >= SHOW_DELAY_MS;
+  // After the replay and its clue cards.
+  const replayLeft = replayEndsAt() - performance.now();
+  if (guess && replayLeft > 0) setTimeout(renderGuess, replayLeft + SHOW_DELAY_MS + 50);
+  const guessReady = guess && memoryOf(guess) && replayLeft <= 0
+    && seenFor(`${game.id}:${guess.memory}`) >= SHOW_DELAY_MS;
   const resultOpen = last && state.memories[last.memory] && closedResult !== lastTag && seenFor(lastTag) !== Infinity;
   // A result just ended shows first (with "Next" if another guess is
   // waiting), so its answers never mix with the next guess.

@@ -10,6 +10,7 @@ import { state, rememberPosition } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
 import { key, now, revealSquare, checkEnd, nextGuess } from "./game.js";
 import { playBleat } from "./sound.js";
+import { replayActive } from "./replay.js";
 import { isAuthor } from "./guess.js";
 
 export const SHEEP_PER_PLAYER = 3; // per game
@@ -68,7 +69,7 @@ let sheepRound = null; // the round in which I tapped 🐑, or null
 export const inSheepMode = () => sheepRound !== null && sheepRound === state.game?.round;
 
 function toggleSheep() {
-  if (!choosing() || myPick()?.ready) return;
+  if (!choosing() || replayActive() || myPick()?.ready) return;
   if (!inSheepMode() && sheepLeft() <= 0) return nudgeStatus();
   sheepRound = inSheepMode() ? null : state.game.round;
   if (inSheepMode()) playBleat(); // "bêêê", here I come
@@ -86,7 +87,7 @@ document.getElementById("sheep").addEventListener("click", toggleSheep);
 // In sheep mode, it places the sheep's line; tapping the same square again
 // turns it to the next direction (up, right, down, left).
 export function pickSquare(x, y) {
-  if (!choosing()) return;
+  if (!choosing() || replayActive()) return; // watch the replay first
   if (!inReach(x, y)) return nudgeStatus();
   if (inSheepMode()) {
     const pick = myPick();
@@ -112,7 +113,7 @@ export function movePick(dx, dy) {
 // Ready with no pick means "the square I'm standing on". In sheep mode, the
 // line has to be placed first.
 function ready() {
-  if (!choosing()) return;
+  if (!choosing() || replayActive()) return;
   if (inSheepMode() && !myPick()?.sheep) return nudgeStatus();
   changeRound((game) => {
     const pick = game.picks[myId] ?? { x: state.me.x, y: state.me.y };
@@ -200,6 +201,7 @@ export function maybeResolve() {
     const squares = new Map(); // "x_y" -> the players turning it over
     const walked = []; // squares walked through on the way
     const sheep = [];
+    const actions = []; // the order the replay plays things in (replay.js)
     for (const p of state.players) {
       const pick = game.picks[p.id];
       const used = game.sheepUsed[p.id] ?? 0;
@@ -214,6 +216,7 @@ export function maybeResolve() {
       const k = key(to.x, to.y);
       squares.set(k, [...(squares.get(k) ?? []), p]);
       walked.push(...pathBetween(p, to));
+      actions.push({ kind: "walk", player: p.id, from: { x: p.x, y: p.y }, path: [...pathBetween(p, to), k] });
     }
     for (const [k, players] of squares) {
       // My own clue can't be turned over by me alone (it would give my
@@ -231,11 +234,13 @@ export function maybeResolve() {
     // player lands on turns over (and is read) even if another walks past it.
     for (const k of walked) walkThrough(game, k);
     game.grazed = sheep.map((pick) => graze(game, pick)); // after the players: they get there first
+    game.grazed.forEach((_, run) => actions.push({ kind: "graze", run }));
     if (game.grazed.length === 0) game.grazed = null;
     nextGuess(game); // all of a memory's clues found: guess it first
     checkEnd(game);
     game.moves = moves; // each device moves its own player (see applyMyMove)
     game.round += 1;
+    game.replay = { tag: `${game.id}:${game.round}`, actions };
     game.picks = null;
     game.deadline = null;
     game.updatedAt = now();

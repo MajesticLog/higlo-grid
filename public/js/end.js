@@ -9,6 +9,7 @@ import { state } from "./state.js";
 import { newBoard } from "./game.js";
 import { backToLobby, takePlayAgain } from "./lobby.js";
 import { playTrumpet, playHowl } from "./sound.js";
+import { replayEndsAt } from "./replay.js";
 
 const END_DELAY_MS = 3500; // time to enjoy the fireflies or the wolf first
 
@@ -42,9 +43,10 @@ export function gameChanged(previous, game) {
     // Watched it happen: sound, then the screen after a moment. Arrived late: show it now.
     const live = previous?.id === game.id && previous.status === "playing";
     if (live) {
-      if (game.status === "won") playTrumpet();
-      else playHowl();
-      timer = setTimeout(showEnd, END_DELAY_MS);
+      // After the replay: the last moves first, then the sound and the screen.
+      const wait = Math.max(0, replayEndsAt() - performance.now());
+      setTimeout(game.status === "won" ? playTrumpet : playHowl, wait);
+      timer = setTimeout(showEnd, wait + END_DELAY_MS);
     } else {
       showEnd();
     }

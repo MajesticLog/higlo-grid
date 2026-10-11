@@ -5,6 +5,7 @@
 // before clues hid whole memories; those still open as memory cards.)
 import { state } from "./state.js";
 import { CLUES } from "./lobby.js";
+import { replayEndsAt } from "./replay.js";
 
 const CARD_DELAY_MS = 900; // let the clue pop up first
 
@@ -23,11 +24,13 @@ export function queueCard(item) {
   if (!state.joined || shown.has(tag)) return; // not over the lobby
   shown.add(tag);
   pending.push(item);
+  // At the end of the replay, all of this round's clues together.
+  const wait = Math.max(CARD_DELAY_MS, replayEndsAt() - performance.now() + 400);
   timer ??= setTimeout(() => {
     timer = null;
     show(pending);
     pending = [];
-  }, CARD_DELAY_MS);
+  }, wait);
 }
 
 // Tapping a found clue on the grid opens it again, on its own.

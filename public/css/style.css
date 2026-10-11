@@ -208,16 +208,18 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   box-shadow: 0 0 0 2px #fff;
 }
 
-/* Squares turned over while you watch: a quick flip.
+/* Squares turned over while you watch: the short grass grows into place
+   from the middle of the square, with a little bounce. (A flip used to show
+   plain green blocks squeezed into thin rectangles.)
    0.6s; keep in sync with FLIP_MS in render.js. */
 .tile.flip {
   animation: flip 0.6s ease-out both;
 }
 
 @keyframes flip {
-  0%   { transform: perspective(200px) rotateY(90deg); background: #7cb342; }
-  50%  { transform: perspective(200px) rotateY(90deg); background: #7cb342; }
-  100% { transform: perspective(200px) rotateY(0); }
+  0%   { transform: scale(0.2); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
 }
 
 /* My sheep's square: tap it again to turn the line. */
@@ -1655,4 +1657,29 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   background: rgba(255, 255, 255, 0.75);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
   pointer-events: none;
+}
+
+/* --- Replay: 3, 2, 1 over the field before the moves play --- */
+#countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-size: min(30vw, 22vh);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 3px #000;
+  animation: count-pop 0.65s ease-out both;
+}
+
+@keyframes count-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  30%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #countdown { animation: none; }
 }
