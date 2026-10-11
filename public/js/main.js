@@ -1,7 +1,8 @@
 // Entry point: lobby, then join the field, keep the player list, wire up the controls.
 import { db, ref, get, set, onValue, onDisconnect } from "./firebase.js";
-import { SIZE, CENTRE, playersRef, myRef, myId } from "./session.js";
+import { SIZE, playersRef, myRef, myId } from "./session.js";
 import { runLobby } from "./lobby.js";
+import { syncGame, spawnSquare } from "./game.js";
 import { state } from "./state.js";
 import { render } from "./render.js";
 import { tryMove, walkTo, stopWalking } from "./moves.js";
@@ -9,29 +10,10 @@ import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
 
-// Free square closest to the centre, ring by ring, so nobody spawns on top of anyone.
-function spawnSquare(players) {
-  const taken = new Set(Object.values(players).map((p) => `${p.x},${p.y}`));
-  for (let ring = 0; ring <= CENTRE; ring++) {
-    const squares = [];
-    for (let y = CENTRE - ring; y <= CENTRE + ring; y++) {
-      for (let x = CENTRE - ring; x <= CENTRE + ring; x++) {
-        if (Math.max(Math.abs(x - CENTRE), Math.abs(y - CENTRE)) === ring) squares.push({ x, y });
-      }
-    }
-    // Within a ring, prefer straight neighbours over diagonal ones.
-    squares.sort((a, b) =>
-      Math.abs(a.x - CENTRE) + Math.abs(a.y - CENTRE) - Math.abs(b.x - CENTRE) - Math.abs(b.y - CENTRE));
-    const free = squares.find((s) => !taken.has(`${s.x},${s.y}`));
-    if (free) return free;
-  }
-  return { x: CENTRE, y: CENTRE }; // grid full: share the centre
-}
-
 // The lobby first: pick an animal and a colour, hide a memory.
 Object.assign(state.me, await runLobby());
 document.getElementById("field").hidden = false;
-Object.assign(state.me, spawnSquare((await get(playersRef)).val() || {}));
+Object.assign(state.me, spawnSquare(Object.values((await get(playersRef)).val() || {})));
 
 // Every time the connection comes up (now, or after a network drop), write
 // myself into the session and ask the server to remove me when I go.
@@ -40,6 +22,7 @@ onValue(ref(db, ".info/connected"), async (snap) => {
   await onDisconnect(myRef).remove();
   await set(myRef, state.me);
   state.joined = true;
+  syncGame(); // start a game if there isn't one, and hide my memory
 });
 
 onValue(playersRef, (snap) => {

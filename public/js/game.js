@@ -1,0 +1,145 @@
+// The field: one game at a time per family link. Grass everywhere, with
+// traps and the family's memories hidden underneath. The bottom row starts
+// turned over, as flowers, and that's where everyone starts.
+import { db, ref, update, onValue, runTransaction } from "./firebase.js";
+import { SIZE, CENTRE, sessionRef, myRef, myId } from "./session.js";
+import { state } from "./state.js";
+import { render } from "./render.js";
+import { stopWalking } from "./moves.js";
+
+// Starting values from docs/game-design.md, to tune after playtests.
+export const TRAPS = 12;
+export const NIGHT_STEPS = 6; // traps turned over before the wolf comes
+export const START_ROW = SIZE - 1;
+const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
+
+const FLOWERS = ["🌼", "🌸", "🌷", "🌻", "🌺"];
+const gameRef = sessionRef("game");
+const memoriesRef = sessionRef("memories");
+
+// Squares are keyed "x_y" (database keys can't contain dots).
+export const key = (x, y) => `${x}_${y}`;
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+export const flower = () => ({ show: "flower", icon: pick(FLOWERS) });
+
+// Server time, so devices with different clocks agree on when a game went quiet.
+let serverOffset = 0;
+onValue(ref(db, ".info/serverTimeOffset"), (snap) => { serverOffset = snap.val() || 0; });
+export const now = () => Date.now() + serverOffset;
+
+// The start row, filled from the middle outwards: 5, 4, 6, 3, 7...
+const START_COLUMNS = [...Array(SIZE).keys()]
+  .sort((a, b) => Math.abs(a - CENTRE) - Math.abs(b - CENTRE) || a - b);
+
+// Joining: the first free start square (shared if the row is full).
+export function spawnSquare(players) {
+  const taken = new Set(players.map((p) => `${p.x},${p.y}`));
+  const x = START_COLUMNS.find((c) => !taken.has(`${c},${START_ROW}`)) ?? CENTRE;
+  return { x, y: START_ROW };
+}
+
+function newGame() {
+  const game = {
+    id: now().toString(36),
+    status: "playing",
+    updatedAt: now(), // also bumped by every reveal (step 3)
+    night: 0,
+    board: {}, // "x_y" -> {kind: "trap"} or {kind: "memory", memory: id}; empty squares aren't stored
+    revealed: {}, // "x_y" -> {show, icon}
+  };
+  for (let x = 0; x < SIZE; x++) game.revealed[key(x, START_ROW)] = flower();
+  for (let i = 0; i < TRAPS; i++) {
+    const square = freeSquare(game);
+    if (square) game.board[square] = { kind: "trap" };
+  }
+  return game;
+}
+
+// A random square that's still grass and has nothing hidden under it yet.
+function freeSquare(game) {
+  const options = [];
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const k = key(x, y);
+      if (!game.board[k] && !game.revealed[k]) options.push(k);
+    }
+  }
+  return options.length ? pick(options) : null;
+}
+
+// Hide any memory that isn't in the field yet: a new one written in the
+// lobby, or one left unfound in an earlier game. Returns how many it hid.
+function hideMissingMemories(game) {
+  const hidden = new Set(Object.values(game.board).map((c) => c.memory).filter(Boolean));
+  const missing = Object.entries(state.memories)
+    .filter(([id, m]) => !m.foundAt && !hidden.has(id))
+    .map(([id]) => id);
+  for (const id of missing) {
+    const square = freeSquare(game);
+    if (square) game.board[square] = { kind: "memory", memory: id };
+  }
+  return missing.length;
+}
+
+// Start a game if there isn't one (or the last one went quiet), and hide any
+// missing memory. One transaction, so two devices can't create two games or
+// hide the same memory twice.
+export function syncGame() {
+  if (!state.joined) return;
+  runTransaction(gameRef, (game) => {
+    const fresh = !game || now() - (game.updatedAt ?? 0) > IDLE_MS;
+    if (fresh) game = newGame();
+    if (game.status !== "playing") return; // abort; a finished game waits for "play again"
+    game.board ??= {}; // the database drops empty objects
+    game.revealed ??= {};
+    if (hideMissingMemories(game) === 0 && !fresh) return; // nothing to do: abort
+    return game;
+  });
+}
+
+// "New game": replace the game I'm looking at. If someone else already
+// replaced it, their new board stays and mine is dropped.
+export function newBoard() {
+  const seen = state.game?.id ?? null;
+  runTransaction(gameRef, (game) => {
+    if ((game?.id ?? null) !== seen) return; // abort
+    const fresh = newGame();
+    hideMissingMemories(fresh);
+    return fresh;
+  });
+}
+
+onValue(gameRef, (snap) => {
+  const previousId = state.game?.id;
+  state.game = snap.val();
+  if (previousId && state.game && state.game.id !== previousId) backToStart();
+  render();
+});
+
+// A new board: everyone goes back to the start row. Each device moves its own
+// player to the column matching its place in the join order, so nobody collides.
+function backToStart() {
+  if (!state.joined) return;
+  stopWalking();
+  const index = Math.max(0, state.players.findIndex((p) => p.id === myId));
+  state.me.x = START_COLUMNS[index % SIZE];
+  state.me.y = START_ROW;
+  update(myRef, { x: state.me.x, y: state.me.y });
+}
+
+// --- The "New game" button, with an inline "are you sure?" ---
+const ask = document.getElementById("new-game-ask");
+const confirmBox = document.getElementById("new-game-confirm");
+const showConfirm = (show) => { ask.hidden = show; confirmBox.hidden = !show; };
+ask.addEventListener("click", () => showConfirm(true));
+document.getElementById("new-game-no").addEventListener("click", () => showConfirm(false));
+document.getElementById("new-game-yes").addEventListener("click", () => {
+  showConfirm(false);
+  newBoard();
+});
+
+onValue(memoriesRef, (snap) => {
+  state.memories = snap.val() || {};
+  syncGame();
+});

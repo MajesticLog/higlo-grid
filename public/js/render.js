@@ -5,10 +5,46 @@ import { state } from "./state.js";
 const FLOAT_MS = 1400; // must match the float animation in style.css
 
 const grid = document.getElementById("grid");
+// Test aid: add ?peek to the link to see what's hidden under the grass.
+const peek = new URLSearchParams(location.search).has("peek");
 
 export function render() {
   grid.replaceChildren();
+  drawTiles();
   drawPlayers();
+}
+
+// Squares are keyed "x_y" in the database.
+const squareOf = (k) => k.split("_").map(Number);
+
+// Turned-over squares, drawn under the players. The grass is the grid's own
+// background, so squares still covered need no element at all.
+function drawTiles() {
+  const game = state.game;
+  if (!game) return;
+  for (const [k, tile] of Object.entries(game.revealed ?? {})) {
+    const el = document.createElement("div");
+    el.className = `tile ${tile.show}`;
+    place(el, ...squareOf(k));
+    el.append(iconSpan(tile.icon));
+    grid.append(el);
+  }
+  if (!peek) return;
+  for (const [k, hidden] of Object.entries(game.board ?? {})) {
+    if (game.revealed?.[k]) continue;
+    const el = document.createElement("div");
+    el.className = "peek";
+    place(el, ...squareOf(k));
+    el.append(iconSpan(hidden.kind === "trap" ? "🪤" : "📜"));
+    grid.append(el);
+  }
+}
+
+function iconSpan(icon) {
+  const el = document.createElement("span");
+  el.className = "icon";
+  el.textContent = icon ?? "";
+  return el;
 }
 
 function place(el, x, y) {

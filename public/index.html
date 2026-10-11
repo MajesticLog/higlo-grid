@@ -32,6 +32,14 @@
     </section>
     <main id="field" hidden>
       <div id="grid" aria-label="Shared grid"></div>
+      <div id="new-game">
+        <button id="new-game-ask" type="button">🔄 New game</button>
+        <span id="new-game-confirm" hidden>
+          Start a new board?
+          <button id="new-game-yes" type="button">Yes</button>
+          <button id="new-game-no" type="button">No</button>
+        </span>
+      </div>
     </main>
     <p id="share">Share this link to play together: <span id="link"></span></p>
     <script type="module" src="/js/main.js"></script>

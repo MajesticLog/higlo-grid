@@ -6,5 +6,7 @@ export const state = {
   me: { x: CENTRE, y: CENTRE, color: null, animal: null }, // my player record
   joined: false,
   players: [], // [{id, x, y, color, animal}] in join order (push keys sort by time)
+  game: null, // {id, status, night, board, revealed}: see game.js
+  memories: {}, // memoryId -> {text, prompt, name, animal, color, createdAt, foundAt?}
   floats: new Map(), // playerId -> {icon, startedAt}: a ❤️ floating above them
 };
