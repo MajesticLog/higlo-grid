@@ -1,6 +1,6 @@
 # Game design: field
 
-11 October 2026, after playtest 1. Amended the same evening after playtest 2 (clues and guessing). Numbers are placeholding values, to be tweaked after playtests.
+11 October 2026, after playtest 1. Amended the same evening after playtest 2 (clues and guessing) and playtest 3 (clarity, free movement, replay, messages). Numbers are placeholding values, to be tweaked after playtests.
 
 ## Why this design
 
@@ -16,87 +16,109 @@ Playtest 2 (the field, with memories hidden under the grass) with my father adde
 - The game should focus on exchange and communication, with more of a "quest": clues to follow.
 - Guessing *what* a memory is matters more than finding *where* it is. How you get to the memory is as important as the memory itself.
 
+Playtest 3 (clues and guessing) with my sister Amélie and her husband William added:
+
+- The guessing screen was broken (everyone could judge, answers leaked between rounds).
+- The visual hierarchy was confusing: the flower row, players versus clues, where you can move.
+- It was hard to follow what happened in a round: everything turned over at once.
+- They wanted to talk inside the game, to see all the clues found, and to guess as soon as they had an idea.
+- New game kept the clues of people who weren't there.
+
 ## A session in one paragraph
 
-Everyone opens the family link, lands in a lobby where they select their colour/icon, and are then prompted to write a short memory and three clues to it. The clues are hidden under the grass of the grid, close together, along with a few wolf traps. Each round, everyone picks a square at the same time, then all squares turn over together. Empty squares show an insect (less often) or a flower (most common option); clues appear for everyone, marked with their author's colour and animal; traps make night fall a little. Players can also send one of their sheep to graze a line of five squares. When all three clues of a memory are found, the game pauses: everyone else guesses what the memory is, out loud or in writing, and the author says yes or no. If every memory's clues are found before full night, fireflies come out and the family ends around a cup of herbal tea in the victory screen, where all memories can be revisited or saved/downloaded. If night falls, the wolf comes (howling sound, nothing scary), everyone runs off to bed, and the clues that weren't found stay hidden for next time.
+Everyone opens the family link, lands in a lobby where they type their name and pick an animal and a colour, then pick a theme ("Places from our youth", "Food"…) and write a short memory with three clues to it, or keep a memory of theirs still waiting to be guessed. The clues are hidden under tall grass, near each other, along with a few wolf traps. Each round, everyone picks any square at the same time and taps Ready. Then "3, 2, 1" and the round plays back one player at a time: each circle walks to its square, the grass it walks through is cut, a trap on the way goes off and the sky darkens, a clue passed on the way is spotted (🔍!), and the square a player lands on turns over. Players can also send one of their sheep to graze a line of five squares. When all three clues of a memory are found, or whenever someone thinks they know it, the game pauses: everyone else guesses what the memory is, out loud or in writing, and the author says yes or no. If every memory is guessed or found before full night, fireflies come out and the family ends around a cup of herbal tea, where all memories can be revisited or saved. If night falls, the wolf comes (a soft howl, nothing scary) and everyone runs off to bed. Memories not guessed wait in the memory chest for their authors to bring them back next time.
 
 ## 1. Arrival: the lobby
 
-- On opening the link, each player types their name, selects their animal and colour, and is then prompted to write a short memory or message (about 80 characters) and **three clues** to it (about 60 characters each). Use questions or suggestions to guide them: "A memory with someone here", "Something the others don't know about you", and an example of good clues.
+- On opening the link, each player types their name and selects their animal and colour (each one unique, reserved live).
+- Then they pick one of eight themes (places from our youth, food, holidays, toys and games, pets and animals, songs and music, funny moments, a secret about me) and write the memory in a few words (80 characters) and **three clues** (60 characters each) that hint without giving it away. Each theme shows an example memory and clues.
+- A player with a memory still waiting to be guessed can **keep it** for this game instead of writing a new one.
 - Text only for now. Small drawing to be explored in terms of feasability and implemented later.
-- The clues will be hidden under grass squares, close together. The author doesn't see where.
-- Someone joining mid-game writes their memory and clues, and they are hidden under squares that haven't been turned over yet.
-- Players can skip writing (a young child, a reluctant player).
-- Once the memory is written, the player sees how to play (first time), then is transported into the grid-field.
+- Players can skip writing (a young child, a reluctant player). "← Back" returns to name, animal and colour without losing what's typed.
+- Someone joining mid-game brings their memory into the game in progress.
+- The first time on a device, "How to play" opens before the field.
+- The author is recognised by a key made of their device and name, so a later visit with another animal or colour still counts as them.
 
 ## 2. The grid
 
-- The grid is covered in grass. Hidden under it: clues, wolf traps, and empty squares.
-- Each player's three clues are hidden within a small area (about 3×3 squares). Finding one tells the group the others are nearby: that's the quest.
-- Players start aligned at the bottom of the grid, on already upturned empty square showing a flower.
-- Empty squares, once turned over, show an insect (15% of empty squares) that flies away or walks away and fades out, or a flower at random. The garden fills up as the game goes on.
-- Found clues stay visible on their square for the rest of the game, framed in their author's colour with their animal and number (1, 2, 3). Tap one to read it again.
+- The grid is covered in tall, unkept grass. Hidden under it: clues, wolf traps, and empty squares. The bottom row, where everyone starts, hides nothing.
+- Each player's three clues are hidden near each other, within a 5×5 area, but never touching. Finding one tells the group the others are close: that's the quest.
+- Turned-over squares are short grass: plain, with little flowers (dots of colour), or with an insect (15%) that flies or walks away.
+- Found clues stay visible on their square for the rest of the game: a 🔍 on a pale card framed in the author's colour, with their animal and the clue's number (1, 2, 3). Tap one to read it again.
+- A clue spotted on someone's way shows 🔍! until someone lands on it. A square a sheep refused shows ❓.
 
 ## 3. A typical round
 
 1. **Choosing phase.** All players act at the same time. Each player either:
-    - moves their circle to a square within 3 squares of where they are, and confirms; or
+    - picks **any square** on the field (small footprints show the way they'll walk), and taps Ready; or
     - sends a sheep (see 4).
 2. The phase ends as soon as everyone has confirmed, or 20s after the first player confirms (the clock only starts then, so families can talk it over). A player who hasn't confirmed turns over the square they're standing on.
-3. **Reveal.** All chosen squares turn over together. Results are collective, no finger pointing at a person who picked a wolf square.
-4. Two players may choose the same square. It turns over once.
+3. **Replay.** "3, 2, 1", then each player's move plays one after the other: their circle walks square by square.
+    - The grass they walk through turns over (short grass, flowers, insects).
+    - A trap on the way goes off: the sky darkens as they reach it. The longer the walk, the bigger the risk.
+    - A clue on the way is only spotted (🔍!): someone has to land on it to read it.
+    - The square they land on turns over, clue or trap included.
+    - Then the sheep graze. Clue cards and guessing come after the replay.
+4. Results are collective. Two players may choose the same square; it turns over once. Players who meet on a square, even walking through, get a heart.
+5. An author alone on one of their own clues doesn't turn it over (it would give their memory away): it gets a ❓.
 
 ## 4. Sheep
 
 - Each player has 3 sheep per game, shown as sheep icons (no reading needed).
-- Using a sheep replaces turning over a square for that round.
-- The player taps a square: the sheep's line is that square and the next **four** (five squares). Tapping it again turns the line: up, right, down, left.
-- The sheep eats the grass on empty squares, which reveals them (insect or flower).
-- The sheep refuses to touch a square hiding a clue or a trap ("bêêê"). That square stays covered, marked with a ❓. It doesn't say what hides under.
-- A short, funny sheep animation.
+- Using a sheep replaces moving for that round.
+- "Choose where to place your sheep": the player taps a square and the sheep's line is that square and the next **four** (five squares). Tapping it again turns the line: up, right, down, left (↻).
+- The sheep eats the grass on empty squares, which reveals them (with a munching sound).
+- The sheep refuses to touch a square hiding a clue or a trap ("Baa?", a bleat). That square stays covered, marked with a ❓. It doesn't say what hides under.
 
 ## 5. Clues and guessing
 
-- When a clue turns over, a card opens for everyone: "🐶 Mathilde's clue, 2 of 3: …".
-- When all three clues of a memory are found, the rounds pause (no clock, no night) and everyone except the author guesses what the memory is. Each guesser either types a guess or taps "I'll say it out loud", so young children who can't write still take part.
-- The guesses appear together once everyone has answered, so nobody copies. The author can reveal them early if someone has stepped away.
-- The author answers yes or no to each typed guess, or "Yes, someone got it!" for a spoken one.
-- One round of guesses: if nobody gets it, the memory is revealed to everyone ("It was…") and play carries on. Nobody gets stuck.
+- When clues turn over, their cards open for everyone at the end of the replay, stacked if there are several: "🐶 Mathilde's clue, 2 of 3", with the clues found so far for that memory.
+- The 💡 button lists every memory's clues found so far.
+- When all three clues of a memory are found, the rounds pause (no clock, no night) and everyone except the author guesses what the memory is: type it, say it out loud (so young children who can't write still take part), or "not sure yet".
+- **Ready to guess!** From the 💡 list, anyone but the author can start guessing a memory before all its clues are found. If nobody gets it, "Not yet! Keep looking": the memory stays secret. If someone gets it, its remaining clues go back to grass.
+- The guesses appear together once everyone has answered, so nobody copies. The author can show them early if someone has stepped away.
+- Only the author judges: yes or no to each typed guess, or "Yes, someone got it!" for a spoken one. If the author has left, everyone sees the answer and the group judges.
+- One round of guesses once all clues are found: if nobody gets it, the memory is revealed to everyone ("It was…") and play carries on. Nobody gets stuck.
 
 ## 6. Night and the wolf
 
-- The sky starts sunny. Each trap turned over makes it darker by one step, bringing it to dusk and nightfall.
+- The sky starts sunny. Each trap that goes off makes it darker by one step, bringing it to dusk and nightfall, with stars and the moon.
 - The game never shows who turned over a trap. Night falls on the group.
 - At full night (6 steps), the wolf appears and everyone runs off. "The wolf is out, let's go to bed!"
-- Losing the game doesn't punish the players. Memories whose clues weren't all found remain, and will be added to the next game, although hidden in new spots.
+- Losing the game doesn't punish the players: memories not guessed wait in the chest, and their authors can bring them back next game.
 
 ## 7. End of game
 
-**Win:** every memory's three clues found before full night.
+**Win:** every memory guessed or all its clues found, before full night.
 
 - Fireflies, a short victory trumpet sound.
-- End screen: the family around a cup of herbal tea (icons and a small teacup next to them), surrounding the set of memories found, each with its clues and whether the family guessed it.
-- Option to look back through the memories found in this game.
+- End screen: the family around a teapot, each with a cup, and the memories of this game with their clues and whether the family guessed them.
 
 **Loss:** full night.
 
 - The wolf comes. "Let's go to bed!"
-- Options: rewatch found memories if any, back to the main screen, or play again. Each player chooses; the new game starts once everyone has.
-- A message makes clear that the memories that weren't found are not lost: they'll be hidden again in new places next game.
+- A message makes clear that the memories that weren't guessed are not lost.
+
+**Both:** each player chooses Play again (a ✅ appears on their token). When everyone in the field has chosen, everyone goes back to the lobby to keep their memory or write a new one. "New game" (with a confirmation) does the same at any time. Only memories of people who are playing get hidden.
 
 ## 8. Persistence
 
-- Memories belong to the family link, not to one game. They persist between sessions, in a treasure chest icon at the top right corner. Dated and grouped per game rather than a long list.
-- Memories whose clues weren't all found are reshuffled into the next game, with any new ones.
-- Found memories go into the memory chest, which can be revisited and importantly downloaded.
-- Memories written before clues existed stay in the chest but are no longer hidden.
+- Memories belong to the family link, not to one game. They're kept in the memory chest (top right), grouped by game, with the date and who played.
+- The chest shows a memory once it's been guessed or revealed, never before. It can be saved as a small page to keep.
+- A memory not guessed comes back when its author keeps it in the lobby.
+- A game nobody has touched for 2 hours is replaced by a fresh board.
 
-## 9. How to play
+## 9. Talking and sharing
 
-- A few illustrated cards, mostly icons and few words, shown once after the lobby and reopened with a ❔ button in the field.
-- They cover: moving and Ready, traps and the night, sheep, clues and guessing.
-- Traps must be stated plainly: each trap turned over makes the sky darker, and turning over too many (6) brings full night and the wolf. Find all the clues before then.
-- The sheep get their own short explanation the first time a player sends one.
+- 💬 A short message (40 characters) pops up in a bubble above its sender for everyone, then fades.
+- ❤️ Tapping another player sends them a heart. Players who meet on a square get one each.
+- Sky events every 1 to 2 minutes, for whimsy only: a hot-air balloon, birds, a rain shower (day); an owl, a shooting star, a UFO (night). Same moment for everyone, with soft sounds.
+
+## 10. How to play
+
+- Seven illustrated cards, mostly icons and few words, shown once after the lobby and reopened with the ❔ button: find the clues, pick a square, clues, guessing (and 💡), traps and the wolf, sheep, the memory chest.
+- Traps are stated plainly: each trap makes the sky darker, and 6 bring full night and the wolf. Find all the clues before then.
+- The first trap on a device also opens a short card saying so.
 
 ## Principles this follows
 
@@ -106,17 +128,18 @@ See docs/best_practices.md and docs/benchmark.md.
 - No reflex race between homes: positions are locked before the reveal, so latency doesn't matter.
 - The timer only stops a round waiting for someone who has stepped away, no pressure, no stress
 - Losing is gentle and gives a reason to come back.
-- Voice stays on the family's own call. Guesses can be spoken, so writing is never required to play.
+- Voice stays on the family's own call. Guesses can be spoken, so writing is never required to play. Message bubbles help those who aren't on the call.
 
 ## Current values
 
 Grid size: 11*11
-1 memory and 3 clues per player, clues hidden within about 3×3 squares
+1 memory and 3 clues per player, clues hidden in a 5×5 area, never touching
 8 "trap" squares (was 12: with 3 clues per player, 12 traps made winning nearly impossible)
-Takes 6 wolf squares for the wolf to show up - to be adapted after playtesting
+Takes 6 traps for the wolf to show up - to be adapted after playtesting
 3 sheep bonus per player, grazing 5 squares
-Players move by up to 3 squares
+Players can move anywhere; traps on the path go off
 Timer set to 20s, from the first player ready
+Sky events every 1 to 2 minutes
 
 
 ## Set aside
@@ -128,3 +151,6 @@ Timer set to 20s, from the first player ready
 - **moving as a group**: can be frustrating
 - **teaching kids words**: different product altogether
 - **pick where to hide the memory**: maybe worth testing later, not for now
+- **Movement limited to 3 squares, with glowing reachable squares** (playtest 3): too slow and visually heavy. Replaced by free movement where the path itself is the risk.
+- **Clearing the 8 squares around where you land**: tried, then replaced by turning over only the path walked.
+- **Short grass and flowers as textures**: only the tall grass kept a texture; the short grass reads better as a simple drawing.

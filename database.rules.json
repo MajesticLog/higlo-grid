@@ -1,6 +1,108 @@
 {
   "rules": {
-    ".read": "now < 1794096000000",  // 2026-11-8
-    ".write": "now < 1794096000000",  // 2026-11-8
+    // Nothing can be listed or read from the top: you can only read a
+    // session if you already know its link. The link is the key to the room.
+    ".read": false,
+    ".write": false,
+
+    "sessions": {
+      "$sid": {
+        // Only ids shaped like our links (session.js).
+        ".read": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+
+        // One record per player in the field (removed when they leave).
+        "players": {
+          "$pid": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+            ".validate": "newData.hasChildren(['x', 'y'])",
+            "x": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
+            "y": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
+            "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
+            "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "tab": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "author": { ".validate": "newData.isString() && newData.val().length <= 64" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        // Who holds which colour and animal (lobby.js): a tab id per slot.
+        "colors": {
+          "$i": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          }
+        },
+        "animals": {
+          "$i": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          }
+        },
+
+        // Memories belong to the family link. They can be added, and the
+        // game marks them found or guessed, but their words can't be changed
+        // or deleted once written.
+        "memories": {
+          "$mid": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/) && newData.exists()",
+            "text": { ".validate": "newData.isString() && newData.val().length <= 300 && (!data.exists() || data.val() === newData.val())" },
+            "clues": {
+              "$n": { ".validate": "newData.isString() && newData.val().length <= 60 && (!data.exists() || data.val() === newData.val())" }
+            },
+            "prompt": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "category": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
+            "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "tab": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "author": { ".validate": "newData.isString() && newData.val().length <= 64" },
+            "createdAt": { ".validate": "newData.isNumber()" },
+            "foundAt": { ".validate": "newData.isNumber()" },
+            "revealedAt": { ".validate": "newData.isNumber()" },
+            "gameId": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "guessed": { ".validate": "newData.isBoolean()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        // The current game (board, rounds, guessing): changed by every device
+        // in transactions, so only its shape is checked.
+        "game": {
+          ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+          ".validate": "newData.hasChildren(['id', 'status'])"
+        },
+
+        // Who played each game, for the memory chest.
+        "history": {
+          "$gid": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)"
+          }
+        },
+
+        // Hearts and message bubbles: short-lived, removed by their sender.
+        "hearts": {
+          "$hid": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+            ".validate": "newData.hasChildren(['to', 'from'])"
+          }
+        },
+        "messages": {
+          "$msg": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+            ".validate": "newData.hasChildren(['from', 'text'])",
+            "from": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "text": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        // Prototype 1 (tag prototype-1-targets, preview channel proto1) still
+        // uses these, so it stays playable for comparison.
+        "targets": { ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)" },
+        "turn": { ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)" },
+        "hints": { ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)" }
+      }
+    }
   }
 }
