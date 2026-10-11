@@ -32,7 +32,7 @@ export const firstEventAt = (t) => t + between(FIRST_EVENT_MS);
 // never plays an event of its own that loses to another device's.
 setInterval(() => {
   const seen = state.game;
-  if (!state.joined || !seen || seen.status !== "playing") return;
+  if (!state.joined || !seen || seen.status !== "playing" || seen.guess) return; // none while guessing
   if (seen.nextEventAt && now() < seen.nextEventAt) return;
   runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen.id || game.status !== "playing") return;

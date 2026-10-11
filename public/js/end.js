@@ -145,23 +145,26 @@ function drawFamily(won, again) {
 // The memories found in this game, in the order they turned up.
 function drawMemories(game) {
   const found = Object.values(state.memories)
-    .filter((m) => m.gameId === game.id && m.foundAt)
+    .filter((m) => m.gameId === game.id && m.foundAt && (!m.clues || m.revealedAt))
     .sort((a, b) => a.foundAt - b.foundAt);
   memoriesTitle.hidden = found.length === 0;
   list.replaceChildren();
   for (const m of found) {
     const item = document.createElement("li");
     item.style.setProperty("--c", m.color ?? "#999");
-    const prompt = document.createElement("span");
-    prompt.className = "end-prompt";
-    prompt.textContent = m.prompt ?? "";
-    const text = document.createElement("span");
-    text.className = "end-text";
-    text.textContent = m.text;
-    const by = document.createElement("span");
-    by.className = "end-by";
-    by.textContent = `${m.animal ?? ""} ${m.name ?? ""}`.trim();
-    item.append(prompt, text, by);
+    const lines = [
+      ["end-prompt", m.prompt ?? ""],
+      ["end-text", m.text],
+      ["end-clues", m.clues ? `🔍 ${m.clues.join(" · ")}` : ""],
+      ["end-by", `${m.animal ?? ""} ${m.name ?? ""}`.trim() + (m.clues ? (m.guessed ? " · ✅ guessed" : " · revealed") : "")],
+    ];
+    for (const [className, text] of lines) {
+      if (!text) continue;
+      const span = document.createElement("span");
+      span.className = className;
+      span.textContent = text;
+      item.append(span);
+    }
     list.append(item);
   }
 }

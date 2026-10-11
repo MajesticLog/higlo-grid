@@ -199,26 +199,28 @@ function updateHide() {
 }
 for (const input of [memory, ...clues]) input.addEventListener("input", updateHide);
 
-function writeMemory(identity) {
-  return new Promise((resolve) => {
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      updateHide();
-      if (hideButton.disabled) return;
-      // Memories belong to the family link, not to this game or this tab.
-      push(sessionRef("memories"), {
-        text: memory.value.trim(),
-        category: category.id,
-        prompt: `${category.icon} ${category.label}`,
-        clues: clues.map((c) => c.value.trim()),
-        ...identity,
-        createdAt: serverTimestamp(),
-      });
-      resolve();
-    });
-    document.getElementById("skip").addEventListener("click", resolve);
+// Resolves with "done" (hidden, or skipped) or "back" (to the name, animal
+// and colour step). What's typed stays in the fields either way.
+let finishWriting = null;
+const writeMemory = () => new Promise((resolve) => { finishWriting = resolve; });
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  updateHide();
+  if (hideButton.disabled || !finishWriting) return;
+  // Memories belong to the family link, not to this game or this tab.
+  push(sessionRef("memories"), {
+    text: memory.value.trim(),
+    category: category.id,
+    prompt: `${category.icon} ${category.label}`,
+    clues: clues.map((c) => c.value.trim()),
+    ...identity(),
+    createdAt: serverTimestamp(),
   });
-}
+  finishWriting("done");
+});
+document.getElementById("skip").addEventListener("click", () => finishWriting?.("done"));
+document.getElementById("write-back").addEventListener("click", () => finishWriting?.("back"));
 
 // --- The whole lobby: resolves with {animal, color} once I'm ready for the field ---
 export async function runLobby() {
@@ -236,19 +238,24 @@ export async function runLobby() {
   const resuming = tab.choice && tab.memoryDone && claimed.every(Boolean);
   if (!resuming) {
     lobby.hidden = false;
-    pickStep.hidden = false;
-    await new Promise((resolve) => pickDone.addEventListener("click", resolve, { once: true }));
-    tab.choice = { ...choice, name: playerName() };
-    write("sessionStorage", TAB_KEY, tab);
-    write("localStorage", LAST_KEY, tab.choice);
+    // Name, animal and colour, then the memory; "Back" goes round again.
+    for (;;) {
+      pickStep.hidden = false;
+      writeStep.hidden = true;
+      await new Promise((resolve) => pickDone.addEventListener("click", resolve, { once: true }));
+      tab.choice = { ...choice, name: playerName() };
+      write("sessionStorage", TAB_KEY, tab);
+      write("localStorage", LAST_KEY, tab.choice);
+      if (tab.memoryDone) break;
 
-    if (!tab.memoryDone) {
       pickStep.hidden = true;
       writeStep.hidden = false;
-      categoryButtons[0].focus();
-      await writeMemory(identity());
-      tab.memoryDone = true;
-      write("sessionStorage", TAB_KEY, tab);
+      (category ? memory : categoryButtons[0]).focus();
+      if (await writeMemory() === "done") {
+        tab.memoryDone = true;
+        write("sessionStorage", TAB_KEY, tab);
+        break;
+      }
     }
     lobby.hidden = true;
   }
@@ -276,6 +283,7 @@ export function takePlayAgain() {
 }
 
 const identity = () => ({
+  tab: tab.id, // recognises the author of a memory, even after a refresh
   name: playerName(),
   animal: ANIMALS[choice.animals],
   color: COLOURS[choice.colors].value,

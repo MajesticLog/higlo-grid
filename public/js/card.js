@@ -29,6 +29,12 @@ export function queueCard(item) {
   }, CARD_DELAY_MS);
 }
 
+// A card explaining something (the sheep), shown straight away.
+export function showInfo(info) {
+  queue.unshift({ info });
+  showNext();
+}
+
 // Tapping a found clue on the grid opens it again.
 export function openCard(item) {
   queue.unshift(item);
@@ -37,6 +43,16 @@ export function openCard(item) {
 
 function showNext() {
   const item = queue.shift();
+  if (item?.info) {
+    heading.textContent = item.info.heading;
+    promptText.textContent = "";
+    text.textContent = item.info.text;
+    author.textContent = "";
+    card.style.setProperty("--c", "#2f7d32");
+    card.hidden = false;
+    closeButton.focus();
+    return;
+  }
   const memory = item && state.memories[item.memory];
   if (!memory) {
     card.hidden = true;

@@ -10,7 +10,9 @@ const list = document.getElementById("chest-list");
 const hiddenNote = document.getElementById("chest-hidden");
 const saveButton = document.getElementById("chest-save");
 
-const found = () => Object.values(state.memories).filter((m) => m.foundAt);
+// A memory with clues is in the chest once it's been guessed (or revealed),
+// never before: that would spoil the guess.
+const found = () => Object.values(state.memories).filter((m) => m.foundAt && (!m.clues || m.revealedAt));
 
 // Found memories grouped by the game they were found in, newest game first,
 // each group in the order its memories turned up.
@@ -66,7 +68,7 @@ function fill() {
     section.append(heading, items);
     list.append(section);
   }
-  const waiting = Object.values(state.memories).filter((m) => m.clues && !m.foundAt).length;
+  const waiting = Object.values(state.memories).filter((m) => m.clues && !m.revealedAt).length;
   hiddenNote.textContent = waiting > 0
     ? `🌱 ${waiting} ${waiting === 1 ? "memory is" : "memories are"} still hidden in the field.`
     : "";

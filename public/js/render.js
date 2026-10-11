@@ -396,7 +396,8 @@ function renderStatus() {
   endOpen.hidden = !over;
   if (over) endOpen.textContent = game.status === "won" ? "☕ Back to the tea" : "🌙 Back to bed";
   if (!choosing()) {
-    if (!over) statusText.textContent = "Joining…";
+    if (game?.guess && !over) statusText.textContent = "🔍 All the clues of a memory are found: time to guess!";
+    else if (!over) statusText.textContent = "Joining…";
     readyButton.hidden = true;
     sheepButton.hidden = true;
     return;

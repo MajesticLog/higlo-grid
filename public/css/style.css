@@ -540,6 +540,14 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 .hint-text { color: #666; margin: 0 0 16px; }
 
+/* "← Back" at the top left of the memory step. */
+#lobby .back {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0 4px;
+  text-align: left;
+}
+
 #prompt {
   font-size: 22px;
   font-weight: 600;
@@ -1367,3 +1375,96 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 @media (max-width: 700px), (orientation: portrait) {
   main#field { padding-top: 80px; }
 }
+
+/* --- Guessing a memory (guess.js): above the clue card, under the chest --- */
+#guess {
+  position: fixed;
+  inset: 0;
+  z-index: 21;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+}
+
+#guess[hidden] { display: none; }
+
+.guess-body {
+  box-sizing: border-box;
+  width: min(100%, 520px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 22px 20px;
+  border-radius: 24px;
+  background: #fffaf0;
+  color: #222;
+  text-align: center;
+  animation: pop-in 0.35s ease-out;
+}
+
+#guess-title { margin: 0; font-size: 24px; }
+#guess-theme { margin: 6px 0 0; color: #666; font-style: italic; }
+
+#guess-clues {
+  margin: 14px auto 0;
+  padding-left: 1.4em;
+  max-width: 400px;
+  text-align: left;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+#guess-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 16px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 18px; /* 16px or more, so iOS doesn't zoom in */
+  border-radius: 12px;
+  border: 2px solid #ccc;
+}
+
+#guess-status { margin: 14px 0 0; font-size: 17px; font-weight: 600; }
+
+#guess-answers {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+
+#guess-answers li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #eee;
+}
+
+.guess-text { flex: 1; font-size: 17px; overflow-wrap: anywhere; }
+.guess-mark { font-size: 22px; }
+
+#guess-answers button {
+  min-width: 48px;
+  min-height: 44px;
+  font-size: 22px;
+  border-radius: 12px;
+  border: 2px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* The answer, once it's over. */
+#guess-reveal { margin-top: 16px; }
+.guess-it-was { margin: 0; color: #666; }
+.guess-memory { margin: 6px 0; font-size: 26px; font-weight: 700; overflow-wrap: anywhere; }
+.guess-by { margin: 0; font-weight: 600; }
+
+.end-clues { font-size: 14px; color: #555; }

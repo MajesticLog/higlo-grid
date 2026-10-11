@@ -9,6 +9,7 @@ import { applyMyMove, maybeResolve } from "./rounds.js";
 import { gameChanged } from "./end.js";
 import { eventChanged, firstEventAt } from "./events.js";
 import { renderChest } from "./chest.js";
+import { renderGuess, maybeAdvance } from "./guess.js";
 import { CLUES } from "./lobby.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
@@ -56,7 +57,23 @@ export function revealSquare(game, k) {
 // same round: be kind); full night means the wolf comes out.
 const isTarget = (hidden) => hidden.kind === "clue" || hidden.kind === "memory";
 
+// A memory whose clues have all turned over gets guessed before anything
+// else happens: start the next one waiting, if none is on.
+export function nextGuess(game) {
+  if (game.guess) return;
+  const cluesOf = {};
+  for (const [k, hidden] of Object.entries(game.board ?? {})) {
+    if (hidden.kind === "clue") (cluesOf[hidden.memory] ??= []).push(k);
+  }
+  for (const [memory, squares] of Object.entries(cluesOf)) {
+    if (game.guessed?.[memory] || !squares.every((k) => game.revealed[k])) continue;
+    game.guess = { memory, phase: "guessing", startedAt: now() };
+    return;
+  }
+}
+
 export function checkEnd(game) {
+  if (game.guess) return; // finish guessing first, even at nightfall
   const targets = Object.keys(game.board).filter((k) => isTarget(game.board[k]));
   if (targets.length > 0 && targets.every((k) => game.revealed[k])) game.status = "won";
   else if (game.night >= NIGHT_STEPS) game.status = "lost";
@@ -75,7 +92,10 @@ function markFound() {
     if (isTarget(hidden)) (squaresOf[hidden.memory] ??= []).push(k);
   }
   for (const [id, squares] of Object.entries(squaresOf)) {
-    if (markedFound.has(id) || !state.memories[id] || state.memories[id].foundAt) continue;
+    const m = state.memories[id];
+    // Done for good once guessed (clues) or turned over (older memories); a
+    // memory found in an earlier game but never guessed counts again here.
+    if (markedFound.has(id) || !m || (m.clues ? m.revealedAt : m.foundAt) || m.gameId === game.id) continue;
     if (!squares.every((k) => game.revealed?.[k])) continue;
     markedFound.add(id);
     update(sessionRef(`memories/${id}`), { foundAt: now(), gameId: game.id });
@@ -164,7 +184,7 @@ function clueSquares(game) {
 function hideMissingMemories(game) {
   const hidden = new Set(Object.values(game.board).map((c) => c.memory).filter(Boolean));
   const missing = Object.entries(state.memories)
-    .filter(([id, m]) => !m.foundAt && m.clues?.length === CLUES && !hidden.has(id))
+    .filter(([id, m]) => !m.revealedAt && m.clues?.length === CLUES && !hidden.has(id)) // not guessed yet
     .map(([id]) => id);
   for (const id of missing) {
     clueSquares(game).forEach((k, n) => { game.board[k] = { kind: "clue", memory: id, n }; });
@@ -210,6 +230,8 @@ onValue(gameRef, (snap) => {
   render();
   gameChanged(previous, state.game);
   eventChanged(state.game);
+  renderGuess();
+  maybeAdvance();
   maybeResolve();
 });
 
@@ -238,6 +260,7 @@ document.getElementById("new-game-yes").addEventListener("click", () => {
 onValue(memoriesRef, (snap) => {
   state.memories = snap.val() || {};
   renderChest();
+  renderGuess();
   markFound();
   syncGame();
 });

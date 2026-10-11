@@ -8,6 +8,7 @@ import { render } from "./render.js";
 import { pickSquare, movePick, inReach, choosing, maybeResolve } from "./rounds.js";
 import { openCard } from "./card.js";
 import { gameChanged, maybeStartAgain } from "./end.js";
+import { renderGuess, maybeAdvance } from "./guess.js";
 import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
@@ -42,6 +43,8 @@ onValue(playersRef, (snap) => {
   render();
   maybeResolve(); // the last player we were waiting for may have left
   maybeStartAgain(); // ...or the last one to choose at the end of a game
+  renderGuess();
+  maybeAdvance(); // ...or the last guesser
 });
 
 // --- Controls ---

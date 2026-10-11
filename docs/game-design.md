@@ -95,6 +95,8 @@ Everyone opens the family link, lands in a lobby where they select their colour/
 
 - A few illustrated cards, mostly icons and few words, shown once after the lobby and reopened with a ❔ button in the field.
 - They cover: moving and Ready, traps and the night, sheep, clues and guessing.
+- Traps must be stated plainly: each trap turned over makes the sky darker, and turning over too many (6) brings full night and the wolf. Find all the clues before then.
+- The sheep get their own short explanation the first time a player sends one.
 
 ## Principles this follows
 

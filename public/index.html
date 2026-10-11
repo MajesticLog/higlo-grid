@@ -20,6 +20,7 @@
         <button id="pick-done" class="primary" type="button" disabled>Next ➜</button>
       </div>
       <form id="write" hidden>
+        <button id="write-back" class="quiet back" type="button">← Back</button>
         <h1>Hide a memory</h1>
         <p class="hint-text">Pick a theme, write your memory in a few words, then 3 clues.
           The clues get hidden in the field: the others find them and guess your memory!</p>
@@ -92,6 +93,36 @@
           <p id="end-waiting" hidden>✅ Waiting for the others to choose…</p>
           <button id="end-lobby" type="button">🏠 Back to the lobby</button>
           <button id="end-garden" class="quiet" type="button">🌼 See the garden</button>
+        </div>
+      </div>
+    </div>
+    <div id="guess" role="dialog" aria-modal="true" aria-labelledby="guess-title" hidden>
+      <div class="guess-body">
+        <h2 id="guess-title"></h2>
+        <p id="guess-theme"></p>
+        <ol id="guess-clues"></ol>
+        <div id="guess-reveal" hidden>
+          <p class="guess-it-was">It was…</p>
+          <p class="guess-memory"></p>
+          <p class="guess-by"></p>
+        </div>
+        <form id="guess-form" hidden>
+          <input id="guess-input" type="text" maxlength="80" autocomplete="off"
+                 aria-label="Your guess" placeholder="My guess…">
+          <div class="end-buttons">
+            <button class="primary" type="submit">Send my guess</button>
+            <button id="guess-aloud" type="button">🗣️ I'll say it out loud</button>
+          </div>
+        </form>
+        <p id="guess-status"></p>
+        <ul id="guess-answers" hidden></ul>
+        <div id="guess-judge" class="end-buttons" hidden>
+          <button id="guess-someone" class="primary" type="button">✅ Yes, someone got it!</button>
+          <button id="guess-nobody" type="button">❌ Nobody got it</button>
+        </div>
+        <div class="end-buttons">
+          <button id="guess-early" type="button" hidden>Show the guesses now</button>
+          <button id="guess-close" class="primary" type="button" hidden>Back to the field</button>
         </div>
       </div>
     </div>
