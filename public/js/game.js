@@ -3,10 +3,11 @@
 // turned over, as flowers, and that's where everyone starts.
 import { db, ref, update, onValue, runTransaction } from "./firebase.js";
 import { SIZE, CENTRE, sessionRef, myRef, myId } from "./session.js";
-import { state } from "./state.js";
+import { state, rememberPosition } from "./state.js";
 import { render } from "./render.js";
 import { applyMyMove, maybeResolve } from "./rounds.js";
 import { gameChanged } from "./end.js";
+import { eventChanged, firstEventAt } from "./events.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const TRAPS = 12;
@@ -88,6 +89,7 @@ function newGame() {
     id: now().toString(36),
     status: "playing",
     updatedAt: now(), // also bumped by every reveal (step 3)
+    nextEventAt: firstEventAt(now()), // something crossing the sky (events.js)
     night: 0,
     round: 1,
     board: {}, // "x_y" -> {kind: "trap"} or {kind: "memory", memory: id}; empty squares aren't stored
@@ -142,7 +144,7 @@ export function syncGame() {
     game.revealed ??= {};
     if (hideMissingMemories(game) === 0 && !fresh) return; // nothing to do: abort
     return game;
-  });
+  }, { applyLocally: false }); // a random board: only show the one the server kept
 }
 
 // "New game": replace the game I'm looking at. If someone else already
@@ -155,7 +157,7 @@ export function newBoard() {
     const fresh = newGame();
     hideMissingMemories(fresh);
     return fresh;
-  });
+  }, { applyLocally: false }); // a random board: only show the one the server kept
 }
 
 onValue(gameRef, (snap) => {
@@ -166,6 +168,7 @@ onValue(gameRef, (snap) => {
   markFound();
   render();
   gameChanged(previous, state.game);
+  eventChanged(state.game);
   maybeResolve();
 });
 
@@ -177,6 +180,7 @@ function backToStart() {
   state.me.x = START_COLUMNS[index % SIZE];
   state.me.y = START_ROW;
   update(myRef, { x: state.me.x, y: state.me.y });
+  rememberPosition();
 }
 
 // --- The "New game" button, with an inline "are you sure?" ---

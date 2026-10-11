@@ -1,9 +1,9 @@
 // Entry point: lobby, then join the field, keep the player list, wire up the controls.
 import { db, ref, get, set, onValue, onDisconnect } from "./firebase.js";
-import { SIZE, playersRef, myRef, myId } from "./session.js";
+import { SIZE, sessionRef, playersRef, myRef, myId } from "./session.js";
 import { runLobby } from "./lobby.js";
 import { syncGame, spawnSquare } from "./game.js";
-import { state } from "./state.js";
+import { state, rememberPosition, savedPosition } from "./state.js";
 import { render } from "./render.js";
 import { pickSquare, movePick, inReach, choosing, maybeResolve } from "./rounds.js";
 import { openCard } from "./card.js";
@@ -15,15 +15,23 @@ document.getElementById("link").textContent = location.href;
 // The lobby first: pick an animal and a colour, hide a memory.
 Object.assign(state.me, await runLobby());
 document.getElementById("field").hidden = false;
-Object.assign(state.me, spawnSquare(Object.values((await get(playersRef)).val() || {})));
+// Back on my square after a refresh in the same game; otherwise the start row.
+const [players, gameNow] = await Promise.all([get(playersRef), get(sessionRef("game"))]);
+const gameId = gameNow.val()?.id;
+Object.assign(state.me, savedPosition(gameId) ?? spawnSquare(Object.values(players.val() || {})));
+rememberPosition(gameId);
 
 // Every time the connection comes up (now, or after a network drop), write
-// myself into the session and ask the server to remove me when I go.
+// myself into the session and ask the server to remove me when I go. While
+// it's down, the status bar says so.
 onValue(ref(db, ".info/connected"), async (snap) => {
-  if (snap.val() !== true) return;
+  state.online = snap.val() === true;
+  render();
+  if (!state.online) return;
   await onDisconnect(myRef).remove();
   await set(myRef, state.me);
   state.joined = true;
+  render(); // the status bar may still say "Joining…" if nothing else changes
   syncGame(); // start a game if there isn't one, and hide my memory
   gameChanged(null, state.game); // a game that ended while I was in the lobby: show its end screen now
 });

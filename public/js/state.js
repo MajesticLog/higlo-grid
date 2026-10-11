@@ -1,12 +1,32 @@
 // Live copies of what's in the database, shared by every module.
 // Listeners write into it; render.js draws from it.
-import { CENTRE } from "./session.js";
+import { CENTRE, sessionId } from "./session.js";
 
 export const state = {
   me: { x: CENTRE, y: CENTRE, color: null, animal: null }, // my player record
-  joined: false,
+  joined: false, // in the field (past the lobby)
+  online: false, // connected to the database right now
   players: [], // [{id, x, y, color, animal}] in join order (push keys sort by time)
   game: null, // {id, status, night, board, revealed}: see game.js
   memories: {}, // memoryId -> {text, prompt, name, animal, color, createdAt, foundAt?}
   floats: new Map(), // playerId -> {icon, startedAt}: a ❤️ floating above them
 };
+
+// Where I stand in the current game, kept for this tab only, so a refresh
+// puts me back on my square instead of the start row.
+const POSITION_KEY = `higlo:${sessionId}:position`;
+
+export function rememberPosition(gameId = state.game?.id) {
+  try {
+    sessionStorage.setItem(POSITION_KEY, JSON.stringify({ game: gameId, x: state.me.x, y: state.me.y }));
+  } catch { /* private mode: a refresh starts on the flower row */ }
+}
+
+export function savedPosition(gameId) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(POSITION_KEY));
+    return saved && gameId && saved.game === gameId ? { x: saved.x, y: saved.y } : null;
+  } catch {
+    return null;
+  }
+}

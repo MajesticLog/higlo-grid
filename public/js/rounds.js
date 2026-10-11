@@ -6,9 +6,10 @@
 // to graze a line of three squares.
 import { update, runTransaction } from "./firebase.js";
 import { SIZE, sessionRef, myRef, myId } from "./session.js";
-import { state } from "./state.js";
+import { state, rememberPosition } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
 import { key, now, revealSquare, checkEnd } from "./game.js";
+import { playBleat } from "./sound.js";
 
 export const REACH = 3; // steps up, down, left or right; no diagonals
 export const SHEEP_PER_PLAYER = 3; // per game
@@ -22,27 +23,43 @@ export const choosing = () => state.joined && state.game?.status === "playing";
 export const myPick = () => state.game?.picks?.[myId];
 export const sheepLeft = () => SHEEP_PER_PLAYER - (state.game?.sheepUsed?.[myId] ?? 0);
 
-// A sheep's line: the tapped square and the next two, to the right ("h") or
-// downwards ("v"), shifted back if it would run off the field.
+// A sheep's line: the tapped square and the next two in its direction.
+// Tapping the 🐑 square again turns it: up, right, down, left. Near an edge
+// the line shifts back so it stays on the field. ("h" and "v" are the two
+// directions from before, kept for games already in progress.)
+const STEPS = { up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0], h: [1, 0], v: [0, 1] };
+const TURN = { up: "right", right: "down", down: "left", left: "up", h: "down", v: "left" };
+export const FIRST_DIRECTION = "up";
+
 export function sheepLine(x, y, dir) {
-  const sx = dir === "h" ? Math.min(x, SIZE - 3) : x;
-  const sy = dir === "v" ? Math.min(y, SIZE - 3) : y;
-  return [0, 1, 2].map((i) => (dir === "h" ? [sx + i, sy] : [sx, sy + i]));
+  const [dx, dy] = STEPS[dir] ?? STEPS.up;
+  const shift = (start, step) => {
+    const end = start + 2 * step;
+    if (end < 0) return start - end;
+    if (end > SIZE - 1) return start - (end - (SIZE - 1));
+    return start;
+  };
+  const sx = shift(x, dx);
+  const sy = shift(y, dy);
+  return [0, 1, 2].map((i) => [sx + i * dx, sy + i * dy]); // in the order the sheep walks
 }
 
 // Every change to a round goes through a transaction on the game, tied to
 // the game and round I'm looking at, so a late tap can never land in the
 // next round or the next game. `edit` returns false to abort.
-function changeRound(edit) {
+// Taps show at once (applied locally). Anything random (ending a round)
+// passes { applyLocally: false }: the device waits for the server, so it
+// never shows its own flowers if another device's version wins.
+function changeRound(edit, options) {
   const seen = state.game;
-  if (!seen) return;
-  runTransaction(gameRef, (game) => {
+  if (!seen) return Promise.resolve();
+  return runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen.id || game.round !== seen.round || game.status !== "playing") return;
     game.picks ??= {};
     game.revealed ??= {};
     game.board ??= {};
     return edit(game) === false ? undefined : game;
-  });
+  }, options);
 }
 
 // --- Sheep mode: on this device only, until the round ends ---
@@ -53,6 +70,7 @@ function toggleSheep() {
   if (!choosing() || myPick()?.ready) return;
   if (!inSheepMode() && sheepLeft() <= 0) return nudgeStatus();
   sheepRound = inSheepMode() ? null : state.game.round;
+  if (inSheepMode()) playBleat(); // "bêêê", here I come
   // Switching between a sheep and a square: start the pick afresh.
   changeRound((game) => {
     if (!game.picks[myId]) return false;
@@ -65,14 +83,14 @@ document.getElementById("sheep").addEventListener("click", toggleSheep);
 
 // Tap a square (or move with the arrows): that's my pick, not ready yet.
 // In sheep mode, it places the sheep's line; tapping the same square again
-// turns the line between across and down.
+// turns it to the next direction (up, right, down, left).
 export function pickSquare(x, y) {
   if (!choosing()) return;
   if (!inReach(x, y)) return nudgeStatus();
   if (inSheepMode()) {
     const pick = myPick();
     const turn = pick?.sheep && pick.x === x && pick.y === y;
-    const dir = turn ? (pick.sheep === "h" ? "v" : "h") : (pick?.sheep ?? "h");
+    const dir = turn ? (TURN[pick.sheep] ?? FIRST_DIRECTION) : (pick?.sheep ?? FIRST_DIRECTION);
     return changeRound((game) => { game.picks[myId] = { x, y, sheep: dir, ready: false }; });
   }
   changeRound((game) => { game.picks[myId] = { x, y, ready: false }; });
@@ -135,8 +153,13 @@ function graze(game, pick) {
 // Ready players go to their pick. Anyone not ready stays where they stand,
 // and that square turns over. Two players on one square turn it over once.
 // A player who sent a sheep stays put and turns nothing over themselves.
+// One request at a time: while the server answers, the clock keeps ticking
+// but this device doesn't ask again.
+let resolving = false;
+
 export function maybeResolve() {
-  if (!choosing() || !roundOver(state.game)) return;
+  if (resolving || !choosing() || !roundOver(state.game)) return;
+  resolving = true;
   changeRound((game) => {
     if (!roundOver(game)) return false;
     game.sheepUsed ??= {};
@@ -165,7 +188,7 @@ export function maybeResolve() {
     game.picks = null;
     game.deadline = null;
     game.updatedAt = now();
-  });
+  }, { applyLocally: false }).finally(() => { resolving = false; });
 }
 
 // After a round, move my circle to where I went. Each device moves only its
@@ -182,6 +205,7 @@ export function applyMyMove() {
   state.me.x = to.x;
   state.me.y = to.y;
   update(myRef, { x: to.x, y: to.y });
+  rememberPosition();
 }
 
 // The clock: redraw the timer bar and check the deadline a few times a second.

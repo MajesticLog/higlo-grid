@@ -77,6 +77,168 @@ export function playHowl() {
   wobble.stop(t + 2);
 }
 
+// --- Event sounds (events.js): short and soft, under the family's voices ---
+
+// A gain that rises, holds and falls: the shape of each sound.
+function envelope(t, peak, attack, hold, release) {
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(peak, t + attack);
+  gain.gain.setValueAtTime(peak, t + attack + hold);
+  gain.gain.linearRampToValueAtTime(0, t + attack + hold + release);
+  gain.connect(ctx.destination);
+  return gain;
+}
+
+// White noise, made once: the raw material for wind, rain and swooshes.
+let noise = null;
+function noiseSource(t, length) {
+  if (!noise) {
+    noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const data = noise.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = noise;
+  source.loop = true;
+  source.start(t);
+  source.stop(t + length);
+  return source;
+}
+
+function filter(type, freq, q = 1) {
+  const f = ctx.createBiquadFilter();
+  f.type = type;
+  f.frequency.value = freq;
+  f.Q.value = q;
+  return f;
+}
+
+function osc(type, t, length) {
+  const o = ctx.createOscillator();
+  o.type = type;
+  o.start(t);
+  o.stop(t + length);
+  return o;
+}
+
+// Hot-air balloon: a light swoosh, like a gust past the basket.
+export function playSwoosh() {
+  if (!ready()) return;
+  const t = ctx.currentTime + 0.05;
+  const band = filter("bandpass", 300, 1.5);
+  band.frequency.setValueAtTime(300, t);
+  band.frequency.exponentialRampToValueAtTime(1400, t + 0.7);
+  band.frequency.exponentialRampToValueAtTime(450, t + 1.6);
+  noiseSource(t, 1.7).connect(band).connect(envelope(t, 0.14, 0.5, 0.3, 0.8));
+}
+
+// Birds: three crow-like caws, raspy and falling.
+export function playCaws() {
+  if (!ready()) return;
+  const start = ctx.currentTime + 0.05;
+  [0, 0.42, 0.95].forEach((at, i) => {
+    const t = start + at;
+    const nasal = filter("bandpass", 1300, 2);
+    nasal.connect(envelope(t, 0.09, 0.02, 0.12, 0.1));
+    for (const [type, detune] of [["sawtooth", 0], ["square", 12]]) {
+      const o = osc(type, t, 0.26);
+      o.detune.value = detune;
+      o.frequency.setValueAtTime(640 - i * 30, t);
+      o.frequency.exponentialRampToValueAtTime(420 - i * 20, t + 0.22);
+      o.connect(nasal);
+    }
+  });
+}
+
+// Shower: rain hiss and a soft wind rising and falling under it.
+export function playRainAndWind() {
+  if (!ready()) return;
+  const t = ctx.currentTime + 0.05;
+  noiseSource(t, 4.5).connect(filter("highpass", 2500)).connect(envelope(t + 0.6, 0.06, 0.8, 2.2, 0.9));
+  const wind = filter("lowpass", 300, 4);
+  wind.frequency.setValueAtTime(300, t);
+  wind.frequency.linearRampToValueAtTime(750, t + 1.8);
+  wind.frequency.linearRampToValueAtTime(320, t + 4.2);
+  noiseSource(t, 4.5).connect(wind).connect(envelope(t, 0.08, 1.2, 1.8, 1.3));
+}
+
+// Owl: "hoo... hoo-hoo".
+export function playHoot() {
+  if (!ready()) return;
+  const start = ctx.currentTime + 0.05;
+  for (const [at, length] of [[0, 0.45], [0.75, 0.22], [1.05, 0.5]]) {
+    const t = start + at;
+    const o = osc("sine", t, length + 0.1);
+    o.frequency.setValueAtTime(410, t);
+    o.frequency.linearRampToValueAtTime(370, t + length);
+    o.connect(envelope(t, 0.14, 0.05, length - 0.15, 0.15));
+  }
+}
+
+// Shooting star: a twinkling run of little bells, like a carillon.
+export function playTwinkle() {
+  if (!ready()) return;
+  const start = ctx.currentTime + 0.05;
+  [2093, 2637, 3136, 2349, 2794, 3520].forEach((freq, i) => {
+    const t = start + i * 0.09;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+    gain.connect(ctx.destination);
+    // A bell is a note plus a brighter, quieter partial.
+    for (const [multiple, level] of [[1, 1], [2.76, 0.35]]) {
+      const partial = ctx.createGain();
+      partial.gain.value = level;
+      const o = osc("sine", t, 1.25);
+      o.frequency.value = freq * multiple;
+      o.connect(partial).connect(gain);
+    }
+  });
+}
+
+// UFO: a wobbly, slightly spooky theremin swooping up and down.
+export function playTheremin() {
+  if (!ready()) return;
+  const t = ctx.currentTime + 0.05;
+  const o = osc("sine", t, 3.2);
+  o.frequency.setValueAtTime(520, t);
+  o.frequency.linearRampToValueAtTime(900, t + 0.8);
+  o.frequency.linearRampToValueAtTime(640, t + 1.5);
+  o.frequency.linearRampToValueAtTime(1000, t + 2.2);
+  o.frequency.linearRampToValueAtTime(480, t + 3.0);
+  const vibrato = osc("sine", t, 3.2);
+  vibrato.frequency.value = 6.5;
+  const depth = ctx.createGain();
+  depth.gain.value = 25;
+  vibrato.connect(depth).connect(o.frequency);
+  o.connect(envelope(t, 0.08, 0.3, 2.3, 0.5));
+}
+
+// Sheep: a wobbly "bêêê" (a buzzy voice with a fast tremolo).
+export function playBleat() {
+  if (!ready()) return;
+  const t = ctx.currentTime + 0.05;
+  const voice = filter("bandpass", 1100, 3);
+  voice.connect(envelope(t, 0.14, 0.04, 0.5, 0.25));
+  const tremolo = ctx.createGain();
+  tremolo.gain.value = 0.6;
+  const wobble = osc("sine", t, 0.85);
+  wobble.frequency.value = 22;
+  const wobbleDepth = ctx.createGain();
+  wobbleDepth.gain.value = 0.4;
+  wobble.connect(wobbleDepth).connect(tremolo.gain);
+  tremolo.connect(voice);
+  for (const [type, detune] of [["sawtooth", 0], ["square", 8]]) {
+    const o = osc(type, t, 0.85);
+    o.detune.value = detune;
+    o.frequency.setValueAtTime(340, t);
+    o.frequency.linearRampToValueAtTime(385, t + 0.15);
+    o.frequency.linearRampToValueAtTime(310, t + 0.8);
+    o.connect(tremolo);
+  }
+}
+
 // --- The sound on/off button ---
 const button = document.getElementById("sound");
 

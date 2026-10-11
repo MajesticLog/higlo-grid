@@ -883,8 +883,10 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   animation: munch 0.4s ease-in-out infinite alternate;
 }
 
-/* Sheep emoji face left: flip it to face the way it walks, across. */
-.graze.h .walker .icon { transform: scaleX(-1); }
+/* Sheep emoji face left: flip it when it walks to the right. Going left or
+   up, it walks the lane backwards. */
+.graze.face-right .walker .icon { transform: scaleX(-1); }
+.graze.reverse .walker { animation-direction: reverse; }
 
 @keyframes graze-h {
   0%   { transform: translateX(0); opacity: 0; }
@@ -942,4 +944,258 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 @media (prefers-reduced-motion: reduce) {
   .walker, .walker .icon { animation: none; }
   .walker { opacity: 0.8; }
+}
+
+/* --- Random events crossing the sky (events.js) ---
+   --dir is 1 (to the right) or -1 (to the left); --y is the height. */
+#events {
+  position: fixed;
+  inset: 0;
+  z-index: 15; /* above the field, under the memory card and end screen */
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.event {
+  position: absolute;
+  left: 0;
+  top: var(--y, 10vh);
+  line-height: 1;
+}
+
+/* Across part of the screen in 5 s (EVENT_MS in events.js), centred on
+   --cx and travelling --span either side, fading in and out. */
+@keyframes cross {
+  0%   { transform: translateX(calc(var(--cx, 50vw) - var(--dir) * var(--span, 30vw) - 50%)); opacity: 0; }
+  18%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { transform: translateX(calc(var(--cx, 50vw) + var(--dir) * var(--span, 30vw) - 50%)); opacity: 0; }
+}
+
+.balloon {
+  --span: 14vw; /* balloons are slow */
+  width: clamp(48px, 10vmin, 90px);
+  animation: cross 5s linear both;
+}
+
+.balloon svg {
+  display: block;
+  width: 100%;
+  animation: bob 3s ease-in-out infinite alternate;
+}
+
+@keyframes bob {
+  from { transform: translateY(0) rotate(-3deg); }
+  to   { transform: translateY(-14px) rotate(3deg); }
+}
+
+.birds {
+  --span: 30vw;
+  animation: cross 5s linear both;
+}
+
+.birds span {
+  position: absolute;
+  font-size: clamp(22px, 4vmin, 34px);
+  /* A V shape, pointing the way they fly. 🐦 faces left, so flip it going right. */
+  left: calc(var(--bx) * var(--dir) * 1.3em);
+  top: calc(var(--by) * 0.8em);
+  scale: calc(var(--dir) * -1) 1;
+  animation: flap 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes flap {
+  from { transform: translateY(0) scaleY(1); }
+  to   { transform: translateY(-4px) scaleY(0.75); }
+}
+
+.owl {
+  --span: 25vw;
+  font-size: clamp(34px, 7vmin, 60px);
+  animation: cross 5s ease-in-out both;
+}
+
+.owl span {
+  display: block;
+  animation: glide 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes glide {
+  from { transform: translateY(-10px) rotate(-6deg); }
+  to   { transform: translateY(10px) rotate(6deg); }
+}
+
+/* A shooting star: a bright head with a fading tail, quick and diagonal. */
+.star {
+  left: var(--x);
+  width: 140px;
+  height: 3px;
+  rotate: calc(var(--dir) * 18deg);
+  scale: var(--dir) 1;
+  animation: shoot 1.4s ease-in both;
+}
+
+/* The star itself at the front of the tail, spinning. */
+.star span {
+  position: absolute;
+  right: -0.5em;
+  top: 50%;
+  translate: 0 -50%;
+  font-size: clamp(22px, 4vmin, 32px);
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 245, 180, 0.9));
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { rotate: 360deg; }
+}
+
+.star i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.9));
+  box-shadow: 0 0 8px 2px rgba(255, 255, 220, 0.6);
+}
+
+@keyframes shoot {
+  0%   { transform: translateX(0); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateX(40vw); opacity: 0; }
+}
+
+/* A UFO wobbling across, with a flickering beam underneath. */
+.ufo {
+  --span: 25vw;
+  width: clamp(60px, 12vmin, 110px);
+  animation: cross 5s linear both;
+}
+
+.ufo .saucer {
+  position: relative; /* above the beam */
+  display: block;
+  animation: wobble 1.2s ease-in-out infinite alternate;
+}
+
+.ufo .saucer svg {
+  display: block;
+  width: 100%;
+}
+
+.ufo-light {
+  animation: blink 0.5s steps(2) infinite;
+}
+
+.ufo-light:nth-child(odd) {
+  animation-delay: -0.25s;
+}
+
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+
+.ufo .beam {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 70%;
+  aspect-ratio: 0.55;
+  translate: -50% 0;
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  background: linear-gradient(rgba(255, 245, 160, 0.8), rgba(255, 245, 160, 0));
+  animation: beam 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes wobble {
+  from { transform: translateY(-6px) rotate(-8deg); }
+  to   { transform: translateY(6px) rotate(8deg); }
+}
+
+@keyframes beam {
+  from { opacity: 0.25; }
+  to   { opacity: 0.85; }
+}
+
+/* The rain cloud: drifts in over the field, waits while it rains, drifts on. */
+.cloud {
+  top: var(--top);
+  font-size: var(--size);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+  animation: cloud 5s ease-in-out both;
+}
+
+@keyframes cloud {
+  0%   { transform: translateX(calc(var(--centre) - var(--dir) * 25vw - 50%)); opacity: 0; }
+  20%  { transform: translateX(calc(var(--centre) - 50%)); opacity: 1; }
+  70%  { transform: translateX(calc(var(--centre) - 50%)); opacity: 1; }
+  100% { transform: translateX(calc(var(--centre) + var(--dir) * 25vw - 50%)); opacity: 0; }
+}
+
+/* Raindrops over the field only, while the cloud is above it. */
+.rain {
+  left: var(--left);
+  top: var(--top);
+  width: var(--width);
+  height: var(--height);
+  overflow: hidden;
+  animation: rain-time 5s linear both;
+}
+
+.rain i {
+  position: absolute;
+  top: -12%;
+  width: 2px;
+  height: 9%;
+  border-radius: 2px;
+  background: linear-gradient(rgba(170, 210, 255, 0), rgba(170, 210, 255, 0.95));
+  animation: drop 0.6s linear infinite;
+}
+
+@keyframes drop {
+  to { transform: translateY(1300%); }
+}
+
+@keyframes rain-time {
+  0%, 18%   { opacity: 0; }
+  26%, 66%  { opacity: 1; }
+  74%, 100% { opacity: 0; }
+}
+
+/* After the rain: a shimmer sweeps the grass, with a few sparkles. */
+.glisten {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 6px;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.4) 50%, transparent 65%);
+  background-size: 300% 100%;
+  animation: shimmer 2.5s ease-in-out both;
+}
+
+.glisten span {
+  position: absolute;
+  font-size: clamp(10px, 2.5vmin, 18px);
+  animation: twinkle 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 100% 0; opacity: 0; }
+  10%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { background-position: 0 0; opacity: 0; }
+}
+
+/* Less motion: events just fade in and out in the middle of the sky. */
+@media (prefers-reduced-motion: reduce) {
+  .event, .event * { animation: none !important; }
+  .event { left: 45vw; animation: event-fade 4s ease-in-out both !important; }
+  .rain, .glisten { display: none; }
+}
+
+@keyframes event-fade {
+  0%, 100% { opacity: 0; }
+  20%, 80% { opacity: 1; }
 }

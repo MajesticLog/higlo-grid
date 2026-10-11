@@ -6,6 +6,7 @@ import {
   REACH, READY_WAIT_MS, inReach, choosing, sheepLine, sheepLeft, inSheepMode,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
+import { playBleat } from "./sound.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const FLIP_MS = 600; // must match the flip animation in style.css
@@ -163,22 +164,37 @@ function drawGrazing() {
   if (!runs) return;
   const tag = `${game.id}:${game.round}`;
   if (grazeSeen !== tag) {
-    // First time I see this grazing: animate it, unless I just arrived.
+    // First time I see this grazing: animate it, unless I just arrived,
+    // with a "bêêê" at each square a sheep refuses.
     grazeStart = justArrived ? -Infinity : performance.now();
     grazeSeen = tag;
+    if (!justArrived) {
+      for (const run of runs) {
+        for (const k of run.refused ?? []) {
+          setTimeout(playBleat, (run.line.indexOf(k) + 1) * SHEEP_STEP_MS - 300);
+        }
+      }
+    }
   }
   const age = performance.now() - grazeStart;
   if (age > SHEEP_STEP_MS * 5) return; // walk (4 steps) plus the last "Baa?"
   for (const run of runs) {
-    const [first] = run.line.map(squareOf);
+    // The lane covers the three squares; the sheep walks it from its first
+    // square, backwards along the lane when it goes left or up.
+    const squares = run.line.map(squareOf);
+    const left = Math.min(...squares.map(([x]) => x));
+    const top = Math.min(...squares.map(([, y]) => y));
+    const across = ["right", "left", "h"].includes(run.dir);
     const lane = document.createElement("div");
-    lane.className = `graze ${run.dir}`;
-    if (run.dir === "h") {
-      lane.style.gridColumn = `${first[0] + 1} / span 3`;
-      lane.style.gridRow = first[1] + 1;
+    lane.className = `graze ${across ? "h" : "v"}`;
+    if (run.dir === "left" || run.dir === "up") lane.classList.add("reverse");
+    if (run.dir === "right" || run.dir === "h") lane.classList.add("face-right");
+    if (across) {
+      lane.style.gridColumn = `${left + 1} / span 3`;
+      lane.style.gridRow = top + 1;
     } else {
-      lane.style.gridColumn = first[0] + 1;
-      lane.style.gridRow = `${first[1] + 1} / span 3`;
+      lane.style.gridColumn = left + 1;
+      lane.style.gridRow = `${top + 1} / span 3`;
     }
     const walker = document.createElement("span");
     walker.className = "walker";
@@ -357,6 +373,11 @@ const timerFill = timer.firstElementChild;
 
 function renderStatus() {
   const game = state.game;
+  if (state.joined && !state.online) {
+    statusText.textContent = "📶 Connection lost, reconnecting…";
+    readyButton.hidden = sheepButton.hidden = endOpen.hidden = true;
+    return;
+  }
   if (game?.status === "lost") {
     statusText.textContent = "🐺 The wolf is out, let's go to bed! The memories still hidden will wait for next time.";
   } else if (game?.status === "won") {
