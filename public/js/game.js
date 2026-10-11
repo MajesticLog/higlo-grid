@@ -5,7 +5,7 @@ import { db, ref, update, onValue, runTransaction } from "./firebase.js";
 import { SIZE, CENTRE, sessionRef, myRef, myId } from "./session.js";
 import { state } from "./state.js";
 import { render } from "./render.js";
-import { stopWalking } from "./moves.js";
+import { applyMyMove, maybeResolve } from "./rounds.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const TRAPS = 12;
@@ -13,7 +13,10 @@ export const NIGHT_STEPS = 6; // traps turned over before the wolf comes
 export const START_ROW = SIZE - 1;
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
 
+const INSECT_CHANCE = 0.15; // share of empty squares that show an insect
+
 const FLOWERS = ["🌼", "🌸", "🌷", "🌻", "🌺"];
+const INSECTS = ["🐞", "🐛", "🐜", "🦗"];
 const gameRef = sessionRef("game");
 const memoriesRef = sessionRef("memories");
 
@@ -22,6 +25,16 @@ export const key = (x, y) => `${x}_${y}`;
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export const flower = () => ({ show: "flower", icon: pick(FLOWERS) });
+
+// Turn a square over, inside a round's transaction. Already turned over: nothing.
+export function revealSquare(game, k) {
+  if (game.revealed[k]) return;
+  const hidden = game.board[k];
+  if (hidden?.kind === "trap") game.revealed[k] = { show: "trap", icon: "🪤" };
+  else if (hidden?.kind === "memory") game.revealed[k] = { show: "memory", icon: "📜", memory: hidden.memory };
+  else if (Math.random() < INSECT_CHANCE) game.revealed[k] = { show: "insect", icon: pick(INSECTS) };
+  else game.revealed[k] = flower();
+}
 
 // Server time, so devices with different clocks agree on when a game went quiet.
 let serverOffset = 0;
@@ -45,8 +58,11 @@ function newGame() {
     status: "playing",
     updatedAt: now(), // also bumped by every reveal (step 3)
     night: 0,
+    round: 1,
     board: {}, // "x_y" -> {kind: "trap"} or {kind: "memory", memory: id}; empty squares aren't stored
-    revealed: {}, // "x_y" -> {show, icon}
+    revealed: {}, // "x_y" -> {show, icon, memory?}
+    // During a round, also: picks {playerId: {x, y, ready}}, deadline.
+    // After one: moves {playerId: {x, y}}, where each player went.
   };
   for (let x = 0; x < SIZE; x++) game.revealed[key(x, START_ROW)] = flower();
   for (let i = 0; i < TRAPS; i++) {
@@ -114,14 +130,15 @@ onValue(gameRef, (snap) => {
   const previousId = state.game?.id;
   state.game = snap.val();
   if (previousId && state.game && state.game.id !== previousId) backToStart();
+  else applyMyMove();
   render();
+  maybeResolve();
 });
 
 // A new board: everyone goes back to the start row. Each device moves its own
 // player to the column matching its place in the join order, so nobody collides.
 function backToStart() {
   if (!state.joined) return;
-  stopWalking();
   const index = Math.max(0, state.players.findIndex((p) => p.id === myId));
   state.me.x = START_COLUMNS[index % SIZE];
   state.me.y = START_ROW;

@@ -31,6 +31,11 @@
       <p id="here"></p>
     </section>
     <main id="field" hidden>
+      <div id="status" aria-live="polite">
+        <p id="status-text">Joining…</p>
+        <button id="ready" type="button" hidden>✓ Ready</button>
+        <div id="timer" hidden><div></div></div>
+      </div>
       <div id="grid" aria-label="Shared grid"></div>
       <div id="new-game">
         <button id="new-game-ask" type="button">🔄 New game</button>
