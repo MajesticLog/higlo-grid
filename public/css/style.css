@@ -104,16 +104,17 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   display: grid;
   grid-template-columns: repeat(var(--size), 1fr);
   grid-template-rows: repeat(var(--size), 1fr);
-  /* Grass: grid lines and a few darker tufts per square, all drawn as a
-     background so the squares stay free for tiles and circles. */
-  background-color: #8bc34a;
+  /* Tall, unkept grass covers every square that hasn't been turned over: one
+     seamless texture stretched over the whole field (CC0, Grass_03 from
+     "Tileable Grass Textures - Set 1" by Cethiel, OpenGameArt), under faint
+     grid lines.
+     Turned-over squares are short grass (.tile). */
+  background-color: #6b8e23;
   background-image:
-    linear-gradient(to right, rgba(40, 80, 20, 0.25) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(40, 80, 20, 0.25) 1px, transparent 1px),
-    radial-gradient(circle at 25% 70%, #7cb342 0 6%, transparent 7%),
-    radial-gradient(circle at 70% 35%, #7cb342 0 5%, transparent 6%),
-    radial-gradient(circle at 60% 80%, #9ccc65 0 4%, transparent 5%);
-  background-size: calc(100% / 11) calc(100% / 11);
+    linear-gradient(to right, rgba(20, 50, 10, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 50, 10, 0.35) 1px, transparent 1px),
+    url("/img/grass-tall.webp");
+  background-size: calc(100% / 11) calc(100% / 11), calc(100% / 11) calc(100% / 11), 100% 100%;
   border: 3px solid #689f38;
   border-radius: 6px;
   position: relative; /* anchors the wolf */
@@ -128,11 +129,21 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 /* A turned-over square: bare earth with what was underneath. */
+/* A turned-over square: short, mown grass, a little lighter than the tall
+   grass so it reads as "done". Darkens with the night. */
+/* A turned-over square: short grass (the field's first look: a light
+   green with a few tufts), cut a little lower than the tall grass around
+   it. Darkens with the night. */
 .tile {
-  margin: 4%;
-  border-radius: 18%;
-  background: color-mix(in srgb, #f3e9d2, #4a5070 calc(var(--night, 0) * 50%));
-  box-shadow: inset 0 0 0 1px rgba(120, 90, 40, 0.25);
+  --tufts:
+    radial-gradient(circle at 25% 70%, #7cb342 0 6%, transparent 7%),
+    radial-gradient(circle at 70% 35%, #7cb342 0 5%, transparent 6%),
+    radial-gradient(circle at 60% 80%, #9ccc65 0 4%, transparent 5%);
+  margin: 3%;
+  border-radius: 10%;
+  background-color: color-mix(in srgb, #8bc34a, #2c3a50 calc(var(--night, 0) * 55%));
+  background-image: var(--tufts);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), inset 0 2px 6px rgba(0, 0, 0, 0.3);
   display: grid;
   place-items: center;
   container-type: inline-size;
@@ -151,27 +162,48 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   background: #fff;
 }
 
-/* A found clue: the author's animal, framed in their colour, with which of
-   their 3 clues it is in the corner. Tap it to read it again. */
+/* Little flowers on short grass: dots of colour, four patterns. */
+.tile.flower.f0 { background-image: radial-gradient(circle at 30% 35%, #f06292 0 7%, transparent 8%), radial-gradient(circle at 68% 62%, #fff59d 0 6%, transparent 7%), radial-gradient(circle at 45% 78%, #fff 0 5%, transparent 6%), var(--tufts); }
+.tile.flower.f1 { background-image: radial-gradient(circle at 62% 28%, #ffffff 0 7%, transparent 8%), radial-gradient(circle at 30% 65%, #ffd54f 0 7%, transparent 8%), var(--tufts); }
+.tile.flower.f2 { background-image: radial-gradient(circle at 25% 30%, #ba68c8 0 6%, transparent 7%), radial-gradient(circle at 72% 45%, #ba68c8 0 6%, transparent 7%), radial-gradient(circle at 50% 75%, #fff176 0 6%, transparent 7%), var(--tufts); }
+.tile.flower.f3 { background-image: radial-gradient(circle at 40% 40%, #ef5350 0 8%, transparent 9%), radial-gradient(circle at 70% 75%, #fff 0 5%, transparent 6%), radial-gradient(circle at 22% 78%, #fff 0 5%, transparent 6%), var(--tufts); }
+
+/* A found clue: a 🔍 on a pale card framed in the author's colour, their
+   animal small at the top left, the clue's number at the bottom right.
+   Flat and square, so it never looks like a player. Tap it to reread. */
 .tile.clue {
   --c: #999;
   position: relative;
+  margin: 6%;
+  border-radius: 14%;
   border: 3px solid var(--c);
-  background: color-mix(in srgb, var(--c) 18%, #fff);
+  background: #fffdf5;
+  box-shadow: none;
+}
+
+.tile.clue .icon { font-size: 46cqi; }
+
+.clue-animal {
+  position: absolute;
+  left: -10%;
+  top: -10%;
+  font-size: 34cqi;
+  line-height: 1;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
 }
 
 .clue-number {
   position: absolute;
-  right: -6%;
-  bottom: -6%;
-  min-width: 34cqi;
-  height: 34cqi;
+  right: -8%;
+  bottom: -8%;
+  min-width: 36cqi;
+  height: 36cqi;
   border-radius: 999px;
   background: var(--c);
   color: #fff;
-  font-size: 24cqi;
+  font-size: 26cqi;
   font-weight: 700;
-  line-height: 34cqi;
+  line-height: 36cqi;
   text-align: center;
   box-shadow: 0 0 0 2px #fff;
 }
@@ -188,12 +220,36 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   100% { transform: perspective(200px) rotateY(0); }
 }
 
-/* Squares you can reach this round: a soft light over the grass. */
+/* Squares you can reach this round: a bright outline with a soft glow
+   that breathes, clearly on top of both tall and short grass. */
 .reach {
-  margin: 6%;
-  border-radius: 18%;
-  background: rgba(255, 255, 255, 0.35);
+  margin: 5%;
+  border-radius: 16%;
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 8px 2px rgba(255, 245, 160, 0.75);
   pointer-events: none;
+  animation: reach-glow 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes reach-glow {
+  from { box-shadow: 0 0 4px 1px rgba(255, 245, 160, 0.5); }
+  to   { box-shadow: 0 0 12px 4px rgba(255, 245, 160, 0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reach { animation: none; }
+}
+
+/* My sheep's square: tap it again to turn the line. */
+.turn-hint {
+  position: absolute;
+  right: 4%;
+  top: 0;
+  font-size: 40cqi;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 3px #000;
 }
 
 /* A square someone picked: a plain dashed ring, so it doesn't say who. */
@@ -381,10 +437,17 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   border: 3px solid #8bc34a;
 }
 
+/* The bar: the instruction big, the details small underneath. */
 #status-text {
   margin: 0;
-  font-size: max(17px, 2.4vmin);
-  font-weight: 600;
+  font-size: max(20px, 2.8vmin);
+  font-weight: 700;
+}
+
+#status-detail {
+  margin: 4px 0 0;
+  font-size: max(14px, 1.8vmin);
+  color: #555;
 }
 
 #ready, #end-open, #sheep {
@@ -1589,3 +1652,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 #rules-dots .dot.on { background: #2f7d32; }
+
+/* Anchors the ↻ on my sheep's square. */
+.pick.mine { position: relative; }

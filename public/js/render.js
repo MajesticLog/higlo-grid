@@ -1,9 +1,9 @@
 // Drawing: everything on screen comes from `state`.
-import { myId } from "./session.js";
+import { SIZE, myId } from "./session.js";
 import { state } from "./state.js";
 import { now, NIGHT_STEPS } from "./game.js";
 import {
-  REACH, READY_WAIT_MS, inReach, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH,
+  REACH, READY_WAIT_MS, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH,
 } from "./rounds.js";
 import { queueCard, explainOnce } from "./card.js";
 import { playBleat } from "./sound.js";
@@ -58,17 +58,21 @@ function drawTiles() {
     const el = document.createElement("div");
     el.className = `tile ${tile.show}`;
     place(el, ...squareOf(k));
-    if (tile.show !== "insect") el.append(iconSpan(tile.icon)); // insects leave
+    if (tile.show === "flower") el.classList.add(`f${tile.f ?? 0}`);
+    if (tile.icon && tile.show !== "insect") el.append(iconSpan(tile.icon)); // insects leave
     if (tile.show === "memory" || tile.show === "clue") {
       el.style.setProperty("--c", state.memories[tile.memory]?.color ?? "#999"); // the author's colour
       el.dataset.memory = tile.memory; // tap it to read it again
     }
     if (tile.show === "clue") {
       el.dataset.clue = tile.n;
+      const animal = document.createElement("span");
+      animal.className = "clue-animal"; // whose memory it belongs to
+      animal.textContent = state.memories[tile.memory]?.animal ?? "";
       const number = document.createElement("span");
       number.className = "clue-number"; // which of the 3 clues
       number.textContent = tile.n + 1;
-      el.append(number);
+      el.append(animal, number);
     }
     const id = `${game.id}:${k}`;
     if (!firstSeen.has(id)) {
@@ -89,7 +93,7 @@ function drawTiles() {
       el.classList.add("flip");
       el.style.animationDelay = `${-age}ms`;
     }
-    if (age < POP_MS) pops.push({ k, tile, age });
+    if (age < POP_MS && tile.icon) pops.push({ k, tile, age });
     grid.append(el);
   }
   if (!peek) return;
@@ -104,13 +108,22 @@ function drawTiles() {
 }
 
 // While I choose: a soft glow on the squares I can reach.
+// Only while choosing a move: hidden while anyone is still walking after a
+// reveal, and shown again once every circle has arrived.
+const someoneWalking = () => state.players.some((p) => {
+  const at = shown.get(p.id);
+  return at && (at.x !== p.x || at.y !== p.y);
+});
+
 function drawReach() {
-  if (!choosing() || state.game.picks?.[myId]?.ready) return;
+  if (!choosing() || state.game.picks?.[myId]?.ready || someoneWalking()) return;
+  const from = state.me;
   for (let dy = -REACH; dy <= REACH; dy++) {
     for (let dx = -REACH; dx <= REACH; dx++) {
-      const x = state.me.x + dx;
-      const y = state.me.y + dy;
-      if ((dx === 0 && dy === 0) || !inReach(x, y)) continue;
+      const x = from.x + dx;
+      const y = from.y + dy;
+      if ((dx === 0 && dy === 0) || Math.abs(dx) + Math.abs(dy) > REACH) continue;
+      if (x < 0 || y < 0 || x >= SIZE || y >= SIZE) continue;
       const el = document.createElement("div");
       el.className = "reach";
       place(el, x, y);
@@ -148,7 +161,15 @@ function drawPicks() {
     el.style.setProperty("--c", state.me.color);
     place(el, x, y);
     if (!mine.sheep) el.append(animalSpan(state.me.animal));
-    else if (x === mine.x && y === mine.y) el.append(iconSpan("🐑"));
+    else if (x === mine.x && y === mine.y) {
+      el.append(iconSpan("🐑"));
+      if (!mine.ready) {
+        const turn = document.createElement("span");
+        turn.className = "turn-hint"; // tap again to turn
+        turn.textContent = "↻";
+        el.append(turn);
+      }
+    }
     grid.append(el);
   }
 }
@@ -329,12 +350,48 @@ function animalSpan(animal) {
 }
 
 // Group players by square; several on one square are drawn side by side.
+// Where each circle is drawn: it walks one square at a time towards where the
+// player really is, instead of jumping there.
+const WALK_STEP_MS = 180;
+const shown = new Map(); // playerId -> {x, y} as drawn
+let walker = null;
+
+function stepWalkers() {
+  let moving = false;
+  for (const p of state.players) {
+    const at = shown.get(p.id);
+    if (!at) continue;
+    const dx = p.x - at.x;
+    const dy = p.y - at.y;
+    if (dx === 0 && dy === 0) continue;
+    // Along the axis with the most distance left: a natural staircase path.
+    if (Math.abs(dx) >= Math.abs(dy)) at.x += Math.sign(dx);
+    else at.y += Math.sign(dy);
+    moving = true;
+  }
+  if (!moving) {
+    clearInterval(walker);
+    walker = null;
+  }
+  render();
+}
+
+function drawnAt(p) {
+  if (!shown.has(p.id)) shown.set(p.id, { x: p.x, y: p.y }); // just arrived: no walk
+  const at = shown.get(p.id);
+  if ((at.x !== p.x || at.y !== p.y) && !walker) walker = setInterval(stepWalkers, WALK_STEP_MS);
+  return at;
+}
+
 function drawPlayers() {
+  const here = new Set(state.players.map((p) => p.id));
+  for (const id of shown.keys()) if (!here.has(id)) shown.delete(id);
   const squares = new Map();
   for (const p of state.players) {
-    const key = `${p.x},${p.y}`;
+    const at = drawnAt(p);
+    const key = `${at.x},${at.y}`;
     if (!squares.has(key)) squares.set(key, []);
-    squares.get(key).push(p);
+    squares.get(key).push({ ...p, ...at });
   }
 
   for (const group of squares.values()) {
@@ -384,27 +441,35 @@ const statusText = document.getElementById("status-text");
 const readyButton = document.getElementById("ready");
 const endOpen = document.getElementById("end-open"); // reopens the end screen
 const sheepButton = document.getElementById("sheep");
+const statusDetail = document.getElementById("status-detail");
+
+// The bar: what to do, big; the details small, underneath.
+function say(main, detail = "") {
+  statusText.textContent = main;
+  statusDetail.textContent = detail;
+  statusDetail.hidden = !detail;
+}
 const timer = document.getElementById("timer");
 const timerFill = timer.firstElementChild;
 
 function renderStatus() {
   const game = state.game;
   if (state.joined && !state.online) {
-    statusText.textContent = "📶 Connection lost, reconnecting…";
+    say("📶 Connection lost, reconnecting…");
     readyButton.hidden = sheepButton.hidden = endOpen.hidden = true;
     return;
   }
   if (game?.status === "lost") {
-    statusText.textContent = "🐺 The wolf is out, let's go to bed! The memories still hidden will wait for next time.";
+    say("🐺 The wolf is out, let's go to bed!", "Memories not guessed can be hidden again next game.");
   } else if (game?.status === "won") {
-    statusText.textContent = "✨ Every memory found!";
+    say("✨ Every memory found!");
   }
   const over = game && game.status !== "playing";
   endOpen.hidden = !over;
   if (over) endOpen.textContent = game.status === "won" ? "☕ Back to the tea" : "🌙 Back to bed";
   if (!choosing()) {
-    if (game?.guess && !over) statusText.textContent = "🔍 All the clues of a memory are found: time to guess!";
-    else if (!over) statusText.textContent = "Joining…";
+    if (game?.guess && !over) say("🔍 Time to guess a memory!", "All its clues are found.");
+    else if (!over) say("Joining…");
     readyButton.hidden = true;
     sheepButton.hidden = true;
     return;
@@ -412,19 +477,20 @@ function renderStatus() {
   const picks = game.picks ?? {};
   const total = state.players.length;
   const readyCount = state.players.filter((p) => picks[p.id]?.ready).length;
-  const count = total > 1 ? ` (${readyCount} of ${total} ready)` : "";
+  const count = total > 1 ? `${readyCount} of ${total} ready` : "";
   const mine = picks[myId];
   const sheepMode = inSheepMode();
+  const withCount = (text) => [text, count].filter(Boolean).join(" · ");
   if (mine?.ready) {
-    statusText.textContent = `✓ Ready! Waiting for the others${count}`;
+    say("✓ Ready!", withCount("Waiting for the others"));
   } else if (sheepMode && mine?.sheep) {
-    statusText.textContent = `🐑 Tap ✓ Ready, or tap the 🐑 square again to turn the line${count}`;
+    say("🐑 Tap ✓ Ready to send your sheep", withCount("Tap the 🐑 square again to turn it ↻"));
   } else if (sheepMode) {
-    statusText.textContent = `🐑 Tap a square for the sheep to graze from${count}`;
+    say("🐑 Choose where to place your sheep", withCount(`Tap a glowing square: it grazes ${SHEEP_LENGTH} squares from there`));
   } else if (mine) {
-    statusText.textContent = `Tap ✓ Ready, or pick another square${count}`;
+    say("Tap ✓ Ready", withCount("or pick another glowing square"));
   } else {
-    statusText.textContent = `Pick a square up to ${REACH} steps away, then tap ✓ Ready${count}`;
+    say("Pick a glowing square", withCount(`Up to ${REACH} steps away, then tap ✓ Ready`));
   }
   readyButton.hidden = Boolean(mine?.ready);
   // The sheep button shows the sheep I have left, one icon each: no reading needed.

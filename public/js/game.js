@@ -19,8 +19,9 @@ export const START_ROW = SIZE - 1;
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
 
 const INSECT_CHANCE = 0.15; // share of empty squares that show an insect
+const FLOWER_CHANCE = 0.45; // share that show little flowers (the rest: plain short grass)
+const FLOWER_KINDS = 4; // dot patterns in style.css (.tile.flower.f0 ... f3)
 
-const FLOWERS = ["🌼", "🌸", "🌷", "🌻", "🌺"];
 const INSECTS = ["🐞", "🐛", "🐜", "🦗"];
 const gameRef = sessionRef("game");
 const memoriesRef = sessionRef("memories");
@@ -29,7 +30,7 @@ const memoriesRef = sessionRef("memories");
 export const key = (x, y) => `${x}_${y}`;
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-export const flower = () => ({ show: "flower", icon: pick(FLOWERS) });
+export const flower = () => ({ show: "flower", f: Math.floor(Math.random() * FLOWER_KINDS) });
 
 // Turn a square over, inside a round's transaction. Already turned over: nothing.
 // Each trap brings the night one step closer.
@@ -40,16 +41,16 @@ export function revealSquare(game, k) {
     game.revealed[k] = { show: "trap", icon: "🪤" };
     game.night += 1;
   } else if (hidden?.kind === "clue") {
-    // Shows the author's animal, framed in their colour, so everyone knows
-    // whose memory it's a clue to.
-    const animal = state.memories[hidden.memory]?.animal ?? "🔍";
-    game.revealed[k] = { show: "clue", icon: animal, memory: hidden.memory, n: hidden.n };
+    // A 🔍 with the author's animal beside it, framed in their colour.
+    game.revealed[k] = { show: "clue", icon: "🔍", memory: hidden.memory, n: hidden.n };
   } else if (hidden?.kind === "memory") { // games from before clues
     game.revealed[k] = { show: "memory", icon: "📜", memory: hidden.memory };
-  } else if (Math.random() < INSECT_CHANCE) {
-    game.revealed[k] = { show: "insect", icon: pick(INSECTS) };
   } else {
-    game.revealed[k] = flower();
+    // Empty: short grass, sometimes with little flowers, sometimes an insect.
+    const roll = Math.random();
+    if (roll < INSECT_CHANCE) game.revealed[k] = { show: "insect", icon: pick(INSECTS) };
+    else if (roll < INSECT_CHANCE + FLOWER_CHANCE) game.revealed[k] = flower();
+    else game.revealed[k] = { show: "grass" };
   }
 }
 
@@ -132,7 +133,8 @@ function newGame() {
     // During a round, also: picks {playerId: {x, y, ready}}, deadline.
     // After one: moves {playerId: {x, y}}, where each player went.
   };
-  for (let x = 0; x < SIZE; x++) game.revealed[key(x, START_ROW)] = flower();
+  // Everything starts as tall grass. Nothing is hidden in the start row, so
+  // where everyone starts is safe.
   for (let i = 0; i < TRAPS; i++) {
     const square = freeSquare(game);
     if (square) game.board[square] = { kind: "trap" };
@@ -146,7 +148,7 @@ function freeSquare(game) {
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const k = key(x, y);
-      if (!game.board[k] && !game.revealed[k]) options.push(k);
+      if (y !== START_ROW && !game.board[k] && !game.revealed[k]) options.push(k);
     }
   }
   return options.length ? pick(options) : null;
@@ -156,7 +158,7 @@ function freeSquare(game) {
 // tells the group the others are near (the quest). Falls back to anywhere
 // if the field is too crowded.
 function clueSquares(game) {
-  const free = (k) => !game.board[k] && !game.revealed[k];
+  const free = (k) => !k.endsWith(`_${START_ROW}`) && !game.board[k] && !game.revealed[k];
   for (let tries = 0; tries < 200; tries++) {
     const cx = 1 + Math.floor(Math.random() * (SIZE - 2));
     const cy = 1 + Math.floor(Math.random() * (START_ROW - 1));
