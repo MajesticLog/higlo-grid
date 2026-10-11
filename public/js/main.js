@@ -97,7 +97,75 @@ onValue(ref(db, ".info/connected"), async (snap) => {
   }
   await onDisconnect(myRef).remove();
   await set(myRef, me);
+  await assignTarget(); // my target was removed if I was disconnected
 });
+
+// --- Targets: each player has one; everyone sees it except its owner ---
+const FOUND_MS = 3000; // how long "Found it!" shows before a new target
+const PULSE_MS = 1600; // must match the pulse animation in style.css
+const targetsRef = ref(db, `${sessionPath}/targets`);
+const myTargetRef = ref(db, `${sessionPath}/targets/${myRef.key}`);
+let targets = {}; // latest snapshot: playerId -> {x, y, found?}
+
+// Pick my target in a transaction on the whole targets node: it reads every
+// target and writes mine in one step, so two targets can't share a square.
+async function assignTarget() {
+  const playersNow = Object.values((await get(playersRef)).val() || {});
+  const result = await runTransaction(targetsRef, (current) => {
+    current = current || {};
+    const blocked = new Set([`${CENTRE},${CENTRE}`]);
+    for (const p of playersNow) blocked.add(`${p.x},${p.y}`);
+    for (const [id, t] of Object.entries(current)) {
+      if (id !== myRef.key) blocked.add(`${t.x},${t.y}`);
+    }
+    const options = [];
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const nearMe = Math.max(Math.abs(x - me.x), Math.abs(y - me.y)) <= 1;
+        if (!nearMe && !blocked.has(`${x},${y}`)) options.push({ x, y });
+      }
+    }
+    if (options.length === 0) return; // grid full: abort, no target for now
+    current[myRef.key] = options[Math.floor(Math.random() * options.length)];
+    return current;
+  });
+  if (result.committed) await onDisconnect(myTargetRef).remove();
+}
+
+onValue(targetsRef, (snap) => {
+  targets = snap.val() || {};
+  render();
+  renderBanner();
+});
+
+// Called after each of my moves.
+function checkFound() {
+  const t = targets[myRef.key];
+  if (!t || t.found || me.x !== t.x || me.y !== t.y) return;
+  stopWalking();
+  update(myTargetRef, { found: true }); // everyone sees the banner and the target
+  setTimeout(assignTarget, FOUND_MS);
+}
+
+// "Found it!" banner at the top, one line per target currently found.
+const banner = document.getElementById("banner");
+let bannerShown = "";
+
+function renderBanner() {
+  const found = players.filter((p) => targets[p.id]?.found);
+  const signature = found.map((p) => p.id).join();
+  if (signature === bannerShown) return; // unchanged: don't restart the pop-in
+  bannerShown = signature;
+  banner.replaceChildren();
+  for (const owner of found) {
+    const id = owner.id;
+    const line = document.createElement("div");
+    line.className = "found";
+    line.style.setProperty("--c", owner.color);
+    line.textContent = `${owner.animal} ${id === myRef.key ? "You found it!" : "Found it!"}`;
+    banner.append(line);
+  }
+}
 
 // --- Drawing: the database is the source of truth ---
 const grid = document.getElementById("grid");
@@ -108,6 +176,7 @@ onValue(playersRef, (snap) => {
   players = [];
   snap.forEach((child) => { players.push({ id: child.key, ...child.val() }); });
   render();
+  renderBanner(); // a banner may have been waiting for its player's details
 });
 
 function render() {
@@ -120,6 +189,26 @@ function render() {
   }
 
   grid.replaceChildren();
+
+  // Targets first, so circles are drawn on top of them.
+  for (const [id, t] of Object.entries(targets)) {
+    if (id === myRef.key && !t.found) continue; // your own target stays hidden
+    const owner = players.find((p) => p.id === id);
+    if (!owner) continue;
+    const el = document.createElement("div");
+    el.className = "target" + (t.found ? " found" : "");
+    el.style.gridColumn = t.x + 1;
+    el.style.gridRow = t.y + 1;
+    el.style.setProperty("--c", owner.color);
+    // Keep every pulse on one shared clock, so redraws don't restart it.
+    el.style.animationDelay = `-${Math.round(performance.now() % PULSE_MS)}ms`;
+    const animal = document.createElement("span");
+    animal.className = "animal";
+    animal.textContent = owner.animal ?? "";
+    el.append(animal);
+    grid.append(el);
+  }
+
   for (const group of squares.values()) {
     const square = document.createElement("div");
     square.className = "square";
@@ -185,6 +274,7 @@ function moveTo(x, y) {
   me.x = x;
   me.y = y;
   update(myRef, { x, y });
+  checkFound();
 }
 
 // Arrow keys: one square at a time.
