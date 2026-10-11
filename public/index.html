@@ -21,11 +21,18 @@
       </div>
       <form id="write" hidden>
         <h1>Hide a memory</h1>
-        <p class="hint-text">It will be hidden under the grass. Find it together!</p>
-        <p id="prompt"></p>
-        <button id="new-prompt" class="quiet" type="button">Another idea ↻</button>
-        <textarea id="memory" maxlength="300" rows="4" aria-labelledby="prompt"></textarea>
-        <button id="hide" class="primary" type="submit">Hide it in the field 🌱</button>
+        <p class="hint-text">Pick a theme, write your memory in a few words, then 3 clues.
+          The clues get hidden in the field: the others find them and guess your memory!</p>
+        <div id="categories" class="categories" role="group" aria-label="Theme"></div>
+        <div id="memory-fields" hidden>
+          <label class="field-label" for="memory">Your memory, in a few words</label>
+          <input id="memory" type="text" maxlength="80" autocomplete="off">
+          <p class="field-label" id="clues-label">3 clues: hint at it, don't give it away</p>
+          <input id="clue-1" type="text" maxlength="60" autocomplete="off" aria-label="Clue 1">
+          <input id="clue-2" type="text" maxlength="60" autocomplete="off" aria-label="Clue 2">
+          <input id="clue-3" type="text" maxlength="60" autocomplete="off" aria-label="Clue 3">
+        </div>
+        <button id="hide" class="primary" type="submit" disabled>Hide my clues in the field 🌱</button>
         <button id="skip" class="quiet" type="button">Skip for now</button>
       </form>
       <p id="here"></p>

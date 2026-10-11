@@ -1,4 +1,5 @@
-// Lobby: pick an animal and a colour, then hide a memory in the field.
+// Lobby: pick an animal and a colour, then write a memory and 3 clues to it.
+// The clues get hidden in the field; the memory is what the others guess.
 import { push, onValue, onDisconnect, runTransaction, serverTimestamp } from "./firebase.js";
 import { sessionId, sessionRef, playersRef } from "./session.js";
 
@@ -14,15 +15,27 @@ export const ANIMALS = [
   "🐱", "🐶", "🐸", "🦊", "🐻", "🐰", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷",
   "🐵", "🐔", "🐧", "🐙", "🦉", "🐢", "🦄", "🐝", "🐳", "🦋", "🐌", "🦔",
 ];
-const PROMPTS = [
-  "A memory with someone here",
-  "Something the others don't know about you",
-  "A place you'd love to go back to",
-  "Something that made you laugh recently",
-  "A meal you'll never forget",
-  "Something you'd like us to do together",
-  "Your favourite toy or game when you were little",
+// Themes keep memories guessable: knowing it's "food" narrows it down. Each
+// comes with an example memory and clues, shown as placeholders.
+export const CATEGORIES = [
+  { id: "places", icon: "🏡", label: "Places from our youth",
+    example: ["Grandma's garden", "There was a swing", "It smelled of roses", "We went every summer"] },
+  { id: "food", icon: "🍲", label: "Food",
+    example: ["Grandpa's pancakes", "On Sunday mornings", "Far too much sugar", "He flipped them in the air"] },
+  { id: "holidays", icon: "🏖️", label: "Holidays",
+    example: ["Camping by the lake", "The tent leaked", "We saw a deer", "It rained all week"] },
+  { id: "toys", icon: "🧸", label: "Toys and games",
+    example: ["My red bike", "It had a bell", "A birthday present", "I fell off it in the park"] },
+  { id: "animals", icon: "🐾", label: "Pets and animals",
+    example: ["Our cat Moustache", "Black and white", "She slept on the piano", "She hated the hoover"] },
+  { id: "music", icon: "🎵", label: "Songs and music",
+    example: ["Singing in the car", "On long drives", "Always the same cassette", "Dad knew all the words"] },
+  { id: "funny", icon: "😂", label: "Funny moments",
+    example: ["The cake on the floor", "It was a birthday", "Chocolate everywhere", "The dog was delighted"] },
+  { id: "secret", icon: "🤫", label: "A secret about me",
+    example: ["I can juggle", "I learned as a teenager", "With three balls", "I practised in my room"] },
 ];
+export const CLUES = 3;
 const KINDS = ["animals", "colors"]; // database nodes: animals/<i>, colors/<i>
 
 // --- Remembering who I am ---
@@ -149,27 +162,55 @@ onValue(playersRef, (snap) => {
     : "Nobody in the field yet. Share the link below so others can join.";
 });
 
-// --- Hiding a memory ---
+// --- Hiding a memory: a theme, the memory in a few words, 3 clues ---
 const form = document.getElementById("write");
 const memory = document.getElementById("memory");
-const promptText = document.getElementById("prompt");
-let promptIndex = Math.floor(Math.random() * PROMPTS.length);
-promptText.textContent = PROMPTS[promptIndex];
-document.getElementById("new-prompt").addEventListener("click", () => {
-  promptIndex = (promptIndex + 1) % PROMPTS.length;
-  promptText.textContent = PROMPTS[promptIndex];
+const clues = [...Array(CLUES)].map((_, i) => document.getElementById(`clue-${i + 1}`));
+const fields = document.getElementById("memory-fields");
+const hideButton = document.getElementById("hide");
+let category = null;
+
+const categoryButtons = CATEGORIES.map((c) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.innerHTML = `<span class="category-icon"></span><span class="category-label"></span>`;
+  b.querySelector(".category-icon").textContent = c.icon;
+  b.querySelector(".category-label").textContent = c.label;
+  b.addEventListener("click", () => chooseCategory(c));
+  document.getElementById("categories").append(b);
+  return b;
 });
+
+// Picking a theme shows the fields, with that theme's example as a guide.
+function chooseCategory(c) {
+  category = c;
+  categoryButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(CATEGORIES[i] === c)));
+  const [example, ...exampleClues] = c.example;
+  memory.placeholder = `For example: ${example}`;
+  clues.forEach((input, i) => { input.placeholder = exampleClues[i]; });
+  fields.hidden = false;
+  updateHide();
+  memory.focus();
+}
+
+// Ready to hide once there's a theme, a memory and all 3 clues.
+function updateHide() {
+  hideButton.disabled = !category || !memory.value.trim() || clues.some((c) => !c.value.trim());
+}
+for (const input of [memory, ...clues]) input.addEventListener("input", updateHide);
 
 function writeMemory(identity) {
   return new Promise((resolve) => {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const text = memory.value.trim();
-      if (!text) return memory.focus();
+      updateHide();
+      if (hideButton.disabled) return;
       // Memories belong to the family link, not to this game or this tab.
       push(sessionRef("memories"), {
-        text,
-        prompt: PROMPTS[promptIndex],
+        text: memory.value.trim(),
+        category: category.id,
+        prompt: `${category.icon} ${category.label}`,
+        clues: clues.map((c) => c.value.trim()),
         ...identity,
         createdAt: serverTimestamp(),
       });
@@ -204,7 +245,7 @@ export async function runLobby() {
     if (!tab.memoryDone) {
       pickStep.hidden = true;
       writeStep.hidden = false;
-      memory.focus();
+      categoryButtons[0].focus();
       await writeMemory(identity());
       tab.memoryDone = true;
       write("sessionStorage", TAB_KEY, tab);
