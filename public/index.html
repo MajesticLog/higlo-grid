@@ -9,6 +9,14 @@
   <body>
     <div id="banner" aria-live="polite"></div>
     <main>
+      <div id="turnbar" aria-live="polite">
+        <p id="turn-text">Joining…</p>
+        <div id="turn-buttons">
+          <button id="hot" type="button" hidden>🔥 Warmer</button>
+          <button id="cold" type="button" hidden>❄️ Colder</button>
+          <button id="next" type="button" hidden>Next ➜</button>
+        </div>
+      </div>
       <div id="grid" aria-label="Shared grid"></div>
       <p id="share">Share this link to play together: <span id="link"></span></p>
     </main>
