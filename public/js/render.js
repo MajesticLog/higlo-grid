@@ -5,7 +5,7 @@ import { now, NIGHT_STEPS } from "./game.js";
 import {
   REACH, READY_WAIT_MS, inReach, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH,
 } from "./rounds.js";
-import { queueCard } from "./card.js";
+import { queueCard, explainOnce } from "./card.js";
 import { playBleat } from "./sound.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
@@ -75,6 +75,13 @@ function drawTiles() {
       firstSeen.set(id, arriving ? -Infinity : performance.now());
       if (!arriving && (tile.show === "memory" || tile.show === "clue")) {
         queueCard({ memory: tile.memory, n: tile.n });
+      }
+      if (!arriving && tile.show === "trap" && state.joined) {
+        explainOnce("trap", {
+          heading: "🪤 A trap!",
+          text: `The sky gets a little darker. After ${NIGHT_STEPS} traps it's full night, `
+            + "and the wolf comes out! Find all the clues before then.",
+        }, 900); // after the trap pops up
       }
     }
     const age = performance.now() - firstSeen.get(id);

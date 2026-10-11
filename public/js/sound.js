@@ -7,14 +7,20 @@ let ctx = null;
 let muted = false;
 try { muted = localStorage.getItem(MUTE_KEY) === "1"; } catch { /* private mode: sound on */ }
 
+// Browsers only count some gestures as permission to play: a key press, a
+// click, or a finger *lifting* (a finger touching down doesn't count). So
+// listen for all of them; on a phone, a refresh that skips the lobby (no
+// typing) would otherwise never get sound. Each gesture also wakes the sound
+// up if the phone suspended or interrupted it (a call, a notification).
 function unlock() {
   if (!ctx) {
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
   }
-  if (ctx.state === "suspended") ctx.resume();
+  if (ctx.state !== "running") ctx.resume().catch(() => {});
 }
-document.addEventListener("pointerdown", unlock);
-document.addEventListener("keydown", unlock);
+for (const gesture of ["pointerup", "touchend", "click", "keydown"]) {
+  document.addEventListener(gesture, unlock, { passive: true });
+}
 
 const ready = () => ctx && ctx.state === "running" && !muted;
 
@@ -151,16 +157,24 @@ export function playCaws() {
   });
 }
 
-// Shower: rain hiss and a soft wind rising and falling under it.
+// Shower: gentle drops pattering on leaves (little "plinks" at random
+// pitches), over a very soft, low hush. No hiss.
 export function playRainAndWind() {
   if (!ready()) return;
-  const t = ctx.currentTime + 0.05;
-  noiseSource(t, 4.5).connect(filter("highpass", 2500)).connect(envelope(t + 0.6, 0.06, 0.8, 2.2, 0.9));
-  const wind = filter("lowpass", 300, 4);
-  wind.frequency.setValueAtTime(300, t);
-  wind.frequency.linearRampToValueAtTime(750, t + 1.8);
-  wind.frequency.linearRampToValueAtTime(320, t + 4.2);
-  noiseSource(t, 4.5).connect(wind).connect(envelope(t, 0.08, 1.2, 1.8, 1.3));
+  const start = ctx.currentTime + 0.05;
+  noiseSource(start, 4).connect(filter("lowpass", 500)).connect(envelope(start + 0.5, 0.025, 1, 1.5, 1));
+  for (let i = 0; i < 45; i++) {
+    // More drops in the middle of the shower, fewer at the start and end.
+    const at = 0.8 + 2.6 * ((Math.random() + Math.random()) / 2);
+    const t = start + at;
+    const drop = osc("sine", t, 0.12);
+    drop.frequency.setValueAtTime(1200 + Math.random() * 1800, t);
+    drop.frequency.exponentialRampToValueAtTime(700 + Math.random() * 400, t + 0.08);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.025 + Math.random() * 0.025, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    drop.connect(gain).connect(ctx.destination);
+  }
 }
 
 // Owl: "hoo... hoo-hoo".

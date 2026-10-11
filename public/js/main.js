@@ -9,6 +9,7 @@ import { pickSquare, movePick, inReach, choosing, maybeResolve } from "./rounds.
 import { openCard } from "./card.js";
 import { gameChanged, maybeStartAgain } from "./end.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
+import { rulesOnce } from "./rules.js";
 import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
@@ -16,6 +17,7 @@ document.getElementById("link").textContent = location.href;
 // The lobby first: pick an animal and a colour, hide a memory.
 Object.assign(state.me, await runLobby());
 document.getElementById("field").hidden = false;
+rulesOnce(); // first time on this device: how to play
 // Back on my square after a refresh in the same game; otherwise the start row.
 const [players, gameNow] = await Promise.all([get(playersRef), get(sessionRef("game"))]);
 const gameId = gameNow.val()?.id;
@@ -56,6 +58,8 @@ const MOVES = {
 document.addEventListener("keydown", (e) => {
   const move = MOVES[e.key];
   if (!move) return;
+  // Not while typing (a guess) or while a card, the rules or the chest is open.
+  if (e.target.closest?.("input, textarea") || document.querySelector('[role="dialog"]:not([hidden])')) return;
   e.preventDefault(); // stop the arrows from scrolling the page
   movePick(...move);
 });

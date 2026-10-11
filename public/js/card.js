@@ -12,6 +12,7 @@ const heading = document.getElementById("card-found");
 const promptText = document.getElementById("card-prompt");
 const text = document.getElementById("card-text");
 const author = document.getElementById("card-author");
+const others = document.getElementById("card-others");
 const closeButton = document.getElementById("card-close");
 
 const queue = []; // {memory, n?} waiting, if several turn over in one round
@@ -35,6 +36,16 @@ export function showInfo(info) {
   showNext();
 }
 
+// A card the first time something happens on this device (a sheep, a trap).
+export function explainOnce(name, info, delay = 0) {
+  const storageKey = `higlo:explained:${name}`;
+  try {
+    if (localStorage.getItem(storageKey)) return;
+    localStorage.setItem(storageKey, "1");
+  } catch { /* private mode: explain every time */ }
+  setTimeout(() => showInfo(info), delay);
+}
+
 // Tapping a found clue on the grid opens it again.
 export function openCard(item) {
   queue.unshift(item);
@@ -43,6 +54,7 @@ export function openCard(item) {
 
 function showNext() {
   const item = queue.shift();
+  others.replaceChildren();
   if (item?.info) {
     heading.textContent = item.info.heading;
     promptText.textContent = "";
@@ -69,6 +81,23 @@ function showNext() {
     heading.textContent = `🔍 ${who}'s clue, ${item.n + 1} of ${CLUES}`;
     text.textContent = memory.clues?.[item.n] ?? "";
     author.textContent = "";
+    // The other clues found so far for this memory, so someone who arrived
+    // late (or looked away) can catch up from any card.
+    const found = Object.values(state.game?.revealed ?? {})
+      .filter((t) => t.show === "clue" && t.memory === item.memory && t.n !== item.n)
+      .map((t) => t.n)
+      .sort();
+    for (const n of found) {
+      const li = document.createElement("li");
+      li.textContent = `${n + 1}. ${memory.clues?.[n] ?? ""}`;
+      others.append(li);
+    }
+    if (found.length) {
+      const label = document.createElement("li");
+      label.className = "card-others-label";
+      label.textContent = "Clues found so far:";
+      others.prepend(label);
+    }
   }
   card.hidden = false;
   closeButton.focus();

@@ -11,7 +11,6 @@ import { render, renderTimer, nudgeStatus } from "./render.js";
 import { key, now, revealSquare, checkEnd, nextGuess } from "./game.js";
 import { playBleat } from "./sound.js";
 import { isAuthor } from "./guess.js";
-import { showInfo } from "./card.js";
 
 export const REACH = 3; // steps up, down, left or right; no diagonals
 export const SHEEP_PER_PLAYER = 3; // per game
@@ -74,10 +73,7 @@ function toggleSheep() {
   if (!choosing() || myPick()?.ready) return;
   if (!inSheepMode() && sheepLeft() <= 0) return nudgeStatus();
   sheepRound = inSheepMode() ? null : state.game.round;
-  if (inSheepMode()) {
-    playBleat(); // "bêêê", here I come
-    explainSheep();
-  }
+  if (inSheepMode()) playBleat(); // "bêêê", here I come
   // Switching between a sheep and a square: start the pick afresh.
   changeRound((game) => {
     if (!game.picks[myId]) return false;
@@ -87,24 +83,6 @@ function toggleSheep() {
 }
 
 document.getElementById("sheep").addEventListener("click", toggleSheep);
-
-// The first time I send a sheep on this device, a card says what it does.
-const SHEEP_HELP_KEY = "higlo:sheep-explained";
-
-function explainSheep() {
-  try {
-    if (localStorage.getItem(SHEEP_HELP_KEY)) return;
-    localStorage.setItem(SHEEP_HELP_KEY, "1");
-  } catch { /* private mode: explain every time */ }
-  showInfo({
-    heading: "🐑 Your sheep",
-    text: `Instead of turning over a square, send a sheep to graze ${SHEEP_LENGTH} squares in a line. `
-      + "Tap a square to start its line, and tap it again to turn the line. "
-      + "The sheep eats the grass on empty squares, so they turn over safely. "
-      + "It refuses to touch a square hiding a clue or a trap, and leaves a ❓ there. "
-      + `You have ${SHEEP_PER_PLAYER} sheep per game: 🐑🐑🐑.`,
-  });
-}
 
 // Tap a square (or move with the arrows): that's my pick, not ready yet.
 // In sheep mode, it places the sheep's line; tapping the same square again

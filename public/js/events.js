@@ -14,8 +14,8 @@ import {
 // Test aid: with ?peek in the link, only 10 to 15 seconds of calm between
 // events after the first one.
 const fast = new URLSearchParams(location.search).has("peek");
-const FIRST_EVENT_MS = fast ? [30000, 40000] : [45000, 60000]; // the first one 45 s to 1 min into a game
-const CALM_MS = fast ? [10000, 15000] : [40000, 55000]; // calm after each event: one every 45 s to 1 min
+const FIRST_EVENT_MS = fast ? [30000, 40000] : [60000, 120000]; // the first one 1 to 2 min into a game
+const CALM_MS = fast ? [10000, 15000] : [55000, 115000]; // calm after each event: one every 1 to 2 min
 const NIGHT_FROM = 3; // night step from which the night events take over
 const DAY = ["balloon", "birds", "rain"];
 const NIGHT = ["owl", "star", "ufo"];
@@ -137,7 +137,7 @@ const PLAY = {
     const board = document.getElementById("board").getBoundingClientRect();
     if (!board.width) return;
     const dir = direction(seed);
-    const size = Math.max(90, board.width * 0.38);
+    const size = Math.max(70, board.width * 0.26); // about a quarter of the field
     add("cloud", "☁️", EVENT_MS, {
       "--dir": dir,
       "--size": `${size}px`,
