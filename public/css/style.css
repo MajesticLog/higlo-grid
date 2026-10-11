@@ -356,7 +356,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   font-weight: 600;
 }
 
-#ready, #end-open {
+#ready, #end-open, #sheep {
   margin-top: 8px;
   min-height: 52px;
   min-width: 150px;
@@ -384,6 +384,22 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   height: 100%;
   background: #f4c430;
   transition: width 0.25s linear;
+}
+
+/* The sheep button: one 🐑 per sheep left. Pressed while aiming a sheep. */
+#sheep {
+  min-width: 0;
+  margin-right: 8px;
+  padding: 0 14px;
+  background: #fff;
+  border: 3px solid #cfd8dc;
+  color: #222;
+  letter-spacing: 2px;
+}
+
+#sheep[aria-pressed="true"] {
+  border-color: #2f7d32;
+  background: #e8f5e9;
 }
 
 #status.nudge {
@@ -813,4 +829,117 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 @media (prefers-reduced-motion: reduce) {
   .firefly, .end-body { animation: none; }
   .firefly { opacity: 0.8; }
+}
+
+/* --- Sheep --- */
+/* A square a sheep refused: something is hiding there. */
+.sniffed {
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+.sniffed .icon {
+  font-size: 50cqi;
+  filter: drop-shadow(0 0 2px #fff);
+}
+
+/* Picks: a sheep's 🐑 on the square tapped. */
+.pick .icon {
+  font-size: 50cqi;
+}
+
+.pick {
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+}
+
+/* The sheep trotting along its line of three squares, 0.8s per square
+   (SHEEP_STEP_MS in render.js), then a moment to fade. */
+.graze {
+  position: relative;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.walker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  animation: graze-h 3.2s linear both;
+}
+
+.graze.h .walker { width: calc(100% / 3); height: 100%; }
+.graze.v .walker { width: 100%; height: calc(100% / 3); animation-name: graze-v; }
+
+.walker .icon {
+  font-size: 80cqi;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  animation: munch 0.4s ease-in-out infinite alternate;
+}
+
+/* Sheep emoji face left: flip it to face the way it walks, across. */
+.graze.h .walker .icon { transform: scaleX(-1); }
+
+@keyframes graze-h {
+  0%   { transform: translateX(0); opacity: 0; }
+  8%   { opacity: 1; }
+  25%  { transform: translateX(0); }
+  50%  { transform: translateX(100%); }
+  75%  { transform: translateX(200%); opacity: 1; }
+  100% { transform: translateX(200%); opacity: 0; }
+}
+
+@keyframes graze-v {
+  0%   { transform: translateY(0); opacity: 0; }
+  8%   { opacity: 1; }
+  25%  { transform: translateY(0); }
+  50%  { transform: translateY(100%); }
+  75%  { transform: translateY(200%); opacity: 1; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
+@keyframes munch {
+  from { translate: 0 0; }
+  to   { translate: 0 -6%; }
+}
+
+/* "Baa?" where the sheep refuses to go, as it gets there. */
+.baa {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.baa span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #222;
+  font-size: max(12px, 2vmin);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  animation: baa 1.6s ease-out both;
+}
+
+@keyframes baa {
+  0%   { transform: translateY(0) scale(0.4); opacity: 0; }
+  20%  { transform: translateY(-60%) scale(1.15); opacity: 1; }
+  30%  { transform: translateY(-55%) scale(1) rotate(-6deg); }
+  40%  { transform: translateY(-55%) rotate(6deg); }
+  50%  { transform: translateY(-55%) rotate(0); }
+  80%  { opacity: 1; }
+  100% { transform: translateY(-80%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walker, .walker .icon { animation: none; }
+  .walker { opacity: 0.8; }
 }

@@ -2,13 +2,16 @@
 import { myId } from "./session.js";
 import { state } from "./state.js";
 import { now, NIGHT_STEPS } from "./game.js";
-import { REACH, READY_WAIT_MS, inReach, choosing } from "./rounds.js";
+import {
+  REACH, READY_WAIT_MS, inReach, choosing, sheepLine, sheepLeft, inSheepMode,
+} from "./rounds.js";
 import { queueCard } from "./card.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const FLIP_MS = 600; // must match the flip animation in style.css
 const POP_MS = 2200; // longest pop or insect animation in style.css, delay included
 const FLYERS = ["🐞", "🦗"]; // the other insects walk away
+const SHEEP_STEP_MS = 800; // the sheep takes this long per square; keep in sync with style.css
 
 const grid = document.getElementById("grid");
 // Test aid: add ?peek to the link to see what's hidden under the grass.
@@ -17,10 +20,12 @@ const peek = new URLSearchParams(location.search).has("peek");
 export function render() {
   grid.replaceChildren();
   drawTiles();
+  drawSniffed();
   drawReach();
   drawPicks();
   drawPlayers();
   drawPops();
+  drawGrazing();
   drawWolf();
   fireflies.hidden = state.game?.status !== "won";
   renderSky();
@@ -38,6 +43,7 @@ const squareOf = (k) => k.split("_").map(Number);
 // arrive don't. Redraws keep animations going with a negative delay.
 const firstSeen = new Map(); // "gameId:x_y" -> when this device first drew it
 let gameSeen = null;
+let justArrived = false; // this render is my first look at this game
 let pops = []; // [{k, tile, age}] squares turned over in the last POP_MS
 
 function drawTiles() {
@@ -45,6 +51,7 @@ function drawTiles() {
   pops = [];
   if (!game) return;
   const arriving = gameSeen !== game.id;
+  justArrived = arriving;
   gameSeen = game.id;
   for (const [k, tile] of Object.entries(game.revealed ?? {})) {
     const el = document.createElement("div");
@@ -97,27 +104,99 @@ function drawReach() {
 
 // Picked squares. Mine shows in my colour with my animal; everyone else's
 // is a plain dashed ring, so you can see where people are going, not who.
+// A sheep's pick covers its whole line, with a 🐑 on the square tapped.
 function drawPicks() {
   if (!choosing()) return;
   const picks = state.game.picks ?? {};
-  const others = new Set();
+  const others = new Map(); // "x_y" -> true if a sheep stands there
   for (const [id, p] of Object.entries(picks)) {
-    if (id !== myId) others.add(`${p.x}_${p.y}`);
+    if (id === myId) continue;
+    for (const [x, y] of pickSquares(p)) {
+      const k = `${x}_${y}`;
+      others.set(k, others.get(k) || (p.sheep && x === p.x && y === p.y));
+    }
   }
-  for (const k of others) {
+  for (const [k, sheep] of others) {
     const el = document.createElement("div");
     el.className = "pick";
     place(el, ...squareOf(k));
+    if (sheep) el.append(iconSpan("🐑"));
     grid.append(el);
   }
   const mine = picks[myId];
-  if (mine) {
+  if (!mine) return;
+  for (const [x, y] of pickSquares(mine)) {
     const el = document.createElement("div");
     el.className = "pick mine" + (mine.ready ? " ready" : "");
     el.style.setProperty("--c", state.me.color);
-    place(el, mine.x, mine.y);
-    el.append(animalSpan(state.me.animal));
+    place(el, x, y);
+    if (!mine.sheep) el.append(animalSpan(state.me.animal));
+    else if (x === mine.x && y === mine.y) el.append(iconSpan("🐑"));
     grid.append(el);
+  }
+}
+
+const pickSquares = (p) => (p.sheep ? sheepLine(p.x, p.y, p.sheep) : [[p.x, p.y]]);
+
+// Squares a sheep refused: something is hiding there (a memory or a trap).
+function drawSniffed() {
+  const game = state.game;
+  if (!game) return;
+  for (const k of Object.keys(game.sniffed ?? {})) {
+    if (game.revealed?.[k]) continue;
+    const el = document.createElement("div");
+    el.className = "sniffed";
+    place(el, ...squareOf(k));
+    el.append(iconSpan("❓"));
+    grid.append(el);
+  }
+}
+
+// The sheep sent last round trot along their lines, above everyone. At a
+// square they refuse, a "Baa?" bubble pops up as they reach it.
+let grazeSeen = null; // "gameId:round" of the grazing this device has timed
+let grazeStart = 0;
+
+function drawGrazing() {
+  const game = state.game;
+  const runs = game?.grazed;
+  if (!runs) return;
+  const tag = `${game.id}:${game.round}`;
+  if (grazeSeen !== tag) {
+    // First time I see this grazing: animate it, unless I just arrived.
+    grazeStart = justArrived ? -Infinity : performance.now();
+    grazeSeen = tag;
+  }
+  const age = performance.now() - grazeStart;
+  if (age > SHEEP_STEP_MS * 5) return; // walk (4 steps) plus the last "Baa?"
+  for (const run of runs) {
+    const [first] = run.line.map(squareOf);
+    const lane = document.createElement("div");
+    lane.className = `graze ${run.dir}`;
+    if (run.dir === "h") {
+      lane.style.gridColumn = `${first[0] + 1} / span 3`;
+      lane.style.gridRow = first[1] + 1;
+    } else {
+      lane.style.gridColumn = first[0] + 1;
+      lane.style.gridRow = `${first[1] + 1} / span 3`;
+    }
+    const walker = document.createElement("span");
+    walker.className = "walker";
+    walker.append(iconSpan("🐑"));
+    walker.style.animationDelay = `${-age}ms`;
+    lane.append(walker);
+    grid.append(lane);
+    for (const k of run.refused ?? []) {
+      const i = run.line.indexOf(k);
+      const baa = document.createElement("div");
+      baa.className = "baa";
+      place(baa, ...squareOf(k));
+      const bubble = document.createElement("span");
+      bubble.textContent = "Baa?";
+      bubble.style.animationDelay = `${(i + 1) * SHEEP_STEP_MS - 300 - age}ms`; // as the sheep gets there
+      baa.append(bubble);
+      grid.append(baa);
+    }
   }
 }
 
@@ -272,6 +351,7 @@ const statusBar = document.getElementById("status");
 const statusText = document.getElementById("status-text");
 const readyButton = document.getElementById("ready");
 const endOpen = document.getElementById("end-open"); // reopens the end screen
+const sheepButton = document.getElementById("sheep");
 const timer = document.getElementById("timer");
 const timerFill = timer.firstElementChild;
 
@@ -288,6 +368,7 @@ function renderStatus() {
   if (!choosing()) {
     if (!over) statusText.textContent = "Joining…";
     readyButton.hidden = true;
+    sheepButton.hidden = true;
     return;
   }
   const picks = game.picks ?? {};
@@ -295,14 +376,25 @@ function renderStatus() {
   const readyCount = state.players.filter((p) => picks[p.id]?.ready).length;
   const count = total > 1 ? ` (${readyCount} of ${total} ready)` : "";
   const mine = picks[myId];
+  const sheepMode = inSheepMode();
   if (mine?.ready) {
     statusText.textContent = `✓ Ready! Waiting for the others${count}`;
+  } else if (sheepMode && mine?.sheep) {
+    statusText.textContent = `🐑 Tap ✓ Ready, or tap the 🐑 square again to turn the line${count}`;
+  } else if (sheepMode) {
+    statusText.textContent = `🐑 Tap a square for the sheep to graze from${count}`;
   } else if (mine) {
     statusText.textContent = `Tap ✓ Ready, or pick another square${count}`;
   } else {
     statusText.textContent = `Pick a square up to ${REACH} steps away, then tap ✓ Ready${count}`;
   }
   readyButton.hidden = Boolean(mine?.ready);
+  // The sheep button shows the sheep I have left, one icon each: no reading needed.
+  const left = sheepLeft();
+  sheepButton.hidden = Boolean(mine?.ready) || (left <= 0 && !sheepMode);
+  sheepButton.textContent = "🐑".repeat(Math.max(0, left));
+  sheepButton.setAttribute("aria-pressed", String(sheepMode));
+  sheepButton.setAttribute("aria-label", `Send a sheep (${left} left)`);
 }
 
 // After the first Ready, a calm bar shows the time left (no numbers).
