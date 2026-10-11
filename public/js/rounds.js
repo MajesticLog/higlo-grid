@@ -1,4 +1,4 @@
-// Rounds: everyone picks a square within reach at the same time and taps
+// Rounds: everyone picks a square anywhere on the field at the same time and taps
 // Ready. When all are ready, or 20 seconds after the first Ready (so one
 // player who stepped away can't stall the game), every picked square turns
 // over at once. Others see which squares are picked, never by whom.
@@ -12,15 +12,13 @@ import { key, now, revealSquare, checkEnd, nextGuess } from "./game.js";
 import { playBleat } from "./sound.js";
 import { isAuthor } from "./guess.js";
 
-export const REACH = 3; // steps up, down, left or right; no diagonals
 export const SHEEP_PER_PLAYER = 3; // per game
 export const SHEEP_LENGTH = 5; // squares a sheep grazes; keep in sync with the graze animation in style.css
 const READY_WAIT_MS = 20000; // after the first Ready, how long the others have
 const gameRef = sessionRef("game");
 
-const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-export const inReach = (x, y) =>
-  x >= 0 && y >= 0 && x < SIZE && y < SIZE && distance(state.me, { x, y }) <= REACH;
+// Players can go anywhere on the field: the walk itself is the risk.
+export const inReach = (x, y) => x >= 0 && y >= 0 && x < SIZE && y < SIZE;
 // Rounds pause while a memory is being guessed.
 export const choosing = () => state.joined && state.game?.status === "playing" && !state.game.guess;
 export const myPick = () => state.game?.picks?.[myId];
@@ -138,18 +136,50 @@ function roundOver(game) {
 // animation everyone sees.
 function graze(game, pick) {
   const line = sheepLine(pick.x, pick.y, pick.sheep).map(([x, y]) => key(x, y));
-  const refused = [];
-  for (const k of line) {
-    if (game.revealed[k]) continue;
-    if (game.board[k]) {
-      game.sniffed ??= {};
-      game.sniffed[k] = true;
-      refused.push(k);
-    } else {
-      revealSquare(game, k);
-    }
-  }
+  const refused = line.filter((k) => clear(game, k) === "refused");
   return { line, dir: pick.sheep, refused };
+}
+
+// A sheep grazing a square: empty grass turns over; a square hiding a clue
+// or a trap is left covered with a ❓.
+function clear(game, k) {
+  if (game.revealed[k]) return "done";
+  if (game.board[k]) {
+    game.sniffed ??= {};
+    game.sniffed[k] = true;
+    return "refused";
+  }
+  revealSquare(game, k);
+  return "cleared";
+}
+
+// The squares a player walks through on the way (not the start, not where
+// they land), along the same staircase path their circle is drawn walking
+// (and the footprints show before Ready).
+export function pathBetween(from, to) {
+  const squares = [];
+  let { x, y } = from;
+  while (x !== to.x || y !== to.y) {
+    const dx = to.x - x;
+    const dy = to.y - y;
+    if (Math.abs(dx) >= Math.abs(dy)) x += Math.sign(dx);
+    else y += Math.sign(dy);
+    squares.push(key(x, y));
+  }
+  return squares.slice(0, -1);
+}
+
+// Walking through a square: grass turns over, a trap goes off (the sky
+// darkens), and a clue is spotted (🔍!) but not read: someone has to land
+// on it for that.
+function walkThrough(game, k) {
+  if (game.revealed[k]) return;
+  if (game.board[k]?.kind === "clue") {
+    game.spotted ??= {};
+    game.spotted[k] = true;
+    return;
+  }
+  revealSquare(game, k);
 }
 
 // Any device can end the round; the transaction makes sure it happens once.
@@ -168,6 +198,7 @@ export function maybeResolve() {
     game.sheepUsed ??= {};
     const moves = {};
     const squares = new Map(); // "x_y" -> the players turning it over
+    const walked = []; // squares walked through on the way
     const sheep = [];
     for (const p of state.players) {
       const pick = game.picks[p.id];
@@ -182,6 +213,7 @@ export function maybeResolve() {
       moves[p.id] = to;
       const k = key(to.x, to.y);
       squares.set(k, [...(squares.get(k) ?? []), p]);
+      walked.push(...pathBetween(p, to));
     }
     for (const [k, players] of squares) {
       // My own clue can't be turned over by me alone (it would give my
@@ -195,6 +227,9 @@ export function maybeResolve() {
       }
       revealSquare(game, k);
     }
+    // Then the squares walked through: after the landings, so a square one
+    // player lands on turns over (and is read) even if another walks past it.
+    for (const k of walked) walkThrough(game, k);
     game.grazed = sheep.map((pick) => graze(game, pick)); // after the players: they get there first
     if (game.grazed.length === 0) game.grazed = null;
     nextGuess(game); // all of a memory's clues found: guess it first

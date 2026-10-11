@@ -3,7 +3,7 @@ import { SIZE, myId } from "./session.js";
 import { state } from "./state.js";
 import { now, NIGHT_STEPS } from "./game.js";
 import {
-  REACH, READY_WAIT_MS, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH,
+  READY_WAIT_MS, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH, pathBetween,
 } from "./rounds.js";
 import { queueCard, explainOnce } from "./card.js";
 import { playBleat } from "./sound.js";
@@ -22,7 +22,6 @@ export function render() {
   grid.replaceChildren();
   drawTiles();
   drawSniffed();
-  drawReach();
   drawPicks();
   drawPlayers();
   drawPops();
@@ -107,31 +106,6 @@ function drawTiles() {
   }
 }
 
-// While I choose: a soft glow on the squares I can reach.
-// Only while choosing a move: hidden while anyone is still walking after a
-// reveal, and shown again once every circle has arrived.
-const someoneWalking = () => state.players.some((p) => {
-  const at = shown.get(p.id);
-  return at && (at.x !== p.x || at.y !== p.y);
-});
-
-function drawReach() {
-  if (!choosing() || state.game.picks?.[myId]?.ready || someoneWalking()) return;
-  const from = state.me;
-  for (let dy = -REACH; dy <= REACH; dy++) {
-    for (let dx = -REACH; dx <= REACH; dx++) {
-      const x = from.x + dx;
-      const y = from.y + dy;
-      if ((dx === 0 && dy === 0) || Math.abs(dx) + Math.abs(dy) > REACH) continue;
-      if (x < 0 || y < 0 || x >= SIZE || y >= SIZE) continue;
-      const el = document.createElement("div");
-      el.className = "reach";
-      place(el, x, y);
-      grid.append(el);
-    }
-  }
-}
-
 // Picked squares. Mine shows in my colour with my animal; everyone else's
 // is a plain dashed ring, so you can see where people are going, not who.
 // A sheep's pick covers its whole line, with a 🐑 on the square tapped.
@@ -155,6 +129,16 @@ function drawPicks() {
   }
   const mine = picks[myId];
   if (!mine) return;
+  // The squares I'll walk through, as small footprints: traps on the way go
+  // off, so I can see what I'll cross and pick somewhere else.
+  if (!mine.sheep) {
+    for (const k of pathBetween(state.me, mine)) {
+      const step = document.createElement("div");
+      step.className = "footstep";
+      place(step, ...squareOf(k));
+      grid.append(step);
+    }
+  }
   for (const [x, y] of pickSquares(mine)) {
     const el = document.createElement("div");
     el.className = "pick mine" + (mine.ready ? " ready" : "");
@@ -181,11 +165,24 @@ function drawSniffed() {
   const game = state.game;
   if (!game) return;
   for (const k of Object.keys(game.sniffed ?? {})) {
-    if (game.revealed?.[k]) continue;
+    if (game.revealed?.[k] || game.spotted?.[k]) continue;
     const el = document.createElement("div");
     el.className = "sniffed";
     place(el, ...squareOf(k));
     el.append(iconSpan("❓"));
+    grid.append(el);
+  }
+  // A clue someone walked past: we know a clue is there, not what it says.
+  for (const k of Object.keys(game.spotted ?? {})) {
+    if (game.revealed?.[k]) continue;
+    const el = document.createElement("div");
+    el.className = "sniffed spotted";
+    place(el, ...squareOf(k));
+    el.append(iconSpan("🔍"));
+    const bang = document.createElement("span");
+    bang.className = "spotted-bang";
+    bang.textContent = "!";
+    el.append(bang);
     grid.append(el);
   }
 }
@@ -486,11 +483,11 @@ function renderStatus() {
   } else if (sheepMode && mine?.sheep) {
     say("🐑 Tap ✓ Ready to send your sheep", withCount("Tap the 🐑 square again to turn it ↻"));
   } else if (sheepMode) {
-    say("🐑 Choose where to place your sheep", withCount(`Tap a glowing square: it grazes ${SHEEP_LENGTH} squares from there`));
+    say("🐑 Choose where to place your sheep", withCount(`Tap a square: it grazes ${SHEEP_LENGTH} squares from there`));
   } else if (mine) {
-    say("Tap ✓ Ready", withCount("or pick another glowing square"));
+    say("Tap ✓ Ready", withCount("or pick another square · the footprints show your way"));
   } else {
-    say("Pick a glowing square", withCount(`Up to ${REACH} steps away, then tap ✓ Ready`));
+    say("Pick any square", withCount("then tap ✓ Ready · traps on your way go off!"));
   }
   readyButton.hidden = Boolean(mine?.ready);
   // The sheep button shows the sheep I have left, one icon each: no reading needed.
@@ -510,7 +507,7 @@ export function renderTimer() {
   timerFill.style.width = `${(left / READY_WAIT_MS) * 100}%`;
 }
 
-// A little shake when someone taps a square out of reach.
+// A little shake when something can't be done (no sheep left, no line placed).
 export function nudgeStatus() {
   statusBar.classList.remove("nudge");
   void statusBar.offsetWidth; // restart the animation

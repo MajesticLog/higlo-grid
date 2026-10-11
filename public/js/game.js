@@ -154,21 +154,31 @@ function freeSquare(game) {
   return options.length ? pick(options) : null;
 }
 
-// A memory's clues go close together: within a 3×3 area, so finding one
-// tells the group the others are near (the quest). Falls back to anywhere
-// if the field is too crowded.
+// A memory's clues go near each other, within a 5×5 area, so finding one
+// tells the group the others are close (the quest); but never touching, so
+// they're found one by one. Falls back to anywhere if the field is crowded.
+const touching = (a, b) => {
+  const [ax, ay] = a.split("_").map(Number);
+  const [bx, by] = b.split("_").map(Number);
+  return Math.max(Math.abs(ax - bx), Math.abs(ay - by)) <= 1;
+};
+
 function clueSquares(game) {
   const free = (k) => !k.endsWith(`_${START_ROW}`) && !game.board[k] && !game.revealed[k];
-  for (let tries = 0; tries < 200; tries++) {
-    const cx = 1 + Math.floor(Math.random() * (SIZE - 2));
-    const cy = 1 + Math.floor(Math.random() * (START_ROW - 1));
+  for (let tries = 0; tries < 300; tries++) {
+    const cx = 2 + Math.floor(Math.random() * (SIZE - 4)); // 2..8
+    const cy = 2 + Math.floor(Math.random() * (START_ROW - 4)); // 2..7: the area stays off the start row
     const area = [];
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
         if (free(key(cx + dx, cy + dy))) area.push(key(cx + dx, cy + dy));
       }
     }
-    if (area.length >= CLUES) return area.sort(() => Math.random() - 0.5).slice(0, CLUES);
+    const chosen = [];
+    for (const k of area.sort(() => Math.random() - 0.5)) {
+      if (chosen.every((c) => !touching(c, k))) chosen.push(k);
+      if (chosen.length === CLUES) return chosen;
+    }
   }
   const squares = [];
   for (let n = 0; n < CLUES; n++) {

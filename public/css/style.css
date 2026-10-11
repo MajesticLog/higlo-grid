@@ -220,27 +220,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   100% { transform: perspective(200px) rotateY(0); }
 }
 
-/* Squares you can reach this round: a bright outline with a soft glow
-   that breathes, clearly on top of both tall and short grass. */
-.reach {
-  margin: 5%;
-  border-radius: 16%;
-  border: 3px solid rgba(255, 255, 255, 0.95);
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 0 8px 2px rgba(255, 245, 160, 0.75);
-  pointer-events: none;
-  animation: reach-glow 1.6s ease-in-out infinite alternate;
-}
-
-@keyframes reach-glow {
-  from { box-shadow: 0 0 4px 1px rgba(255, 245, 160, 0.5); }
-  to   { box-shadow: 0 0 12px 4px rgba(255, 245, 160, 0.9); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reach { animation: none; }
-}
-
 /* My sheep's square: tap it again to turn the line. */
 .turn-hint {
   position: absolute;
@@ -1655,3 +1634,25 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* Anchors the ↻ on my sheep's square. */
 .pick.mine { position: relative; }
+
+/* A clue someone walked past: 🔍 with a "!", not read yet. */
+.spotted { position: relative; }
+
+.spotted-bang {
+  position: absolute;
+  right: 8%;
+  top: 2%;
+  font-size: 40cqi;
+  font-weight: 900;
+  color: #ffeb3b;
+  text-shadow: 0 0 2px #000, 0 0 4px #000;
+}
+
+/* The way to my pick: small, light footprints. */
+.footstep {
+  margin: 38%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}

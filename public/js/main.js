@@ -50,7 +50,7 @@ onValue(playersRef, (snap) => {
 });
 
 // --- Controls ---
-// Arrow keys: move my pick one square, within reach.
+// Arrow keys: move my pick one square.
 const MOVES = {
   ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
 };
@@ -64,8 +64,8 @@ document.addEventListener("keydown", (e) => {
   movePick(...move);
 });
 
-// Tap or click a square within reach: that's my pick. Out of reach: a found
-// memory opens again, and someone else's circle gets a heart. Pointer events cover mouse,
+// Tap or click a square: that's my pick. A found clue opens again; someone
+// else's circle also gets a heart. Pointer events cover mouse,
 // finger and pen.
 const grid = document.getElementById("grid");
 const clamp = (n) => Math.max(0, Math.min(SIZE - 1, n));
@@ -78,11 +78,12 @@ grid.addEventListener("pointerdown", (e) => {
   // A found memory, not something I'm picking: open it again.
   const memoryTile = [...grid.querySelectorAll(".tile.clue, .tile.memory")]
     .find((el) => Number(el.style.gridColumn) === x + 1 && Number(el.style.gridRow) === y + 1);
-  if (memoryTile && !(choosing() && inReach(x, y))) {
+  if (memoryTile) {
     const n = memoryTile.dataset.clue;
     return openCard({ memory: memoryTile.dataset.memory, n: n == null ? undefined : Number(n) });
   }
+  // Another player's circle: a heart for them (and their square is my pick).
   const circle = e.target.closest(".circle");
-  if (circle && circle.dataset.id !== myId && !inReach(x, y)) return sendHeart(circle.dataset.id);
+  if (circle && circle.dataset.id !== myId) sendHeart(circle.dataset.id);
   pickSquare(x, y);
 });

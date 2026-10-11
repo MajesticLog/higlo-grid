@@ -1,7 +1,7 @@
 // How to play: a few cards, mostly pictures and few words, shown once per
 // device after the lobby and reopened with the ❔ button. The numbers come
 // from the game's settings, so the rules stay true when they're tuned.
-import { REACH, SHEEP_LENGTH, SHEEP_PER_PLAYER } from "./rounds.js";
+import { SHEEP_LENGTH, SHEEP_PER_PLAYER } from "./rounds.js";
 import { NIGHT_STEPS } from "./game.js";
 import { CLUES } from "./lobby.js";
 
@@ -16,14 +16,15 @@ const CARDS = [
   {
     picture: "👆 ✓",
     title: "Pick a square",
-    text: `Each round, everyone taps a glowing square up to ${REACH} steps away, then ✓ Ready. `
-      + "All the squares turn over at the same time.",
+    text: "Each round, everyone taps any square, then ✓ Ready. Footprints show your way. "
+      + "The square you land on turns over, and so does the grass you walk through: "
+      + "watch out, a trap on your way goes off! A clue you pass shows 🔍! until someone lands on it.",
   },
   {
     picture: "🐶 ① ② ③",
     title: "Clues",
     text: "A clue shows whose memory it belongs to: their animal and colour, and its number. "
-      + `Each player's ${CLUES} clues are hidden close together, so look nearby!`,
+      + `Each player's ${CLUES} clues are hidden near each other, so look around a clue or a 🔍!`,
   },
   {
     picture: "💭 🗣️ ✅",
