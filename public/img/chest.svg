@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 40">
+  <!-- Memory chest button (top-right corner of the field). Drawn for Higlo grid. -->
+  <path d="M4 16c0-8 9-13 20-13s20 5 20 13v2H4z" fill="#a1662f"/>
+  <path d="M4 16c0-8 9-13 20-13s20 5 20 13" fill="none" stroke="#6d3f17" stroke-width="2"/>
+  <rect x="4" y="18" width="40" height="19" rx="3" fill="#c07a3a" stroke="#6d3f17" stroke-width="2"/>
+  <rect x="4" y="16" width="40" height="5" fill="#f4c430" stroke="#b8860b" stroke-width="1.5"/>
+  <rect x="20" y="18" width="8" height="9" rx="2" fill="#f4c430" stroke="#b8860b" stroke-width="1.5"/>
+  <circle cx="24" cy="23" r="1.6" fill="#6d3f17"/>
+</svg>

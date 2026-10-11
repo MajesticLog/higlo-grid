@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+  <!-- Little flowers (pattern 4 of 4), laid over the short grass on some
+       turned-over squares. Transparent around the dots. Drawn for Higlo grid. -->
+  <circle cx="40" cy="40" r="8" fill="#ef5350"/>
+  <circle cx="70" cy="75" r="5" fill="#ffffff"/>
+  <circle cx="22" cy="78" r="5" fill="#ffffff"/>
+</svg>

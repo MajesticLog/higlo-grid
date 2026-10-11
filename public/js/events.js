@@ -96,27 +96,11 @@ const direction = (seed) => (seed < 0.5 ? 1 : -1);
 const height = (seed, min, max) => `${min + ((seed * 997) % 1) * (max - min)}vh`;
 const across = (seed) => `${30 + ((seed * 7919) % 1) * 40}vw`;
 
-// A hot-air balloon (there's no emoji for one, so a small drawing).
-const BALLOON = `<svg viewBox="0 0 60 80" aria-hidden="true">
-  <path d="M30 3C13 3 4 16 4 29c0 15 15 25 20 31h12c5-6 20-16 20-31C56 16 47 3 30 3z" fill="#e4572e"/>
-  <path d="M30 3c-7 0-11 13-11 26 0 15 5 25 7 31h8c2-6 7-16 7-31 0-13-4-26-11-26z" fill="#f4c430"/>
-  <path d="M25 60l1 8M35 60l-1 8" stroke="#6d4c41" stroke-width="1.5"/>
-  <rect x="24" y="67" width="12" height="9" rx="2" fill="#a1887f"/>
-</svg>`;
+// Drawings for the balloon and the UFO (there's no emoji for a balloon, and
+// the UFO emoji has its own beam): files in img/, easy to replace.
+const BALLOON = '<img src="/img/balloon.svg" alt="">';
 
-// A flying saucer with a little alien (the emoji has its own beam, which
-// clashed with ours).
-const UFO = `<svg viewBox="0 0 80 44" aria-hidden="true">
-  <ellipse cx="40" cy="17" rx="15" ry="13" fill="#b3e5fc" stroke="#4fc3f7" stroke-width="1.5"/>
-  <circle cx="40" cy="16" r="5.5" fill="#81c784"/>
-  <circle cx="38" cy="15" r="1.3" fill="#1b5e20"/><circle cx="42" cy="15" r="1.3" fill="#1b5e20"/>
-  <ellipse cx="40" cy="27" rx="37" ry="10" fill="#90a4ae"/>
-  <ellipse cx="40" cy="24" rx="37" ry="6" fill="#cfd8dc"/>
-  <circle class="ufo-light" cx="18" cy="29" r="2.8" fill="#ffee58"/>
-  <circle class="ufo-light" cx="31" cy="31.5" r="2.8" fill="#ff8a65"/>
-  <circle class="ufo-light" cx="49" cy="31.5" r="2.8" fill="#ffee58"/>
-  <circle class="ufo-light" cx="62" cy="29" r="2.8" fill="#ff8a65"/>
-</svg>`;
+const UFO = '<img src="/img/ufo.svg" alt="">';
 
 const PLAY = {
   balloon(seed) {

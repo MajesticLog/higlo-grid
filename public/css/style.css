@@ -131,18 +131,19 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 /* A turned-over square: bare earth with what was underneath. */
 /* A turned-over square: short, mown grass, a little lighter than the tall
    grass so it reads as "done". Darkens with the night. */
-/* A turned-over square: short grass (the field's first look: a light
-   green with a few tufts), cut a little lower than the tall grass around
-   it. Darkens with the night. */
+/* A turned-over square: short grass (img/grass-short.svg), with little
+   flowers on some (img/flowers-N.svg), cut a little lower than the tall
+   grass around it. The night shade goes on top. */
 .tile {
-  --tufts:
-    radial-gradient(circle at 25% 70%, #7cb342 0 6%, transparent 7%),
-    radial-gradient(circle at 70% 35%, #7cb342 0 5%, transparent 6%),
-    radial-gradient(circle at 60% 80%, #9ccc65 0 4%, transparent 5%);
+  --flowers: none;
   margin: 3%;
   border-radius: 10%;
-  background-color: color-mix(in srgb, #8bc34a, #2c3a50 calc(var(--night, 0) * 55%));
-  background-image: var(--tufts);
+  background-color: #8bc34a;
+  background-image:
+    linear-gradient(rgba(25, 35, 70, calc(var(--night, 0) * 0.55)), rgba(25, 35, 70, calc(var(--night, 0) * 0.55))),
+    var(--flowers),
+    url("/img/grass-short.svg");
+  background-size: 100% 100%;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), inset 0 2px 6px rgba(0, 0, 0, 0.3);
   display: grid;
   place-items: center;
@@ -162,11 +163,11 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   background: #fff;
 }
 
-/* Little flowers on short grass: dots of colour, four patterns. */
-.tile.flower.f0 { background-image: radial-gradient(circle at 30% 35%, #f06292 0 7%, transparent 8%), radial-gradient(circle at 68% 62%, #fff59d 0 6%, transparent 7%), radial-gradient(circle at 45% 78%, #fff 0 5%, transparent 6%), var(--tufts); }
-.tile.flower.f1 { background-image: radial-gradient(circle at 62% 28%, #ffffff 0 7%, transparent 8%), radial-gradient(circle at 30% 65%, #ffd54f 0 7%, transparent 8%), var(--tufts); }
-.tile.flower.f2 { background-image: radial-gradient(circle at 25% 30%, #ba68c8 0 6%, transparent 7%), radial-gradient(circle at 72% 45%, #ba68c8 0 6%, transparent 7%), radial-gradient(circle at 50% 75%, #fff176 0 6%, transparent 7%), var(--tufts); }
-.tile.flower.f3 { background-image: radial-gradient(circle at 40% 40%, #ef5350 0 8%, transparent 9%), radial-gradient(circle at 70% 75%, #fff 0 5%, transparent 6%), radial-gradient(circle at 22% 78%, #fff 0 5%, transparent 6%), var(--tufts); }
+/* Little flowers on short grass: four patterns of coloured dots. */
+.tile.flower.f0 { --flowers: url("/img/flowers-1.svg"); }
+.tile.flower.f1 { --flowers: url("/img/flowers-2.svg"); }
+.tile.flower.f2 { --flowers: url("/img/flowers-3.svg"); }
+.tile.flower.f3 { --flowers: url("/img/flowers-4.svg"); }
 
 /* A found clue: a 🔍 on a pale card framed in the author's colour, their
    animal small at the top left, the clue's number at the bottom right.
@@ -1147,7 +1148,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   animation: cross 5s linear both;
 }
 
-.balloon svg {
+.balloon img {
   display: block;
   width: 100%;
   animation: bob 3s ease-in-out infinite alternate;
@@ -1248,21 +1249,9 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   animation: wobble 1.2s ease-in-out infinite alternate;
 }
 
-.ufo .saucer svg {
+.ufo .saucer img {
   display: block;
   width: 100%;
-}
-
-.ufo-light {
-  animation: blink 0.5s steps(2) infinite;
-}
-
-.ufo-light:nth-child(odd) {
-  animation-delay: -0.25s;
-}
-
-@keyframes blink {
-  50% { opacity: 0.3; }
 }
 
 .ufo .beam {
@@ -1385,7 +1374,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   cursor: pointer;
 }
 
-#chest svg {
+#chest img {
   display: block;
   width: 100%;
   height: 100%;
