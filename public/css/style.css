@@ -52,6 +52,19 @@ main {
   aspect-ratio: 1;
   border-radius: 50%;
   position: relative; /* anchors the heart */
+  /* A white ring keeps neighbouring circles apart, whatever their colours. */
+  box-shadow: 0 0 0 2px #fff, 0 1px 3px 2px rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+  container-type: inline-size; /* lets the animal scale with the circle */
+}
+
+/* The player's animal, with a white glow so it stands out on any colour. */
+.animal {
+  font-size: 62cqi;
+  line-height: 1;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+  pointer-events: none;
 }
 
 /* A heart over a circle: pops in, floats up a little, stays a second, fades.

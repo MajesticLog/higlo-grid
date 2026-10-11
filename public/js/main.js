@@ -14,6 +14,13 @@ const PALETTE = [
 ];
 // Past the palette, spread hues by the golden angle so they stay distinct.
 const colourFor = (i) => PALETTE[i] ?? `hsl(${Math.round(i * 137.5) % 360}, 65%, 50%)`;
+// One animal per colour slot, so players can be told apart without seeing
+// colour, and named aloud on a call ("the fox is getting warmer").
+const ANIMALS = [
+  "🐱", "🐶", "🐸", "🦊", "🐻", "🐰", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷",
+  "🐵", "🐔", "🐧", "🐙", "🦉", "🐢", "🦄", "🐝", "🐳", "🦋", "🐌", "🦔",
+];
+const animalFor = (i) => ANIMALS[i % ANIMALS.length];
 
 // --- Session: read it from the path, or start a new one ---
 function newSessionId() {
@@ -38,7 +45,7 @@ const playersRef = ref(db, `${sessionPath}/players`);
 const myRef = push(playersRef); // unique key generated locally, nothing written yet
 
 // Where I am. Kept locally so a reconnect can write it back.
-const me = { x: CENTRE, y: CENTRE, color: null };
+const me = { x: CENTRE, y: CENTRE, color: null, animal: null };
 let myColourIndex = 0;
 
 // Claim a colour slot with a transaction: the database accepts the write only
@@ -83,6 +90,7 @@ onValue(ref(db, ".info/connected"), async (snap) => {
   if (snap.val() !== true) return;
   myColourIndex = await claimColour(myColourIndex);
   me.color = colourFor(myColourIndex);
+  me.animal = animalFor(myColourIndex);
   if (!joined) {
     Object.assign(me, spawnSquare((await get(playersRef)).val() || {}));
     joined = true;
@@ -123,6 +131,10 @@ function render() {
       el.className = "circle" + (p.id === myRef.key ? " me" : "");
       el.style.background = p.color;
       el.dataset.id = p.id;
+      const animal = document.createElement("span");
+      animal.className = "animal";
+      animal.textContent = p.animal ?? "";
+      el.append(animal);
       if (hearts.has(p.id)) el.append(heartElement(hearts.get(p.id)));
       square.append(el);
     }
