@@ -42,6 +42,7 @@ function drawPlayers() {
       el.className = "circle" + (p.id === myId ? " me" : "");
       el.style.background = p.color;
       el.dataset.id = p.id;
+      if (p.name) el.title = p.name; // on hover, for mouse users
       el.append(animalSpan(p.animal));
       if (state.floats.has(p.id)) el.append(floatElement(state.floats.get(p.id)));
       square.append(el);

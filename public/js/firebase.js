@@ -6,6 +6,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
 export {
   ref, push, set, update, get, remove, onValue, onChildAdded, onDisconnect, runTransaction,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
 export const db = getDatabase(initializeApp(firebaseConfig));

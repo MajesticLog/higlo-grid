@@ -2,6 +2,7 @@ body {
   margin: 0;
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #f4f1ea;
@@ -104,4 +105,115 @@ main {
 #share {
   font-size: 14px;
   word-break: break-all;
+  padding: 0 16px;
+  text-align: center;
 }
+
+/* --- Lobby --- */
+#lobby {
+  width: min(100% - 32px, 560px);
+  padding-block: 16px;
+  text-align: center;
+}
+
+#lobby h1 { font-size: 28px; margin: 0 0 12px; }
+#lobby h2 { font-size: 18px; margin: 20px 0 8px; }
+
+#preview {
+  width: 88px;
+  margin: 0 auto;
+  background: #ddd;
+}
+
+/* Big, finger-sized choices: at least 48px. */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 8px;
+}
+
+.choices button {
+  aspect-ratio: 1;
+  min-height: 48px;
+  font-size: 30px;
+  line-height: 1;
+  border-radius: 14px;
+  border: 2px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+
+#colours button { border-radius: 50%; border-color: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+
+.choices button[aria-pressed="true"] {
+  outline: 4px solid #333;
+  outline-offset: 2px;
+}
+
+/* Taken by someone else: faded and crossed out, readable without colour. */
+.choices button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  background-image: linear-gradient(to top right, transparent 46%, #333 47% 53%, transparent 54%);
+}
+
+#lobby .primary {
+  display: block;
+  margin: 24px auto 8px;
+  min-height: 56px;
+  padding: 0 28px;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  border-radius: 14px;
+  border: none;
+  background: #2f7d32;
+  color: #fff;
+  cursor: pointer;
+}
+
+#lobby .primary:disabled { background: #bbb; cursor: not-allowed; }
+
+#lobby .quiet {
+  min-height: 44px;
+  font: inherit;
+  border: none;
+  background: none;
+  color: #555;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hint-text { color: #666; margin: 0 0 16px; }
+
+#prompt {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 8px 0 0;
+}
+
+#name {
+  box-sizing: border-box;
+  width: min(100%, 320px);
+  min-height: 48px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 20px; /* 16px or more, so iOS doesn't zoom in */
+  text-align: center;
+  border-radius: 12px;
+  border: 2px solid #ccc;
+}
+
+#memory {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  font: inherit;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid #ccc;
+  resize: vertical;
+}
+
+#here { color: #666; margin-top: 20px; }

@@ -7,10 +7,33 @@
     <link rel="stylesheet" href="/css/style.css">
   </head>
   <body>
-    <main>
+    <section id="lobby" hidden>
+      <div id="pick" hidden>
+        <h1>Who are you?</h1>
+        <div id="preview" class="circle"><span class="animal">?</span></div>
+        <h2><label for="name">Your name</label></h2>
+        <input id="name" type="text" maxlength="20" autocomplete="nickname" enterkeyhint="done">
+        <h2>Pick an animal</h2>
+        <div id="animals" class="choices"></div>
+        <h2>Pick a colour</h2>
+        <div id="colours" class="choices"></div>
+        <button id="pick-done" class="primary" type="button" disabled>Next ➜</button>
+      </div>
+      <form id="write" hidden>
+        <h1>Hide a memory</h1>
+        <p class="hint-text">It will be hidden under the grass. Find it together!</p>
+        <p id="prompt"></p>
+        <button id="new-prompt" class="quiet" type="button">Another idea ↻</button>
+        <textarea id="memory" maxlength="300" rows="4" aria-labelledby="prompt"></textarea>
+        <button id="hide" class="primary" type="submit">Hide it in the field 🌱</button>
+        <button id="skip" class="quiet" type="button">Skip for now</button>
+      </form>
+      <p id="here"></p>
+    </section>
+    <main id="field" hidden>
       <div id="grid" aria-label="Shared grid"></div>
-      <p id="share">Share this link to play together: <span id="link"></span></p>
     </main>
+    <p id="share">Share this link to play together: <span id="link"></span></p>
     <script type="module" src="/js/main.js"></script>
   </body>
 </html>

@@ -1,44 +1,13 @@
-// Entry point: join the session, keep the player list, wire up the controls.
-import { db, ref, get, set, onValue, onDisconnect, runTransaction } from "./firebase.js";
-import { SIZE, CENTRE, sessionRef, playersRef, myRef, myId } from "./session.js";
+// Entry point: lobby, then join the field, keep the player list, wire up the controls.
+import { db, ref, get, set, onValue, onDisconnect } from "./firebase.js";
+import { SIZE, CENTRE, playersRef, myRef, myId } from "./session.js";
+import { runLobby } from "./lobby.js";
 import { state } from "./state.js";
 import { render } from "./render.js";
 import { tryMove, walkTo, stopWalking } from "./moves.js";
 import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
-
-const PALETTE = [
-  "#e4572e", "#2e86ab", "#f4c430", "#4caf50", "#9c27b0", "#ff8c42",
-  "#17bebb", "#e91e63", "#795548", "#3f51b5", "#8bc34a", "#607d8b",
-];
-// Past the palette, spread hues by the golden angle so they stay distinct.
-const colourFor = (i) => PALETTE[i] ?? `hsl(${Math.round(i * 137.5) % 360}, 65%, 50%)`;
-// One animal per colour slot, so players can be told apart without seeing
-// colour, and named aloud on a call ("the fox is getting warmer").
-const ANIMALS = [
-  "🐱", "🐶", "🐸", "🦊", "🐻", "🐰", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷",
-  "🐵", "🐔", "🐧", "🐙", "🦉", "🐢", "🦄", "🐝", "🐳", "🦋", "🐌", "🦔",
-];
-const animalFor = (i) => ANIMALS[i % ANIMALS.length];
-
-// Claim a colour slot with a transaction: the database accepts the write only
-// if the slot is still empty (or already mine), so two players joining at the
-// same moment can never get the same colour. Released when I disconnect.
-let myColourIndex = 0;
-
-async function claimColour(start) {
-  for (let i = start; ; i++) {
-    const slot = sessionRef(`colors/${i}`);
-    const result = await runTransaction(slot, (owner) =>
-      owner === null || owner === myId ? myId : undefined // undefined = abort
-    );
-    if (result.committed) {
-      await onDisconnect(slot).remove();
-      return i;
-    }
-  }
-}
 
 // Free square closest to the centre, ring by ring, so nobody spawns on top of anyone.
 function spawnSquare(players) {
@@ -59,18 +28,15 @@ function spawnSquare(players) {
   return { x: CENTRE, y: CENTRE }; // grid full: share the centre
 }
 
-// Every time the connection comes up (first load or after a network drop),
-// write myself into the session and ask the server to remove me when I go.
-let spawned = false;
+// The lobby first: pick an animal and a colour, hide a memory.
+Object.assign(state.me, await runLobby());
+document.getElementById("field").hidden = false;
+Object.assign(state.me, spawnSquare((await get(playersRef)).val() || {}));
+
+// Every time the connection comes up (now, or after a network drop), write
+// myself into the session and ask the server to remove me when I go.
 onValue(ref(db, ".info/connected"), async (snap) => {
   if (snap.val() !== true) return;
-  myColourIndex = await claimColour(myColourIndex);
-  state.me.color = colourFor(myColourIndex);
-  state.me.animal = animalFor(myColourIndex);
-  if (!spawned) {
-    Object.assign(state.me, spawnSquare((await get(playersRef)).val() || {}));
-    spawned = true;
-  }
   await onDisconnect(myRef).remove();
   await set(myRef, state.me);
   state.joined = true;
