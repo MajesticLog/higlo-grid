@@ -1,3 +1,9 @@
+/* "hidden" always wins. Without this, any box given a layout below (flex,
+   grid, block) stays visible even when the code hides it. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -540,6 +546,20 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 .hint-text { color: #666; margin: 0 0 16px; }
 
+/* "Keep my memory": a memory of mine still waiting to be guessed. */
+#keep {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #e8f5e9;
+  border: 2px solid #a5d6a7;
+}
+
+#keep p { margin: 0; }
+#keep-text { margin: 6px 0 4px !important; font-weight: 700; font-size: 18px; }
+#keep .primary { margin: 10px auto 6px !important; }
+.keep-or { color: #666; font-size: 14px; }
+
 /* "← Back" at the top left of the memory step. */
 #lobby .back {
   display: block;
@@ -664,24 +684,37 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 /* --- Memory card: opens for everyone when a memory turns over --- */
+/* One or more cards stacked in a column (clues found in the same round),
+   scrolling if they don't fit, with one Close underneath. */
 #card {
   position: fixed;
   inset: 0;
   z-index: 20;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   padding: 16px;
+  overflow-y: auto;
   background: rgba(0, 0, 0, 0.45);
 }
 
-#card[hidden] { display: none; }
+#card-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: auto; /* centred when short, scrollable when long */
+}
+
+#card-close { margin-bottom: auto; }
 
 .card-body {
+  --c: #999; /* the author's colour, set in card.js */
   box-sizing: border-box;
   width: min(100%, 480px);
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 24px;
+  padding: 20px 24px;
   border-radius: 20px;
   border: 6px solid var(--c);
   background: #fff;
@@ -690,23 +723,21 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   animation: pop-in 0.35s ease-out;
 }
 
-#card { --c: #999; } /* the author's colour, set in card.js */
-
 .card-found { margin: 0; font-size: 18px; color: #666; }
-#card-prompt { margin: 12px 0 0; font-style: italic; color: #555; }
-#card-text {
-  margin: 16px 0;
+.card-prompt { margin: 10px 0 0; font-style: italic; color: #555; }
+.card-text {
+  margin: 14px 0;
   font-size: max(22px, 3vmin);
   line-height: 1.4;
   white-space: pre-wrap; /* keep the author's line breaks */
   overflow-wrap: anywhere;
 }
-#card-author { margin: 0 0 20px; font-size: 20px; font-weight: 700; }
+.card-author { margin: 0; font-size: 20px; font-weight: 700; }
 
 /* On a clue card: the other clues found so far for the same memory. */
-#card-others {
+.card-others {
   list-style: none;
-  margin: 0 0 18px;
+  margin: 0;
   padding: 10px 14px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--c) 10%, #fff);
@@ -715,7 +746,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   line-height: 1.5;
 }
 
-#card-others:empty { display: none; }
 .card-others-label { color: #666; font-size: 14px; font-weight: 600; }
 
 #card-close {

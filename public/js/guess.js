@@ -32,11 +32,14 @@ const earlyButton = document.getElementById("guess-early");
 const reveal = document.getElementById("guess-reveal");
 const closeButton = document.getElementById("guess-close");
 
-// Who wrote a memory: the same tab, or failing that (a new visit) the same
-// name, animal and colour.
-export const isAuthor = (player, memory) =>
-  Boolean(player && memory) && ((memory.tab && player.tab === memory.tab)
-    || (player.name === memory.name && player.animal === memory.animal && player.color === memory.color));
+// Who wrote a memory: the same author key (this device and name, see
+// lobby.js). Memories from before author keys: the same tab, or the same name.
+const sameName = (a, b) => Boolean(a && b) && a.trim().toLowerCase() === b.trim().toLowerCase();
+export const isAuthor = (player, memory) => {
+  if (!player || !memory) return false;
+  if (memory.author && player.author) return memory.author === player.author;
+  return Boolean(memory.tab && player.tab === memory.tab) || sameName(player.name, memory.name);
+};
 
 const memoryOf = (guess) => guess && state.memories[guess.memory];
 const authorHere = (memory) => state.players.some((p) => isAuthor(p, memory));
@@ -159,10 +162,13 @@ export function renderGuess() {
   const last = game.lastGuess;
   const lastTag = last && `${game.id}:${last.at}`;
   const guessReady = guess && memoryOf(guess) && seenFor(`${game.id}:${guess.memory}`) >= SHOW_DELAY_MS;
-  if (guessReady) {
-    drawGuess(guess, memoryOf(guess));
-  } else if (last && state.memories[last.memory] && closedResult !== lastTag && seenFor(lastTag) !== Infinity) {
+  const resultOpen = last && state.memories[last.memory] && closedResult !== lastTag && seenFor(lastTag) !== Infinity;
+  // A result just ended shows first (with "Next" if another guess is
+  // waiting), so its answers never mix with the next guess.
+  if (resultOpen) {
     drawResult(game, last, state.memories[last.memory]);
+  } else if (guessReady) {
+    drawGuess(guess, memoryOf(guess));
   } else {
     box.hidden = true;
   }
@@ -276,10 +282,12 @@ function drawResult(game, last, memory) {
   answerList.hidden = !last.answers;
   drawAnswers(last.answers ?? {}, last.verdicts ?? {}, false);
   closeButton.hidden = false;
+  closeButton.textContent = game.guess ? "Next ➜" : "Back to the field";
   box.hidden = false;
 }
 
 closeButton.addEventListener("click", () => {
   closedResult = `${state.game?.id}:${state.game?.lastGuess?.at}`;
   box.hidden = true;
+  renderGuess(); // the next guess, if one is waiting
 });

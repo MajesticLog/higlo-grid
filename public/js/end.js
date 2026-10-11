@@ -58,7 +58,7 @@ export function showEnd() {
   if (!state.game || state.game.status === "playing") return;
   drawEnd();
   screen.hidden = false;
-  (againButton.hidden ? document.getElementById("end-lobby") : againButton).focus();
+  if (!againButton.hidden) againButton.focus();
 }
 
 function drawEnd() {
@@ -70,7 +70,7 @@ function drawEnd() {
   title.textContent = won ? "☕ Tea time!" : "🌙 Let's go to bed!";
   note.textContent = won
     ? "Every memory found before nightfall. Time for a cup of herbal tea together!"
-    : "The wolf is out, everyone runs off to bed! The memories still hidden aren't lost: next game, they'll be hidden in new places.";
+    : "The wolf is out, everyone runs off to bed! The memories not guessed aren't lost: next game, their authors can hide them again.";
   drawFamily(won, again);
   drawMemories(game);
   againButton.hidden = Boolean(again[myId]);
@@ -170,6 +170,5 @@ function drawMemories(game) {
 }
 
 againButton.addEventListener("click", chooseAgain);
-document.getElementById("end-lobby").addEventListener("click", backToLobby);
 document.getElementById("end-garden").addEventListener("click", () => { screen.hidden = true; });
 document.getElementById("end-open").addEventListener("click", showEnd);

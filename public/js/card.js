@@ -1,42 +1,46 @@
 // Cards: when a clue turns over, it opens for everyone, saying whose memory
-// it belongs to ("🐶 Mathilde's clue, 2 of 3"). Each device closes its own.
-// Found clues reopen with a tap. (Games from before clues hid whole
-// memories; those still open as memory cards.)
+// it belongs to ("🐶 Mathilde's clue, 2 of 3") and listing the clues found so
+// far. Clues found in the same round open together, stacked one under the
+// other, with a single Close. Found clues reopen with a tap. (Games from
+// before clues hid whole memories; those still open as memory cards.)
 import { state } from "./state.js";
 import { CLUES } from "./lobby.js";
 
 const CARD_DELAY_MS = 900; // let the clue pop up first
 
 const card = document.getElementById("card");
-const heading = document.getElementById("card-found");
-const promptText = document.getElementById("card-prompt");
-const text = document.getElementById("card-text");
-const author = document.getElementById("card-author");
-const others = document.getElementById("card-others");
+const stack = document.getElementById("card-stack");
 const closeButton = document.getElementById("card-close");
 
-const queue = []; // {memory, n?} waiting, if several turn over in one round
 const shown = new Set();
+let pending = []; // clues found this round, waiting for the pop-up to finish
+let timer = null;
 
 // A clue (or an old-style memory) just turned over while I was watching:
-// show it once.
+// show it once, with any others found at the same moment.
 export function queueCard(item) {
   const tag = `${item.memory}:${item.n}`;
   if (!state.joined || shown.has(tag)) return; // not over the lobby
   shown.add(tag);
-  setTimeout(() => {
-    queue.push(item);
-    if (card.hidden) showNext();
+  pending.push(item);
+  timer ??= setTimeout(() => {
+    timer = null;
+    show(pending);
+    pending = [];
   }, CARD_DELAY_MS);
 }
 
-// A card explaining something (the sheep), shown straight away.
-export function showInfo(info) {
-  queue.unshift({ info });
-  showNext();
+// Tapping a found clue on the grid opens it again, on its own.
+export function openCard(item) {
+  show([item], true);
 }
 
-// A card the first time something happens on this device (a sheep, a trap).
+// A card explaining something (a trap), shown straight away.
+export function showInfo(info) {
+  show([{ info }], true);
+}
+
+// A card the first time something happens on this device (a trap).
 export function explainOnce(name, info, delay = 0) {
   const storageKey = `higlo:explained:${name}`;
   try {
@@ -46,64 +50,69 @@ export function explainOnce(name, info, delay = 0) {
   setTimeout(() => showInfo(info), delay);
 }
 
-// Tapping a found clue on the grid opens it again.
-export function openCard(item) {
-  queue.unshift(item);
-  showNext();
-}
-
-function showNext() {
-  const item = queue.shift();
-  others.replaceChildren();
-  if (item?.info) {
-    heading.textContent = item.info.heading;
-    promptText.textContent = "";
-    text.textContent = item.info.text;
-    author.textContent = "";
-    card.style.setProperty("--c", "#2f7d32");
-    card.hidden = false;
-    closeButton.focus();
-    return;
+// Adds the cards to the open stack (or starts a new one).
+function show(items, replace = false) {
+  if (replace || card.hidden) stack.replaceChildren();
+  for (const item of items) {
+    const body = cardFor(item);
+    if (body) stack.append(body);
   }
-  const memory = item && state.memories[item.memory];
-  if (!memory) {
-    card.hidden = true;
-    return;
-  }
-  const who = `${memory.animal ?? ""} ${memory.name ?? ""}`.trim();
-  promptText.textContent = memory.prompt ?? "";
-  card.style.setProperty("--c", memory.color ?? "#999");
-  if (item.n == null) {
-    heading.textContent = "📜 A memory!";
-    text.textContent = memory.text;
-    author.textContent = who;
-  } else {
-    heading.textContent = `🔍 ${who}'s clue, ${item.n + 1} of ${CLUES}`;
-    text.textContent = memory.clues?.[item.n] ?? "";
-    author.textContent = "";
-    // The other clues found so far for this memory, so someone who arrived
-    // late (or looked away) can catch up from any card.
-    const found = Object.values(state.game?.revealed ?? {})
-      .filter((t) => t.show === "clue" && t.memory === item.memory && t.n !== item.n)
-      .map((t) => t.n)
-      .sort();
-    for (const n of found) {
-      const li = document.createElement("li");
-      li.textContent = `${n + 1}. ${memory.clues?.[n] ?? ""}`;
-      others.append(li);
-    }
-    if (found.length) {
-      const label = document.createElement("li");
-      label.className = "card-others-label";
-      label.textContent = "Clues found so far:";
-      others.prepend(label);
-    }
-  }
+  if (!stack.children.length) return;
   card.hidden = false;
   closeButton.focus();
 }
 
-closeButton.addEventListener("click", showNext);
+function line(className, text, tag = "p") {
+  const el = document.createElement(tag);
+  el.className = className;
+  el.textContent = text;
+  return el;
+}
+
+function cardFor(item) {
+  const body = document.createElement("div");
+  body.className = "card-body";
+  if (item.info) {
+    body.style.setProperty("--c", "#2f7d32");
+    body.append(line("card-found", item.info.heading), line("card-text", item.info.text));
+    return body;
+  }
+  const memory = state.memories[item.memory];
+  if (!memory) return null;
+  const who = `${memory.animal ?? ""} ${memory.name ?? ""}`.trim();
+  body.style.setProperty("--c", memory.color ?? "#999");
+  if (item.n == null) { // an old-style whole memory
+    body.append(line("card-found", "📜 A memory!"), line("card-prompt", memory.prompt ?? ""),
+      line("card-text", memory.text), line("card-author", who));
+    return body;
+  }
+  body.append(
+    line("card-found", `🔍 ${who}'s clue, ${item.n + 1} of ${CLUES}`),
+    line("card-prompt", memory.prompt ?? ""),
+    line("card-text", memory.clues?.[item.n] ?? ""),
+  );
+  // The other clues found so far for this memory, so someone who arrived
+  // late (or looked away) can catch up from any card.
+  const others = Object.values(state.game?.revealed ?? {})
+    .filter((t) => t.show === "clue" && t.memory === item.memory && t.n !== item.n)
+    .map((t) => t.n)
+    .sort();
+  if (others.length) {
+    const list = document.createElement("ul");
+    list.className = "card-others";
+    list.append(line("card-others-label", "Clues found so far:", "li"));
+    for (const n of others) list.append(line("", `${n + 1}. ${memory.clues?.[n] ?? ""}`, "li"));
+    body.append(list);
+  }
+  return body;
+}
+
+function close() {
+  card.hidden = true;
+  stack.replaceChildren();
+}
+
+closeButton.addEventListener("click", close);
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !card.hidden) showNext();
+  if (e.key === "Escape" && !card.hidden) close();
 });

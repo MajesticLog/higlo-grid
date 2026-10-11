@@ -10,7 +10,7 @@ import { gameChanged } from "./end.js";
 import { eventChanged, firstEventAt } from "./events.js";
 import { renderChest } from "./chest.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
-import { CLUES } from "./lobby.js";
+import { CLUES, myMemoryId, backToLobby } from "./lobby.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const TRAPS = 8; // was 12: with 3 clues per player, 12 made winning nearly impossible
@@ -126,7 +126,8 @@ function newGame() {
     nextEventAt: firstEventAt(now()), // something crossing the sky (events.js)
     night: 0,
     round: 1,
-    board: {}, // "x_y" -> {kind: "trap"} or {kind: "memory", memory: id}; empty squares aren't stored
+    entered: {}, // memoryId -> true: the memories of the players in this game
+    board: {}, // "x_y" -> {kind: "trap"} or {kind: "clue", memory: id, n}; empty squares aren't stored
     revealed: {}, // "x_y" -> {show, icon, memory?}
     // During a round, also: picks {playerId: {x, y, ready}}, deadline.
     // After one: moves {playerId: {x, y}}, where each player went.
@@ -177,14 +178,15 @@ function clueSquares(game) {
   return squares;
 }
 
-// Hide the clues of any memory that isn't in the field yet: a new one
-// written in the lobby, or one left unfound in an earlier game. Memories
-// from before clues existed stay in the chest but aren't hidden any more.
-// Returns how many it hid.
+// Hide the clues of any memory entered in this game that isn't in the field
+// yet: each player brings one from the lobby (new, or kept from before).
+// Memories of people who aren't playing wait in the chest. (Games from before
+// "entered" existed hide every unguessed memory.) Returns how many it hid.
 function hideMissingMemories(game) {
   const hidden = new Set(Object.values(game.board).map((c) => c.memory).filter(Boolean));
+  const entered = (id) => !game.entered || game.entered[id];
   const missing = Object.entries(state.memories)
-    .filter(([id, m]) => !m.revealedAt && m.clues?.length === CLUES && !hidden.has(id)) // not guessed yet
+    .filter(([id, m]) => !m.revealedAt && m.clues?.length === CLUES && entered(id) && !hidden.has(id))
     .map(([id]) => id);
   for (const id of missing) {
     clueSquares(game).forEach((k, n) => { game.board[k] = { kind: "clue", memory: id, n }; });
@@ -200,10 +202,18 @@ export function syncGame() {
   runTransaction(gameRef, (game) => {
     const fresh = !game || now() - (game.updatedAt ?? 0) > IDLE_MS;
     if (fresh) game = newGame();
+    game.entered ??= {};
     if (game.status !== "playing") return; // abort; a finished game waits for "play again"
     game.board ??= {}; // the database drops empty objects
     game.revealed ??= {};
-    if (hideMissingMemories(game) === 0 && !fresh) return; // nothing to do: abort
+    // Bring my memory into this game (once it has reached the database).
+    const mine = myMemoryId();
+    let entering = false;
+    if (mine && state.memories[mine] && game.entered && !game.entered[mine]) {
+      game.entered[mine] = true;
+      entering = true;
+    }
+    if (hideMissingMemories(game) === 0 && !fresh && !entering) return; // nothing to do: abort
     return game;
   }, { applyLocally: false }); // a random board: only show the one the server kept
 }
@@ -215,17 +225,21 @@ export function newBoard() {
   const seen = state.game?.id ?? null;
   return runTransaction(gameRef, (game) => {
     if ((game?.id ?? null) !== seen) return; // abort
-    const fresh = newGame();
-    hideMissingMemories(fresh);
-    return fresh;
+    // Everyone goes back to the lobby to keep their memory or write a new
+    // one; each brings it in on the way back. Nothing is hidden until then.
+    return { ...newGame(), viaLobby: true };
   }, { applyLocally: false }); // a random board: only show the one the server kept
 }
 
 onValue(gameRef, (snap) => {
   const previous = state.game;
   state.game = snap.val();
-  if (previous && state.game && state.game.id !== previous.id) backToStart();
-  else applyMyMove();
+  if (previous && state.game && state.game.id !== previous.id) {
+    if (state.game.viaLobby && state.joined) return backToLobby(); // New game / Play again
+    backToStart();
+  } else {
+    applyMyMove();
+  }
   markFound();
   render();
   gameChanged(previous, state.game);

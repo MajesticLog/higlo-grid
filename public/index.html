@@ -22,6 +22,12 @@
       <form id="write" hidden>
         <button id="write-back" class="quiet back" type="button">← Back</button>
         <h1>Hide a memory</h1>
+        <div id="keep" hidden>
+          <p>Your memory is still waiting to be guessed:</p>
+          <p id="keep-text"></p>
+          <button id="keep-it" class="primary" type="button">Keep it for this game</button>
+          <p class="keep-or">or write a new one below</p>
+        </div>
         <p class="hint-text">Pick a theme, write your memory in a few words, then 3 clues.
           The clues get hidden in the field: the others find them and guess your memory!</p>
         <div id="categories" class="categories" role="group" aria-label="Theme"></div>
@@ -73,15 +79,9 @@
         </span>
       </div>
     </main>
-    <div id="card" role="dialog" aria-modal="true" aria-labelledby="card-text" hidden>
-      <div class="card-body">
-        <p class="card-found" id="card-found">📜 A memory!</p>
-        <p id="card-prompt"></p>
-        <p id="card-text"></p>
-        <ul id="card-others"></ul>
-        <p id="card-author"></p>
-        <button id="card-close" type="button">Close</button>
-      </div>
+    <div id="card" role="dialog" aria-modal="true" aria-label="Clues found" hidden>
+      <div id="card-stack"></div>
+      <button id="card-close" type="button">Close</button>
     </div>
     <div id="end" role="dialog" aria-modal="true" aria-labelledby="end-title" hidden>
       <div class="end-body">
@@ -93,7 +93,6 @@
         <div class="end-buttons">
           <button id="end-again" class="primary" type="button">🔄 Play again</button>
           <p id="end-waiting" hidden>✅ Waiting for the others to choose…</p>
-          <button id="end-lobby" type="button">🏠 Back to the lobby</button>
           <button id="end-garden" class="quiet" type="button">🌼 See the garden</button>
         </div>
       </div>
@@ -137,7 +136,7 @@
           <button id="guess-nobody" type="button">❌ Nobody got it</button>
         </div>
         <div class="end-buttons">
-          <button id="guess-early" type="button" hidden>Show the guesses now</button>
+          <button id="guess-early" type="button" hidden>Everyone's done? Show the guesses</button>
           <button id="guess-close" class="primary" type="button" hidden>Back to the field</button>
         </div>
       </div>

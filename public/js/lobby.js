@@ -54,6 +54,18 @@ const tab = read("sessionStorage", TAB_KEY); // {id, choice?, memoryDone?}
 tab.id ??= Math.random().toString(36).slice(2, 10);
 write("sessionStorage", TAB_KEY, tab);
 
+// This device, for good (all family links): with the player's name it makes
+// an author key, so a memory's author is recognised on a later visit even
+// with another animal or colour, and two people sharing a device stay apart.
+const device = (() => {
+  const saved = read("localStorage", "higlo:device");
+  if (saved.id) return saved.id;
+  const id = Math.random().toString(36).slice(2, 12);
+  write("localStorage", "higlo:device", { id });
+  return id;
+})();
+export const authorKey = (name) => `${device}:${name.trim().toLowerCase()}`;
+
 // --- Claiming an animal or a colour ---
 // A transaction writes my tab id into the slot only if it's free (or already
 // mine), so two players can never hold the same one. The server frees it when
@@ -202,14 +214,49 @@ for (const input of [memory, ...clues]) input.addEventListener("input", updateHi
 // Resolves with "done" (hidden, or skipped) or "back" (to the name, animal
 // and colour step). What's typed stays in the fields either way.
 let finishWriting = null;
-const writeMemory = () => new Promise((resolve) => { finishWriting = resolve; });
+const writeMemory = () => {
+  showKeep();
+  return new Promise((resolve) => { finishWriting = resolve; });
+};
+
+// My memory for this game (kept, or just written), so the field hides its
+// clues. Only memories of players who are here get hidden.
+export const myMemoryId = () => tab.memoryId ?? null;
+function useMemory(id) {
+  tab.memoryId = id;
+  write("sessionStorage", TAB_KEY, tab);
+}
+
+// A memory of mine still waiting to be guessed can be kept for this game.
+let memories = {};
+onValue(sessionRef("memories"), (snap) => { memories = snap.val() || {}; });
+const keepBox = document.getElementById("keep");
+let keepId = null;
+
+function showKeep() {
+  const mine = Object.entries(memories)
+    .filter(([, m]) => m.author === authorKey(playerName()) && m.clues && !m.revealedAt)
+    .sort(([, a], [, b]) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  keepId = mine[0]?.[0] ?? null;
+  keepBox.hidden = !keepId;
+  if (keepId) {
+    const m = mine[0][1];
+    document.getElementById("keep-text").textContent = `${m.prompt ?? ""}: “${m.text}”`;
+  }
+}
+
+document.getElementById("keep-it").addEventListener("click", () => {
+  if (!keepId || !finishWriting) return;
+  useMemory(keepId);
+  finishWriting("done");
+});
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   updateHide();
   if (hideButton.disabled || !finishWriting) return;
   // Memories belong to the family link, not to this game or this tab.
-  push(sessionRef("memories"), {
+  const ref = push(sessionRef("memories"), {
     text: memory.value.trim(),
     category: category.id,
     prompt: `${category.icon} ${category.label}`,
@@ -217,9 +264,13 @@ form.addEventListener("submit", (e) => {
     ...identity(),
     createdAt: serverTimestamp(),
   });
+  useMemory(ref.key);
   finishWriting("done");
 });
-document.getElementById("skip").addEventListener("click", () => finishWriting?.("done"));
+document.getElementById("skip").addEventListener("click", () => {
+  useMemory(null);
+  finishWriting?.("done");
+});
 document.getElementById("write-back").addEventListener("click", () => finishWriting?.("back"));
 
 // --- The whole lobby: resolves with {animal, color} once I'm ready for the field ---
@@ -283,7 +334,8 @@ export function takePlayAgain() {
 }
 
 const identity = () => ({
-  tab: tab.id, // recognises the author of a memory, even after a refresh
+  tab: tab.id,
+  author: authorKey(playerName()), // recognises the author of a memory (see guess.js)
   name: playerName(),
   animal: ANIMALS[choice.animals],
   color: COLOURS[choice.colors].value,
