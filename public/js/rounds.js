@@ -3,7 +3,7 @@
 // player who stepped away can't stall the game), every picked square turns
 // over at once. Others see which squares are picked, never by whom.
 // Instead of turning over a square, a player can send one of their sheep
-// to graze a line of three squares.
+// to graze a line of five squares.
 import { update, runTransaction } from "./firebase.js";
 import { SIZE, sessionRef, myRef, myId } from "./session.js";
 import { state, rememberPosition } from "./state.js";
@@ -13,6 +13,7 @@ import { playBleat } from "./sound.js";
 
 export const REACH = 3; // steps up, down, left or right; no diagonals
 export const SHEEP_PER_PLAYER = 3; // per game
+export const SHEEP_LENGTH = 5; // squares a sheep grazes; keep in sync with the graze animation in style.css
 const READY_WAIT_MS = 20000; // after the first Ready, how long the others have
 const gameRef = sessionRef("game");
 
@@ -23,7 +24,7 @@ export const choosing = () => state.joined && state.game?.status === "playing";
 export const myPick = () => state.game?.picks?.[myId];
 export const sheepLeft = () => SHEEP_PER_PLAYER - (state.game?.sheepUsed?.[myId] ?? 0);
 
-// A sheep's line: the tapped square and the next two in its direction.
+// A sheep's line: the tapped square and the next four in its direction.
 // Tapping the 🐑 square again turns it: up, right, down, left. Near an edge
 // the line shifts back so it stays on the field. ("h" and "v" are the two
 // directions from before, kept for games already in progress.)
@@ -34,14 +35,14 @@ export const FIRST_DIRECTION = "up";
 export function sheepLine(x, y, dir) {
   const [dx, dy] = STEPS[dir] ?? STEPS.up;
   const shift = (start, step) => {
-    const end = start + 2 * step;
+    const end = start + (SHEEP_LENGTH - 1) * step;
     if (end < 0) return start - end;
     if (end > SIZE - 1) return start - (end - (SIZE - 1));
     return start;
   };
   const sx = shift(x, dx);
   const sy = shift(y, dy);
-  return [0, 1, 2].map((i) => [sx + i * dx, sy + i * dy]); // in the order the sheep walks
+  return Array.from({ length: SHEEP_LENGTH }, (_, i) => [sx + i * dx, sy + i * dy]); // in the order the sheep walks
 }
 
 // Every change to a round goes through a transaction on the game, tied to

@@ -3,7 +3,7 @@ import { myId } from "./session.js";
 import { state } from "./state.js";
 import { now, NIGHT_STEPS } from "./game.js";
 import {
-  REACH, READY_WAIT_MS, inReach, choosing, sheepLine, sheepLeft, inSheepMode,
+  REACH, READY_WAIT_MS, inReach, choosing, sheepLine, sheepLeft, inSheepMode, SHEEP_LENGTH,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
 import { playBleat } from "./sound.js";
@@ -177,9 +177,9 @@ function drawGrazing() {
     }
   }
   const age = performance.now() - grazeStart;
-  if (age > SHEEP_STEP_MS * 5) return; // walk (4 steps) plus the last "Baa?"
+  if (age > SHEEP_STEP_MS * (SHEEP_LENGTH + 2)) return; // the walk plus the last "Baa?"
   for (const run of runs) {
-    // The lane covers the three squares; the sheep walks it from its first
+    // The lane covers the sheep's squares; the sheep walks it from its first
     // square, backwards along the lane when it goes left or up.
     const squares = run.line.map(squareOf);
     const left = Math.min(...squares.map(([x]) => x));
@@ -190,11 +190,11 @@ function drawGrazing() {
     if (run.dir === "left" || run.dir === "up") lane.classList.add("reverse");
     if (run.dir === "right" || run.dir === "h") lane.classList.add("face-right");
     if (across) {
-      lane.style.gridColumn = `${left + 1} / span 3`;
+      lane.style.gridColumn = `${left + 1} / span ${SHEEP_LENGTH}`;
       lane.style.gridRow = top + 1;
     } else {
       lane.style.gridColumn = left + 1;
-      lane.style.gridRow = `${top + 1} / span 3`;
+      lane.style.gridRow = `${top + 1} / span ${SHEEP_LENGTH}`;
     }
     const walker = document.createElement("span");
     walker.className = "walker";

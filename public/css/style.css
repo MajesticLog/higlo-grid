@@ -856,7 +856,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   container-type: inline-size;
 }
 
-/* The sheep trotting along its line of three squares, 0.8s per square
+/* The sheep trotting along its line of five squares, 0.8s per square
    (SHEEP_STEP_MS in render.js), then a moment to fade. */
 .graze {
   position: relative;
@@ -871,11 +871,11 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   display: grid;
   place-items: center;
   container-type: inline-size;
-  animation: graze-h 3.2s linear both;
+  animation: graze-h 4.8s linear both;
 }
 
-.graze.h .walker { width: calc(100% / 3); height: 100%; }
-.graze.v .walker { width: 100%; height: calc(100% / 3); animation-name: graze-v; }
+.graze.h .walker { width: calc(100% / 5); height: 100%; }
+.graze.v .walker { width: 100%; height: calc(100% / 5); animation-name: graze-v; }
 
 .walker .icon {
   font-size: 80cqi;
@@ -888,22 +888,28 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 .graze.face-right .walker .icon { transform: scaleX(-1); }
 .graze.reverse .walker { animation-direction: reverse; }
 
+/* Five squares (SHEEP_LENGTH), 0.8 s each: on the first square at 1/6 of
+   the walk, the last at 5/6, then a moment to fade. */
 @keyframes graze-h {
-  0%   { transform: translateX(0); opacity: 0; }
-  8%   { opacity: 1; }
-  25%  { transform: translateX(0); }
-  50%  { transform: translateX(100%); }
-  75%  { transform: translateX(200%); opacity: 1; }
-  100% { transform: translateX(200%); opacity: 0; }
+  0%     { transform: translateX(0); opacity: 0; }
+  6%     { opacity: 1; }
+  16.7%  { transform: translateX(0); }
+  33.3%  { transform: translateX(100%); }
+  50%    { transform: translateX(200%); }
+  66.7%  { transform: translateX(300%); }
+  83.3%  { transform: translateX(400%); opacity: 1; }
+  100%   { transform: translateX(400%); opacity: 0; }
 }
 
 @keyframes graze-v {
-  0%   { transform: translateY(0); opacity: 0; }
-  8%   { opacity: 1; }
-  25%  { transform: translateY(0); }
-  50%  { transform: translateY(100%); }
-  75%  { transform: translateY(200%); opacity: 1; }
-  100% { transform: translateY(200%); opacity: 0; }
+  0%     { transform: translateY(0); opacity: 0; }
+  6%     { opacity: 1; }
+  16.7%  { transform: translateY(0); }
+  33.3%  { transform: translateY(100%); }
+  50%    { transform: translateY(200%); }
+  66.7%  { transform: translateY(300%); }
+  83.3%  { transform: translateY(400%); opacity: 1; }
+  100%   { transform: translateY(400%); opacity: 0; }
 }
 
 @keyframes munch {
