@@ -356,7 +356,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   font-weight: 600;
 }
 
-#ready {
+#ready, #end-open {
   margin-top: 8px;
   min-height: 52px;
   min-width: 150px;
@@ -628,4 +628,189 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 @media (prefers-reduced-motion: reduce) {
   .star, .wolf-icon, .howl, .card-body { animation: none; }
+}
+
+/* --- A win: fireflies drifting over the field --- */
+#board {
+  position: relative; /* anchors the fireflies over the grid */
+  width: var(--board);
+  margin: 0 auto;
+}
+
+#fireflies {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+}
+
+.firefly {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff7a8;
+  box-shadow: 0 0 6px 3px rgba(255, 236, 120, 0.85), 0 0 16px 6px rgba(255, 220, 80, 0.45);
+  animation: firefly 4s ease-in-out infinite;
+}
+
+@keyframes firefly {
+  0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+  30%      { opacity: 1; }
+  50%      { transform: translate(var(--dx), var(--dy)); opacity: 0.9; }
+  70%      { opacity: 0.3; }
+}
+
+/* --- End screen: tea time, or bedtime --- */
+#end {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+}
+
+#end[hidden] { display: none; }
+
+.end-body {
+  box-sizing: border-box;
+  width: min(100%, 560px);
+  padding: 24px 20px;
+  border-radius: 24px;
+  background: #fffaf0;
+  color: #222;
+  text-align: center;
+  animation: pop-in 0.4s ease-out;
+}
+
+#end.lost .end-body { background: #1d2550; color: #f2f2f7; }
+
+#end-title { margin: 0; font-size: 30px; }
+#end-note { margin: 12px 0 0; font-size: 18px; line-height: 1.4; }
+
+/* Everyone in a ring around the teapot (or the house, at bedtime). */
+#end-family {
+  position: relative;
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  margin: 12px auto 0;
+}
+
+.end-centre {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 64px;
+  line-height: 1;
+}
+
+.end-token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.end-circle {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.end-badge {
+  position: absolute;
+  right: -10px;
+  bottom: -6px;
+  font-size: 20px;
+}
+
+#end.lost .end-badge { right: auto; left: 60%; top: -18px; bottom: auto; }
+
+.end-check {
+  position: absolute;
+  left: -10px;
+  bottom: -6px;
+  font-size: 20px;
+}
+
+#end-waiting {
+  flex-basis: 100%;
+  margin: 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.end-name {
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#end-memories-title { margin: 20px 0 8px; font-size: 18px; }
+
+#end-memories {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+#end-memories li {
+  --c: #999;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border-left: 6px solid var(--c);
+  background: #fff;
+  color: #222;
+  display: grid;
+  gap: 4px;
+}
+
+.end-prompt { font-size: 14px; font-style: italic; color: #666; }
+.end-text { font-size: 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.end-by { font-size: 15px; font-weight: 700; }
+
+.end-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.end-buttons button {
+  min-height: 52px;
+  padding: 0 20px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 14px;
+  border: 2px solid #ccc;
+  background: #fff;
+  color: #222;
+  cursor: pointer;
+}
+
+.end-buttons .primary { border: none; background: #2f7d32; color: #fff; }
+.end-buttons .quiet { border: none; background: none; color: inherit; text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .firefly, .end-body { animation: none; }
+  .firefly { opacity: 0.8; }
 }

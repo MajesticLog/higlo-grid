@@ -215,6 +215,25 @@ export async function runLobby() {
   return identity();
 }
 
+// From the end screen: back through the lobby to write a new memory (with
+// the same name, animal and colour preselected). Reloading leaves the field
+// cleanly: the server removes my player and frees my choices. Coming back,
+// I count as wanting to play again (see takePlayAgain).
+export function backToLobby() {
+  tab.memoryDone = false;
+  tab.playAgain = true;
+  write("sessionStorage", TAB_KEY, tab);
+  location.reload();
+}
+
+// True once, if I came back from the lobby after a game ended.
+export function takePlayAgain() {
+  if (!tab.playAgain) return false;
+  tab.playAgain = false;
+  write("sessionStorage", TAB_KEY, tab);
+  return true;
+}
+
 const identity = () => ({
   name: playerName(),
   animal: ANIMALS[choice.animals],

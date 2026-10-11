@@ -22,6 +22,7 @@ export function render() {
   drawPlayers();
   drawPops();
   drawWolf();
+  fireflies.hidden = state.game?.status !== "won";
   renderSky();
   renderStatus();
   renderTimer();
@@ -148,6 +149,20 @@ function drawWolf() {
   grid.append(el);
 }
 
+// A win: fireflies drift over the field. They live outside the grid, so
+// redraws don't restart them.
+const fireflies = document.getElementById("fireflies");
+for (let i = 0; i < 24; i++) {
+  const fly = document.createElement("span");
+  fly.className = "firefly";
+  fly.style.left = `${Math.random() * 100}%`;
+  fly.style.top = `${Math.random() * 100}%`;
+  fly.style.setProperty("--dx", `${(Math.random() * 2 - 1) * 60}px`);
+  fly.style.setProperty("--dy", `${(Math.random() * 2 - 1) * 60}px`);
+  fly.style.animationDelay = `-${(Math.random() * 4).toFixed(2)}s`;
+  fireflies.append(fly);
+}
+
 // --- The sky: each trap brings the night one step closer ---
 // Stars appear from dusk and twinkle; the sun goes down, the moon comes up.
 const sky = document.getElementById("sky");
@@ -256,6 +271,7 @@ function floatElement({ icon, startedAt }) {
 const statusBar = document.getElementById("status");
 const statusText = document.getElementById("status-text");
 const readyButton = document.getElementById("ready");
+const endOpen = document.getElementById("end-open"); // reopens the end screen
 const timer = document.getElementById("timer");
 const timerFill = timer.firstElementChild;
 
@@ -266,8 +282,11 @@ function renderStatus() {
   } else if (game?.status === "won") {
     statusText.textContent = "✨ Every memory found!";
   }
+  const over = game && game.status !== "playing";
+  endOpen.hidden = !over;
+  if (over) endOpen.textContent = game.status === "won" ? "☕ Back to the tea" : "🌙 Back to bed";
   if (!choosing()) {
-    if (!game || game.status === "playing") statusText.textContent = "Joining…";
+    if (!over) statusText.textContent = "Joining…";
     readyButton.hidden = true;
     return;
   }

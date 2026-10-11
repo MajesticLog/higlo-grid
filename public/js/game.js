@@ -6,6 +6,7 @@ import { SIZE, CENTRE, sessionRef, myRef, myId } from "./session.js";
 import { state } from "./state.js";
 import { render } from "./render.js";
 import { applyMyMove, maybeResolve } from "./rounds.js";
+import { gameChanged } from "./end.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const TRAPS = 12;
@@ -145,10 +146,11 @@ export function syncGame() {
 }
 
 // "New game": replace the game I'm looking at. If someone else already
-// replaced it, their new board stays and mine is dropped.
+// replaced it, their new board stays and mine is dropped. Returns a promise
+// that settles once the database has answered.
 export function newBoard() {
   const seen = state.game?.id ?? null;
-  runTransaction(gameRef, (game) => {
+  return runTransaction(gameRef, (game) => {
     if ((game?.id ?? null) !== seen) return; // abort
     const fresh = newGame();
     hideMissingMemories(fresh);
@@ -157,12 +159,13 @@ export function newBoard() {
 }
 
 onValue(gameRef, (snap) => {
-  const previousId = state.game?.id;
+  const previous = state.game;
   state.game = snap.val();
-  if (previousId && state.game && state.game.id !== previousId) backToStart();
+  if (previous && state.game && state.game.id !== previous.id) backToStart();
   else applyMyMove();
   markFound();
   render();
+  gameChanged(previous, state.game);
   maybeResolve();
 });
 

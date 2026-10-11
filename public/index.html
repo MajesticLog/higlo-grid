@@ -35,11 +35,16 @@
       <div id="status" aria-live="polite">
         <p id="status-text">Joining…</p>
         <button id="ready" type="button" hidden>✓ Ready</button>
+        <button id="end-open" type="button" hidden></button>
         <div id="timer" hidden><div></div></div>
       </div>
-      <div id="grid" aria-label="Shared grid"></div>
+      <div id="board">
+        <div id="grid" aria-label="Shared grid"></div>
+        <div id="fireflies" aria-hidden="true" hidden></div>
+      </div>
       <div id="new-game">
         <button id="new-game-ask" type="button">🔄 New game</button>
+        <button id="sound" type="button">🔊 Sound on</button>
         <span id="new-game-confirm" hidden>
           Start a new board?
           <button id="new-game-yes" type="button">Yes</button>
@@ -54,6 +59,21 @@
         <p id="card-text"></p>
         <p id="card-author"></p>
         <button id="card-close" type="button">Close</button>
+      </div>
+    </div>
+    <div id="end" role="dialog" aria-modal="true" aria-labelledby="end-title" hidden>
+      <div class="end-body">
+        <h2 id="end-title"></h2>
+        <div id="end-family"></div>
+        <p id="end-note"></p>
+        <h3 id="end-memories-title">Memories found this game</h3>
+        <ul id="end-memories"></ul>
+        <div class="end-buttons">
+          <button id="end-again" class="primary" type="button">🔄 Play again</button>
+          <p id="end-waiting" hidden>✅ Waiting for the others to choose…</p>
+          <button id="end-lobby" type="button">🏠 Back to the lobby</button>
+          <button id="end-garden" class="quiet" type="button">🌼 See the garden</button>
+        </div>
       </div>
     </div>
     <div id="sky" aria-hidden="true"><span id="sky-icon">☀️</span></div>

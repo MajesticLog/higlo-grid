@@ -7,6 +7,7 @@ import { state } from "./state.js";
 import { render } from "./render.js";
 import { pickSquare, movePick, inReach, choosing, maybeResolve } from "./rounds.js";
 import { openCard } from "./card.js";
+import { gameChanged, maybeStartAgain } from "./end.js";
 import { sendHeart } from "./hearts.js";
 
 document.getElementById("link").textContent = location.href;
@@ -24,6 +25,7 @@ onValue(ref(db, ".info/connected"), async (snap) => {
   await set(myRef, state.me);
   state.joined = true;
   syncGame(); // start a game if there isn't one, and hide my memory
+  gameChanged(null, state.game); // a game that ended while I was in the lobby: show its end screen now
 });
 
 onValue(playersRef, (snap) => {
@@ -31,6 +33,7 @@ onValue(playersRef, (snap) => {
   snap.forEach((child) => { state.players.push({ id: child.key, ...child.val() }); });
   render();
   maybeResolve(); // the last player we were waiting for may have left
+  maybeStartAgain(); // ...or the last one to choose at the end of a game
 });
 
 // --- Controls ---

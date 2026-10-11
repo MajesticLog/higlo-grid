@@ -15,7 +15,7 @@ const shown = new Set();
 
 // A memory just turned over while I was watching: show it once.
 export function queueCard(id) {
-  if (shown.has(id)) return;
+  if (!state.joined || shown.has(id)) return; // not over the lobby
   shown.add(id);
   setTimeout(() => {
     queue.push(id);
