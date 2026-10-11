@@ -31,6 +31,17 @@
       <p id="here"></p>
     </section>
     <main id="field" hidden>
+      <button id="chest" type="button" aria-label="Memory chest">
+        <svg viewBox="0 0 48 40" aria-hidden="true">
+            <path d="M4 16c0-8 9-13 20-13s20 5 20 13v2H4z" fill="#a1662f"/>
+            <path d="M4 16c0-8 9-13 20-13s20 5 20 13" fill="none" stroke="#6d3f17" stroke-width="2"/>
+            <rect x="4" y="18" width="40" height="19" rx="3" fill="#c07a3a" stroke="#6d3f17" stroke-width="2"/>
+            <rect x="4" y="16" width="40" height="5" fill="#f4c430" stroke="#b8860b" stroke-width="1.5"/>
+            <rect x="20" y="18" width="8" height="9" rx="2" fill="#f4c430" stroke="#b8860b" stroke-width="1.5"/>
+            <circle cx="24" cy="23" r="1.6" fill="#6d3f17"/>
+          </svg>
+        <span id="chest-count" hidden>0</span>
+      </button>
       <div id="sky-strip" aria-hidden="true"><span id="sky-strip-icon">☀️</span></div>
       <div id="status" aria-live="polite">
         <p id="status-text">Joining…</p>
@@ -74,6 +85,18 @@
           <p id="end-waiting" hidden>✅ Waiting for the others to choose…</p>
           <button id="end-lobby" type="button">🏠 Back to the lobby</button>
           <button id="end-garden" class="quiet" type="button">🌼 See the garden</button>
+        </div>
+      </div>
+    </div>
+    <div id="chest-panel" role="dialog" aria-modal="true" aria-labelledby="chest-title" hidden>
+      <div class="chest-body">
+        <h2 id="chest-title">🧺 Memory chest</h2>
+        <p class="chest-intro">Every memory your family has found, game by game.</p>
+        <div id="chest-list"></div>
+        <p id="chest-hidden"></p>
+        <div class="end-buttons">
+          <button id="chest-save" class="primary" type="button">⬇️ Save the memories</button>
+          <button id="chest-close" type="button">Close</button>
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { render } from "./render.js";
 import { applyMyMove, maybeResolve } from "./rounds.js";
 import { gameChanged } from "./end.js";
 import { eventChanged, firstEventAt } from "./events.js";
+import { renderChest } from "./chest.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const TRAPS = 12;
@@ -196,6 +197,7 @@ document.getElementById("new-game-yes").addEventListener("click", () => {
 
 onValue(memoriesRef, (snap) => {
   state.memories = snap.val() || {};
+  renderChest();
   markFound();
   syncGame();
 });
