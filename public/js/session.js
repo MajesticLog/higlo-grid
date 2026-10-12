@@ -2,8 +2,9 @@
 import { db, ref, push } from "./firebase.js";
 
 // The garden's size can follow the family (docs/game-design.md). For now
-// it's 7 x 7 for everyone: 5 x 5, then 6 x 6, felt too easy (playtest 5). fitGrid() in game.js sets it;
-// every module reads SIZE live (an ES module export follows its variable).
+// it's 7 x 7 for everyone: 5 x 5, then 6 x 6, felt too easy (playtest 5).
+// fitGrid() in game.js sets it; every module reads SIZE live (an ES module
+// export follows its variable).
 export let SIZE = 7;
 export const sizeFor = () => 7; // (players) => ... to make it follow the family again
 export function setSize(size) { SIZE = size; }
