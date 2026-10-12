@@ -9,7 +9,10 @@ import { state } from "./state.js";
 import { newGameForAll } from "./game.js";
 import { backToLobby, takePlayAgain } from "./lobby.js";
 import { playTrumpet, playHowl } from "./sound.js";
-import { replayEndsAt } from "./replay.js";
+import { replayActive } from "./replay.js";
+import { cardOpen } from "./card.js";
+import { guessOpen } from "./guess.js";
+import { notesList } from "./notes.js";
 
 const END_DELAY_MS = 3500; // time to enjoy the fireflies or the wolf first
 
@@ -40,13 +43,13 @@ export function gameChanged(previous, game) {
   const tag = `${game.id}:${game.status}`;
   if (handled !== tag) {
     handled = tag;
-    // Watched it happen: sound, then the screen after a moment. Arrived late: show it now.
+    // Watched it happen: once nothing else is on screen (the replay, a clue
+    // card, the guess and its result), the sound, then the screen after a
+    // moment. Arrived late: show it now.
     const live = previous?.id === game.id && previous.status === "playing";
     if (live) {
-      // After the replay: the last moves first, then the sound and the screen.
-      const wait = Math.max(0, replayEndsAt() - performance.now());
-      setTimeout(game.status === "won" ? playTrumpet : playHowl, wait);
-      timer = setTimeout(showEnd, wait + END_DELAY_MS);
+      clearTimeout(timer);
+      endWhenFree(tag);
     } else {
       showEnd();
     }
@@ -54,6 +57,17 @@ export function gameChanged(previous, game) {
     drawEnd(); // someone chose: update the ticks
   }
   maybeStartAgain();
+}
+
+function endWhenFree(tag) {
+  const game = state.game;
+  if (!game || `${game.id}:${game.status}` !== tag) return; // a new game started
+  if (replayActive() || cardOpen() || guessOpen()) {
+    timer = setTimeout(() => endWhenFree(tag), 300);
+    return;
+  }
+  (game.status === "won" ? playTrumpet : playHowl)();
+  timer = setTimeout(showEnd, END_DELAY_MS);
 }
 
 export function showEnd() {
@@ -71,10 +85,10 @@ function drawEnd() {
   screen.classList.toggle("lost", !won);
   // Plain words any family understands (playtest 5: "tea time" wasn't clear).
   // Counted from the game itself: the memories' own records may arrive a moment later.
-  const count = (game.queue ?? []).filter((id) => game.guessed?.[id]).length;
+  const count = (game.queue ?? []).filter((id) => game.guessed?.[id] && game.guessed[id] !== "kept").length;
   title.textContent = won ? "🎉 What a team!" : "🌙 Let's go to bed!";
   note.textContent = won
-    ? `Well done! You found ${count} ${count === 1 ? "memory" : "memories"}!`
+    ? (count > 0 ? `Well done! You found ${count} ${count === 1 ? "memory" : "memories"}!` : "Well done!")
     : "The wolf is out, everyone runs off to bed! The memories not guessed aren't lost: next game, their authors can hide them again.";
   drawFamily(won, again);
   drawMemories(game);
@@ -148,7 +162,8 @@ function drawFamily(won, again) {
 }
 
 // The memories found in this game, in the order they turned up.
-const foundThisGame = (game) => Object.values(state.memories)
+const foundThisGame = (game) => Object.entries(state.memories)
+  .map(([id, m]) => ({ ...m, id }))
   .filter((m) => m.gameId === game.id && m.foundAt && (!m.clues || m.revealedAt))
   .sort((a, b) => a.foundAt - b.foundAt);
 
@@ -172,6 +187,7 @@ function drawMemories(game) {
       span.textContent = text;
       item.append(span);
     }
+    item.append(notesList(m.id)); // notes.js keeps it up to date
     list.append(item);
   }
 }

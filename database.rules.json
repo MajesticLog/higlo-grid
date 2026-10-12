@@ -23,6 +23,7 @@
             "tab": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "author": { ".validate": "newData.isString() && newData.val().length <= 64" },
             "busy": { ".validate": "newData.isNumber()" },
+            "reading": { ".validate": "newData.isBoolean()" },
             "$other": { ".validate": false }
           }
         },
@@ -63,6 +64,18 @@
             "revealedAt": { ".validate": "newData.isNumber()" },
             "gameId": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "guessed": { ".validate": "newData.isBoolean()" },
+            // Notes on a found memory (notes.js): added, never changed.
+            "notes": {
+              "$nid": {
+                ".validate": "!data.exists() && newData.hasChildren(['text', 'at'])",
+                "text": { ".validate": "newData.isString() && newData.val().length <= 80" },
+                "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
+                "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "at": { ".validate": "newData.isNumber()" },
+                "$other": { ".validate": false }
+              }
+            },
             "$other": { ".validate": false }
           }
         },

@@ -16,8 +16,9 @@ const CARDS = [
   {
     picture: "👀 🌷 🐌",
     title: "Remember them together",
-    text: `Each round, a few squares show their pictures for ${FLASH_MS / 1000} seconds. `
-      + "Remember them together: you don't know yet which one you'll need!",
+    text: `Each round, every square shows its picture for ${FLASH_MS / 1000} seconds. `
+      + "Remember them together: you don't know yet which one you'll need! "
+      + "After each round, everyone goes back to the middle.",
   },
   {
     picture: "🐌 👆 ✓",

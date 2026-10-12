@@ -4,6 +4,7 @@
 import { state } from "./state.js";
 import { onValue } from "./firebase.js";
 import { sessionRef } from "./session.js";
+import { noteBox, notesOf, noteLine } from "./notes.js";
 
 const button = document.getElementById("chest");
 const count = document.getElementById("chest-count");
@@ -21,7 +22,9 @@ onValue(sessionRef("history"), (snap) => {
 
 // A memory with clues is in the chest once it's been guessed (or revealed),
 // never before: that would spoil the guess.
-const found = () => Object.values(state.memories).filter((m) => m.foundAt && (!m.clues || m.revealedAt));
+const found = () => Object.entries(state.memories)
+  .map(([id, m]) => ({ ...m, id }))
+  .filter((m) => m.foundAt && (!m.clues || m.revealedAt));
 
 // Found memories grouped by the game they were found in, newest game first,
 // each group in the order its memories turned up.
@@ -50,6 +53,8 @@ export function renderChest() {
 }
 
 function fill() {
+  // Someone typing a note: leave the chest as it is (notes.js updates the lists).
+  if (document.activeElement?.closest?.("#chest-panel .notes-form")) return;
   list.replaceChildren();
   const games = byGame();
   if (games.length === 0) {
@@ -78,6 +83,7 @@ function fill() {
         span.textContent = text;
         item.append(span);
       }
+      item.append(noteBox(m.id, { folded: true }));
       items.append(item);
     }
     section.append(heading, who, items);
@@ -118,6 +124,7 @@ function savePage() {
           <p class="prompt">${escape(m.prompt ?? "")}</p>
           <p class="text">${escape(m.text)}</p>
           <p class="by">${escape(author(m))}</p>
+          ${notesOf(m.id).map((n) => `<p class="note">📝 ${escape(noteLine(n))}</p>`).join("")}
         </article>`).join("")}
     </section>`).join("");
   const html = `<!DOCTYPE html>
@@ -136,6 +143,7 @@ function savePage() {
   .text { margin: 6px 0; font-size: 18px; white-space: pre-wrap; }
   .by { margin: 0; font-weight: 700; }
   .players { margin: -4px 0 8px; color: #777; font-size: 14px; }
+  .note { margin: 6px 0 0; color: #444; font-size: 15px; }
 </style>
 </head>
 <body><main><h1>🧺 Our family memories</h1>${sections}</main></body>

@@ -17,6 +17,11 @@ const shown = new Set();
 let pending = []; // clues found this round, waiting for the pop-up to finish
 let timer = null;
 
+// A clue card on my screen, or about to open: the guess, its result and the
+// end screen wait for it (guess.js, end.js), and so does the next round
+// (main.js tells the others).
+export const cardOpen = () => !card.hidden || pending.length > 0;
+
 // A clue (or an old-style memory) just turned over while I was watching:
 // show it once, with any others found at the same moment.
 export function queueCard(item) {
@@ -111,6 +116,7 @@ function cardFor(item) {
 function close() {
   card.hidden = true;
   stack.replaceChildren();
+  document.dispatchEvent(new Event("card-closed")); // whatever waited for it can open now
 }
 
 closeButton.addEventListener("click", close);

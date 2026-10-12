@@ -13,6 +13,7 @@ import { eventChanged, firstEventAt } from "./events.js";
 import { renderChest } from "./chest.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
 import { CLUES, myMemoryId, backToLobby } from "./lobby.js";
+import { refreshNotes } from "./notes.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const PICTURES = ["🌸", "🌷", "🐌", "🐛", "🍄", "🐦"]; // sakura, tulip, snail, caterpillar, mushroom, bird
@@ -210,6 +211,7 @@ onValue(memoriesRef, (snap) => {
   state.memories = snap.val() || {};
   renderChest();
   renderGuess();
+  refreshNotes(); // a note just added, wherever it shows
   syncGame();
 });
 

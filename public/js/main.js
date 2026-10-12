@@ -8,7 +8,8 @@ import { render } from "./render.js";
 import { pickSquare, movePick, maybeResolve, ready } from "./rounds.js";
 import { playersChanged } from "./announce.js";
 import { gameChanged, maybeStartAgain } from "./end.js";
-import { renderGuess, maybeAdvance } from "./guess.js";
+import { renderGuess, maybeAdvance, readingResult } from "./guess.js";
+import { cardOpen } from "./card.js";
 import { hintHelp } from "./rules.js";
 import { sendHeart } from "./hearts.js";
 import "./messages.js";
@@ -52,14 +53,23 @@ onValue(ref(db, ".info/connected"), async (snap) => {
 });
 
 // A window open on my screen (rules, a clue card, guessing, the chest, the
-// 💡 list): tell the others, so the next flash waits for me (rounds.js).
+// 💡 list): tell the others, so the next flash waits for me (rounds.js), for
+// a while. A clue card, and the result of a guess where notes are written,
+// it waits for until I close them.
 let busy = false;
+let reading = false;
 setInterval(() => {
   if (!state.joined) return;
   const open = Boolean(document.querySelector('[role="dialog"]:not([hidden])'));
-  if (open === busy) return;
-  busy = open;
-  update(myRef, { busy: open ? now() : null });
+  if (open !== busy) {
+    busy = open;
+    update(myRef, { busy: open ? now() : null });
+  }
+  const nowReading = readingResult() || cardOpen();
+  if (nowReading !== reading) {
+    reading = nowReading;
+    update(myRef, { reading: reading || null });
+  }
 }, 400);
 
 onValue(playersRef, (snap) => {

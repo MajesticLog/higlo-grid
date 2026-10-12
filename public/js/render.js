@@ -4,7 +4,7 @@ import { state } from "./state.js";
 import { now, NIGHT_STEPS, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
 import { SIZE } from "./session.js";
 import {
-  READY_WAIT_MS, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
+  READY_WAIT_MS, someoneReading, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
 import {
@@ -70,7 +70,7 @@ function cardForResult() {
 }
 
 // The garden. Squares are tall grass (the grid's own background) except:
-// the flash (6 pictures for a few seconds), a chosen square showing its
+// the flash (every picture for a few seconds), a chosen square showing its
 // picture during the replay, after a miss the squares that had the picture,
 // and squares a sheep has grazed (short grass, until the end of the choosing).
 let pops = []; // pictures to pop above the players: [{k, icon, age}]
@@ -82,7 +82,7 @@ function drawTiles() {
   const phase = roundPhase();
   // The flash.
   if (phase === "flash") {
-    for (const k of game.flash.squares ?? []) card(k, "", PICTURES[game.board[k]]);
+    for (const k of Object.keys(game.board)) card(k, "", PICTURES[game.board[k]]);
   }
   // Squares a sheep has grazed this round: not the picture, so short grass.
   if (phase === "choose") {
@@ -467,6 +467,7 @@ function renderStatus() {
     const last = game.replay;
     if (!currentMemory(game)) return say("🌱 Waiting for a memory to find…", "Write one in the lobby, or wait for someone to join");
     if (!last) return say("🌱 Get ready!", cluesLine(game));
+    if (someoneReading()) return say("⏳ Waiting for everyone to finish reading…", "The next round starts once every window is closed");
     return last.success
       ? say(`✅ Found! ${last.found} of ${last.needed} needed`, cluesLine(game))
       : say("🌙 Not this time… the night falls a little", cluesLine(game));

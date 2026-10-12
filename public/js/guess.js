@@ -14,6 +14,8 @@ import { now, nextGuess, checkEnd, currentMemory, cluesOf } from "./game.js";
 import { CLUES } from "./lobby.js";
 import { playTwinkle } from "./sound.js";
 import { replayEndsAt } from "./replay.js";
+import { noteBox } from "./notes.js";
+import { cardOpen } from "./card.js";
 
 const SHOW_DELAY_MS = 2500; // let the last clue's card show first
 const gameRef = sessionRef("game");
@@ -32,6 +34,8 @@ const nobodyButton = document.getElementById("guess-nobody");
 const earlyButton = document.getElementById("guess-early");
 const reveal = document.getElementById("guess-reveal");
 const closeButton = document.getElementById("guess-close");
+const notesSlot = document.getElementById("guess-notes");
+const aloneButtons = document.getElementById("guess-alone");
 
 // Who wrote a memory: the same author key (this device and name, see
 // lobby.js). Memories from before author keys: the same tab, or the same name.
@@ -71,6 +75,19 @@ function changeGuess(edit) {
   });
 }
 
+// Nobody but its author is here to guess (playing alone): they choose to
+// keep it for a game with the family. It counts as done for this game, but
+// stays hidden, and its author can bring it to the next game from the lobby.
+function keepForLater(game) {
+  const { memory } = game.guess;
+  game.guess = null;
+  game.guessed ??= {};
+  game.guessed[memory] = "kept";
+  nextGuess(game);
+  checkEnd(game);
+  game.updatedAt = now();
+}
+
 // Over: everyone sees the result; the rounds resume (or the next memory's
 // guessing starts, or the game ends).
 function finish(game, guessed) {
@@ -97,15 +114,13 @@ function allAnswered(game) {
   return guessers(memory).every((p) => game.guess.answers?.[p.id]);
 }
 
-// Any device moves things on when they're due: nobody here to guess (the
-// author is alone) reveals the memory; everyone answered shows the guesses.
+// Any device moves things on when they're due: everyone answered shows the
+// guesses. (Nobody here to guess: the author chooses, see drawAlone.)
 export function maybeAdvance() {
   const guess = state.game?.guess;
   const memory = memoryOf(guess);
   if (!state.joined || !memory) return;
-  if (guess.phase === "guessing" && guessers(memory).length === 0) {
-    changeGuess((game) => finish(game, false));
-  } else if (guess.phase === "guessing" && allAnswered(state.game)) {
+  if (guess.phase === "guessing" && guessers(memory).length > 0 && allAnswered(state.game)) {
     changeGuess((game) => {
       if (game.guess.phase !== "guessing" || !allAnswered(game)) return false;
       game.guess.phase = "judging";
@@ -150,6 +165,15 @@ function judge(playerId, yes) {
 }
 someoneButton.addEventListener("click", () => changeGuess((game) => finish(game, true)));
 nobodyButton.addEventListener("click", () => changeGuess((game) => finish(game, false)));
+document.getElementById("guess-reveal-it").addEventListener("click", () => changeGuess((game) => {
+  if (guessers(state.memories[game.guess.memory]).length > 0) return false; // someone came: they guess
+  finish(game, false);
+  game.lastGuess.alone = true;
+}));
+document.getElementById("guess-keep").addEventListener("click", () => changeGuess((game) => {
+  if (guessers(state.memories[game.guess.memory]).length > 0) return false;
+  keepForLater(game);
+}));
 
 // --- Drawing ---
 const firstSeen = new Map(); // guess or result tag -> when this device first saw it
@@ -166,20 +190,22 @@ function seenFor(tag) {
   return performance.now() - firstSeen.get(tag);
 }
 
-// The guess shows after a short delay (the last clue's card first). Until
-// then, or once it's over, the latest result shows until closed.
+// One thing at a time: the round's replay, then its clue card, then the
+// guess, then its result (until closed). Until then, nothing opens.
 export function renderGuess() {
   const game = state.game;
   if (!state.joined || !game) return;
   const guess = game.guess;
   const last = game.lastGuess;
   const lastTag = last && `${game.id}:${last.at}`;
-  // After the replay and its clue cards.
+  // After the replay and its clue card.
   const replayLeft = replayEndsAt() - performance.now();
-  if (guess && replayLeft > 0) setTimeout(renderGuess, replayLeft + SHOW_DELAY_MS + 50);
-  const guessReady = guess && memoryOf(guess) && replayLeft <= 0
+  if ((guess || last) && replayLeft > 0) setTimeout(renderGuess, replayLeft + SHOW_DELAY_MS + 50);
+  const free = replayLeft <= 0 && !cardOpen();
+  const guessReady = free && guess && memoryOf(guess)
     && seenFor(`${game.id}:${guess.memory}`) >= SHOW_DELAY_MS;
-  const resultOpen = last && state.memories[last.memory] && closedResult !== lastTag && seenFor(lastTag) !== Infinity;
+  const resultOpen = free && last && state.memories[last.memory] && closedResult !== lastTag
+    && seenFor(lastTag) !== Infinity;
   // A result just ended shows first (with "Next" if another guess is
   // waiting), so its answers never mix with the next guess.
   if (resultOpen) {
@@ -255,6 +281,9 @@ function drawGuess(guess, memory) {
   drawClues(memory, guess.memory);
   reveal.hidden = true;
   closeButton.hidden = true;
+  notesSlot.hidden = true;
+  aloneButtons.hidden = true;
+  if (guessers(memory).length === 0) return drawAlone(memory);
   if (guess.phase === "guessing") {
     form.hidden = mine || Boolean(answers[myId]);
     answerList.hidden = true;
@@ -290,6 +319,23 @@ function drawGuess(guess, memory) {
   box.hidden = false;
 }
 
+// Only the author is here, so nobody can guess: reveal it now, or keep it
+// secret for a game with the family.
+function drawAlone(memory) {
+  title.textContent = "🌱 Nobody else is here to guess your memory";
+  form.hidden = true;
+  earlyButton.hidden = true;
+  answerList.hidden = true;
+  judgeButtons.hidden = true;
+  aloneButtons.hidden = false;
+  statusText.textContent = `All ${CLUES} clues are found! Reveal it now, or keep it secret for a game with the family?`;
+  reveal.hidden = false;
+  reveal.querySelector(".guess-it-was").textContent = "Your memory:";
+  reveal.querySelector(".guess-memory").textContent = memory.text;
+  reveal.querySelector(".guess-by").textContent = who(memory);
+  box.hidden = false;
+}
+
 function drawResult(game, last, memory) {
   const tag = `${game.id}:${last.at}`;
   if (last.guessed && !cheered.has(tag)) { // a little twinkle of bells, once
@@ -298,9 +344,11 @@ function drawResult(game, last, memory) {
   }
   const notYet = last.early && !last.guessed; // the memory stays secret
   title.textContent = last.guessed ? "🎉 You guessed it!"
-    : notYet ? "Not yet! Keep looking 🔍" : "Nobody guessed it this time";
+    : notYet ? "Not yet! Keep looking 🔍"
+      : last.alone ? "📖 Your memory is revealed" : "Nobody guessed it this time";
   drawClues(memory, last.memory, !notYet);
   form.hidden = true;
+  aloneButtons.hidden = true;
   earlyButton.hidden = true;
   judgeButtons.hidden = true;
   statusText.textContent = notYet ? "The memory stays a secret until you find more clues." : "";
@@ -310,16 +358,32 @@ function drawResult(game, last, memory) {
   reveal.querySelector(".guess-by").textContent = who(memory);
   answerList.hidden = !last.answers;
   drawAnswers(last.answers ?? {}, last.verdicts ?? {}, false);
+  // Found for good: a note to keep, from anyone (notes.js). A new box for a
+  // new memory; otherwise the same one, so what's being typed stays.
+  notesSlot.hidden = notYet;
+  if (!notYet && notesSlot.dataset.memory !== last.memory) {
+    notesSlot.dataset.memory = last.memory;
+    notesSlot.replaceChildren(noteBox(last.memory));
+  }
   closeButton.hidden = false;
   closeButton.textContent = game.guess ? "Next ➜" : "Back to the field";
   box.hidden = false;
 }
 
+// The result of a guess is on my screen (with its notes): the game waits
+// until I close it (main.js tells the others, rounds.js waits).
+export const readingResult = () => !box.hidden && !closeButton.hidden;
+
+// The guess or its result is on my screen: the end screen waits for it.
+export const guessOpen = () => !box.hidden;
+
 closeButton.addEventListener("click", () => {
   closedResult = `${state.game?.id}:${state.game?.lastGuess?.at}`;
   box.hidden = true;
   renderGuess(); // the next guess, if one is waiting
+  document.dispatchEvent(new Event("guess-closed"));
 });
+document.addEventListener("card-closed", renderGuess); // the guess can open now
 
 // --- 💡 Clues found, and "Ready to guess!" ---
 const cluesPanel = document.getElementById("clues-panel");
@@ -371,6 +435,7 @@ function drawCluesPanel() {
     status.className = "clues-state";
     status.textContent = done === "guessed" ? `✅ Guessed: “${memory.text}”`
       : done === "revealed" ? `It was: “${memory.text}”`
+      : done === "kept" ? "🌱 Kept secret for another game"
         : `${foundClues(id).length} of ${CLUES} clues found`;
     box.append(heading, list, status);
     const canGuess = !done && id === currentMemory(game) && !amAuthor(memory) && game.status === "playing" && !game.guess;
