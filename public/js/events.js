@@ -33,6 +33,7 @@ export const firstEventAt = (t) => t + between(FIRST_EVENT_MS);
 setInterval(() => {
   const seen = state.game;
   if (!state.joined || !seen || seen.status !== "playing" || seen.guess) return; // none while guessing
+  if (seen.phase === "flash" && seen.flash && now() < seen.flash.at + 6000) return; // nor during a flash
   if (seen.nextEventAt && now() < seen.nextEventAt) return;
   runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen.id || game.status !== "playing") return;

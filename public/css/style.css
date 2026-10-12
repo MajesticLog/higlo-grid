@@ -1857,3 +1857,64 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   width: 100%;
   height: 100%;
 }
+
+/* --- Memory garden (v4) --- */
+/* A square showing its picture: during the flash, or when chosen in the
+   replay. A pale card so the picture reads clearly. */
+.tile.pic {
+  background: #fffdf5;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.tile.pic .icon { font-size: 64cqi; }
+
+/* In the replay: the right picture glows green; the others stay plain. */
+.tile.pic.right {
+  box-shadow: 0 0 0 3px #43a047, 0 0 12px 4px rgba(67, 160, 71, 0.6);
+}
+
+.tile.pic.wrong { opacity: 0.85; }
+
+/* The card with the picture to find, in the status bar. */
+#target {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 3px solid #f4c430;
+  background: #fffdf5;
+  font-size: 36px;
+  line-height: 1;
+  visibility: hidden; /* shown by render.js; keeps its space */
+}
+
+/* The sheep placed this round, munching in the middle of what it grazed. */
+.sheep-sitting {
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sheep-sitting .icon {
+  font-size: 70cqi;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  animation: munch 0.4s ease-in-out infinite alternate;
+}
+
+/* ❔ for newcomers: a soft glow until it's opened once. */
+#help.glow {
+  border-color: #f4c430;
+  animation: help-glow 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes help-glow {
+  from { box-shadow: 0 0 0 2px rgba(244, 196, 48, 0.4), 0 2px 6px rgba(0, 0, 0, 0.15); }
+  to   { box-shadow: 0 0 0 6px rgba(244, 196, 48, 0.55), 0 0 16px 6px rgba(244, 196, 48, 0.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #help.glow { animation: none; box-shadow: 0 0 0 4px rgba(244, 196, 48, 0.6); }
+}

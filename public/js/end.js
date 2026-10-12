@@ -6,7 +6,7 @@
 import { runTransaction } from "./firebase.js";
 import { sessionRef, myId } from "./session.js";
 import { state } from "./state.js";
-import { newBoard } from "./game.js";
+import { newGameForAll } from "./game.js";
 import { backToLobby, takePlayAgain } from "./lobby.js";
 import { playTrumpet, playHowl } from "./sound.js";
 import { replayEndsAt } from "./replay.js";
@@ -92,7 +92,7 @@ function chooseAgain() {
 }
 
 // Once everyone in the field has chosen, any device starts the new board
-// (newBoard only replaces the game it saw, so it happens once). Players who
+// (newGameForAll only replaces the game it saw, so it happens once). Players who
 // went to the lobby have left the field, so nobody waits for them; they
 // count as ready when they come back.
 export function maybeStartAgain() {
@@ -104,7 +104,7 @@ export function maybeStartAgain() {
   }
   const again = game.again ?? {};
   if (!again[myId] && takePlayAgain()) return chooseAgain();
-  if (state.players.length > 0 && state.players.every((p) => again[p.id])) newBoard();
+  if (state.players.length > 0 && state.players.every((p) => again[p.id])) newGameForAll();
 }
 
 // Everyone in a ring: around a teapot, each with a cup, or tucked in with 💤.

@@ -22,6 +22,7 @@
             "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "tab": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "author": { ".validate": "newData.isString() && newData.val().length <= 64" },
+            "busy": { ".validate": "newData.isNumber()" },
             "$other": { ".validate": false }
           }
         },

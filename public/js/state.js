@@ -7,7 +7,7 @@ export const state = {
   joined: false, // in the field (past the lobby)
   online: false, // connected to the database right now
   players: [], // [{id, x, y, color, animal}] in join order (push keys sort by time)
-  game: null, // {id, status, night, board, revealed}: see game.js
+  game: null, // the current game: board, round, clues, night... (game.js, rounds.js)
   memories: {}, // memoryId -> {text, prompt, name, animal, color, createdAt, foundAt?}
   floats: new Map(), // playerId -> {icon, startedAt}: a ❤️ floating above them
   bubbles: new Map(), // playerId -> {text, startedAt}: a message above them (messages.js)

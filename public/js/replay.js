@@ -1,19 +1,19 @@
 // Replay: a round's result arrives all at once, but each device plays it
 // back in order so everyone can follow what happened: "3, 2, 1", then each
-// player's walk one after another (squares turning over as their circle
-// reaches them, traps darkening the sky as they go off), then the sheep.
-// Clue cards, guessing and the end of the game wait until it's over.
-// Someone who arrives mid-replay just sees the result.
+// player walks to their square, one after another, and the picture under it
+// shows (popping above them) for a moment before the grass covers it again.
+// The clue card or the night comes after. Someone who arrives mid-replay just
+// sees the result.
 //
-// The round's transaction stores game.replay: {tag, actions}, where an action
-// is {kind: "walk", player, from: {x, y}, path: ["x_y", ...]} (the landing
-// square last) or {kind: "graze", run} (an index into game.grazed).
+// The round's transaction stores game.replay: {tag, actions, success, ...},
+// where an action is {kind: "walk", player, from: {x, y}, path: ["x_y", ...]}
+// (the square they chose last).
 import { state } from "./state.js";
 
 export const COUNT_MS = 650; // each of 3, 2, 1
 export const STEP_MS = 220; // a circle walking one square
-export const SHEEP_STEP_MS = 800; // keep in sync with the graze animation in style.css
-const PAUSE_MS = 350; // between one player's walk and the next
+export const PAUSE_MS = 350; // between one player's walk and the next
+export const SHOW_MS = 2200; // how long a chosen square shows its picture
 
 let current = null; // the replay being played: its timeline
 let ticker = null;
@@ -33,29 +33,19 @@ export function updateReplay(arriving) {
   }
   if (current?.tag === replay.tag) return;
   const start = arriving ? -Infinity : performance.now();
-  const reveal = new Map(); // "x_y" -> when it turns over
+  const shown = new Map(); // "x_y" -> when its picture shows
   const walks = new Map(); // playerId -> {from, path, start}
-  const grazes = new Map(); // run index -> start
-  // Only squares turned over in this round; the ones from earlier rounds stay as they are.
-  const fresh = replay.fresh ?? {};
-  const at = (k, t) => {
-    if (!fresh[k]) return;
-    if (!reveal.has(k) || reveal.get(k) > t) reveal.set(k, t);
-  };
   let t = start + 3 * COUNT_MS;
   for (const action of replay.actions ?? []) {
-    if (action.kind === "walk") {
-      walks.set(action.player, { from: action.from, path: action.path, start: t });
-      action.path.forEach((k, i) => at(k, t + (i + 1) * STEP_MS));
-      t += action.path.length * STEP_MS + PAUSE_MS;
-    } else if (action.kind === "graze") {
-      grazes.set(action.run, t);
-      const run = state.game.grazed?.[action.run];
-      (run?.line ?? []).forEach((k, i) => at(k, t + (i + 1) * SHEEP_STEP_MS - 300));
-      t += SHEEP_STEP_MS * ((run?.line.length ?? 0) + 1);
-    }
+    if (action.kind !== "walk") continue;
+    walks.set(action.player, { from: action.from, path: action.path, start: t });
+    const landing = action.path[action.path.length - 1];
+    const landed = t + action.path.length * STEP_MS;
+    if (!shown.has(landing)) shown.set(landing, landed);
+    t = landed + PAUSE_MS;
   }
-  current = { tag: replay.tag, start, end: t, reveal, walks, grazes };
+  const end = Math.max(t, ...[...shown.values()].map((at) => at + SHOW_MS));
+  current = { tag: replay.tag, start, end, shown, walks, replay, fresh: !arriving };
   if (replayActive() && !ticker) {
     ticker = setInterval(() => {
       if (!replayActive()) {
@@ -69,6 +59,8 @@ export function updateReplay(arriving) {
 
 export const replayActive = () => Boolean(current) && performance.now() < current.end;
 export const replayEndsAt = () => (replayActive() ? current.end : 0);
+// True once per new round result this device watched live (not on arrival).
+export const replayIsFresh = (tag) => current?.tag === tag && current.fresh;
 
 // 3, 2, 1, or null once the moves start.
 export function countdown() {
@@ -77,8 +69,15 @@ export function countdown() {
   return left >= 1 && left <= 3 ? left : null;
 }
 
-// A square turned over this round, not reached yet in the replay.
-export const notYet = (k) => replayActive() && (current.reveal.get(k) ?? -Infinity) > performance.now();
+// A chosen square showing its picture right now: how long it has been shown
+// (ms), or null.
+export function pictureAge(k) {
+  if (!replayActive()) return null;
+  const at = current.shown.get(k);
+  if (at === undefined) return null;
+  const age = performance.now() - at;
+  return age >= 0 && age < SHOW_MS ? age : null;
+}
 
 // Where a player's circle is in the replay: still at the start, on the way,
 // or landed. Null when there's no replay for them.
@@ -92,16 +91,8 @@ export function replayPosition(playerId) {
   return { x, y };
 }
 
-// When a sheep run starts in the replay (or null: play it as it comes).
-export const grazeStartFor = (run) => (current?.grazes.get(run) ?? null);
-
-// The night as shown: traps not reached yet in the replay don't count yet.
+// The night as shown: a missed round only darkens the sky once it has played.
 export function nightShown(night) {
-  if (!replayActive()) return night;
-  const revealed = state.game?.revealed ?? {};
-  let pending = 0;
-  for (const [k, t] of current.reveal) {
-    if (t > performance.now() && revealed[k]?.show === "trap") pending += 1;
-  }
-  return Math.max(0, night - pending);
+  if (!replayActive() || current.replay.success) return night;
+  return Math.max(0, night - 1);
 }

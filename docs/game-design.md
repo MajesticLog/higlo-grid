@@ -44,7 +44,7 @@ Unchanged from v3:
 - A player with a memory still waiting to be guessed can **keep it** for this game.
 - Players can skip writing (a young child, a reluctant player). "← Back" returns to name, animal and colour.
 - Someone joining mid-game brings their memory into the game in progress.
-- The first time on a device, "How to play" opens before the field.
+- "How to play" never opens by itself: the ❔ above the field glows until a player opens it once on that device.
 - The author is recognised by a key made of their device and name.
 
 ## 2. The garden
@@ -56,7 +56,7 @@ Unchanged from v3:
 
 ## 3. A typical round
 
-1. **Flash.** Six squares show their pictures for **4 seconds**: a mix of kinds, three of them the kind that will be asked (players don't know which yet). Then the grass covers them again.
+1. **Flash.** "3, 2, 1", then six squares show their pictures for **4 seconds**: a mix of kinds, and among them the kind that will be asked (players don't know which yet), as many as the family needs to succeed plus one (2 for 1 or 2 players, 3 for 3 or 4). Then the grass covers them again. The flash waits while anyone has a window open (rules, a clue card…), for up to 30 seconds.
 2. **Pause.** About a second, with a message on screen ("Who remembers what?"), so nobody feels stuck. Nobody can move until every square is covered again.
 3. **The card.** A card at the top shows the picture to find this round. It's never the same as the round before.
 4. **Choosing.** Everyone talks it over and walks to a square they think hides it, then taps Ready (or presses Enter). Players can cross paths and share a square while walking, but no two players can choose the same square. The round ends when everyone is ready, or 20 s after the first Ready; anyone not ready keeps the square they're on.
@@ -110,7 +110,7 @@ Everything stays collective: the game never shows who picked a wrong square.
 
 ## 10. How to play
 
-- A few picture cards, shown once after the lobby and reopened with ❔: the garden and its pictures, the flash and the card, choosing and Ready, finding versus missing (clues and the night), sheep, guessing, the memory chest.
+- A few picture cards, opened with ❔ (never by themselves; the ❔ glows for anyone who hasn't opened it yet on that device): the garden and its pictures, the flash and the card, choosing and Ready, finding versus missing (clues and the night), sheep, guessing, the memory chest.
 
 ## Principles this follows
 
@@ -127,7 +127,7 @@ See docs/best_practices.md and docs/benchmark.md.
 
 Grid: 7*7, everyone starting on the centre square
 Pictures: 6 kinds, 8 of each (48 squares)
-Flash: 6 squares, 3 of them the asked kind, 4 seconds, then about 1 second before the card
+Flash: "3, 2, 1", then 6 squares (the asked kind: what's needed to succeed + 1), 4 seconds, then about 1 second before the card
 Found: half the players rounded up, on different squares
 Misses before the wolf: 5
 Sheep: 1 per player per game, grazing 3*3

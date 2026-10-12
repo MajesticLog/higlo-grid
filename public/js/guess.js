@@ -10,7 +10,7 @@
 import { update, runTransaction } from "./firebase.js";
 import { sessionRef, myId } from "./session.js";
 import { state } from "./state.js";
-import { now, nextGuess, checkEnd } from "./game.js";
+import { now, nextGuess, checkEnd, currentMemory, cluesOf } from "./game.js";
 import { CLUES } from "./lobby.js";
 import { playTwinkle } from "./sound.js";
 import { replayEndsAt } from "./replay.js";
@@ -60,9 +60,13 @@ function changeGuess(edit) {
   }).then(({ committed, snapshot }) => {
     // The device that finishes a guess records it on the memory, for the
     // chest and the end screen. (Others may too; the writes agree.)
-    const last = snapshot.val()?.lastGuess;
+    const game = snapshot.val();
+    const last = game?.lastGuess;
     if (committed && last?.memory === seen.memory && !(last.early && !last.guessed)) {
-      update(sessionRef(`memories/${seen.memory}`), { revealedAt: last.at, guessed: last.guessed });
+      // Found for good: into the chest, with this game.
+      update(sessionRef(`memories/${seen.memory}`), {
+        foundAt: last.at, revealedAt: last.at, guessed: last.guessed, gameId: game.id,
+      });
     }
   });
 }
@@ -82,15 +86,7 @@ function finish(game, guessed) {
   }
   game.guessed ??= {};
   game.guessed[memory] = guessed ? "guessed" : "revealed";
-  // Guessed before all its clues were found: the rest no longer need
-  // finding, so they go back to plain grass.
-  for (const [k, hidden] of Object.entries(game.board)) {
-    if (hidden.memory !== memory || game.revealed?.[k]) continue;
-    delete game.board[k];
-    if (game.sniffed) delete game.sniffed[k];
-    if (game.spotted) delete game.spotted[k];
-  }
-  nextGuess(game);
+  nextGuess(game); // the next memory, if it already has its clues
   checkEnd(game);
   game.updatedAt = now();
 }
@@ -197,8 +193,8 @@ export function renderGuess() {
 }
 
 // The clues found so far for a memory, as numbers (0, 1, 2).
-const foundClues = (memoryId) => [...new Set(Object.values(state.game?.revealed ?? {})
-  .filter((t) => t.show === "clue" && t.memory === memoryId).map((t) => t.n))].sort();
+// The clues earned so far for a memory, as numbers (0, 1, 2): they come in order.
+const foundClues = (memoryId) => [...Array(cluesOf(state.game, memoryId)).keys()];
 
 function drawClues(memory, memoryId, all = false) {
   theme.textContent = memory.prompt ?? "";
@@ -329,12 +325,13 @@ closeButton.addEventListener("click", () => {
 const cluesPanel = document.getElementById("clues-panel");
 const cluesList = document.getElementById("clues-list");
 
-// Start guessing a memory before all its clues are found. Anyone but its
-// author, while nothing else is being guessed.
+// Start guessing the current memory before all its clues are earned. Anyone
+// but its author, while nothing else is being guessed.
 function readyToGuess(memoryId) {
   const seen = state.game?.id;
   runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen || game.status !== "playing" || game.guess || game.guessed?.[memoryId]) return;
+    if (currentMemory(game) !== memoryId || cluesOf(game, memoryId) === 0) return;
     game.guess = {
       memory: memoryId, phase: "guessing", early: true, startedAt: now(),
       by: { name: state.me.name ?? "", animal: state.me.animal ?? "" },
@@ -346,12 +343,12 @@ function readyToGuess(memoryId) {
 
 function drawCluesPanel() {
   const game = state.game;
-  const ids = [...new Set(Object.values(game?.revealed ?? {})
-    .filter((t) => t.show === "clue").map((t) => t.memory))];
+  // The memories with clues so far, in the order they're played.
+  const ids = (game?.queue ?? []).filter((id) => cluesOf(game, id) > 0);
   cluesList.replaceChildren();
   if (ids.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No clues found yet. Keep exploring the field!";
+    empty.textContent = "No clues yet. Find the right pictures together to earn them!";
     cluesList.append(empty);
   }
   for (const id of ids) {
@@ -376,7 +373,7 @@ function drawCluesPanel() {
       : done === "revealed" ? `It was: “${memory.text}”`
         : `${foundClues(id).length} of ${CLUES} clues found`;
     box.append(heading, list, status);
-    const canGuess = !done && !amAuthor(memory) && game.status === "playing" && !game.guess;
+    const canGuess = !done && id === currentMemory(game) && !amAuthor(memory) && game.status === "playing" && !game.guess;
     if (canGuess) {
       const button = document.createElement("button");
       button.type = "button";

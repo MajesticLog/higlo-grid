@@ -96,10 +96,8 @@ function cardFor(item) {
   );
   // The other clues found so far for this memory, so someone who arrived
   // late (or looked away) can catch up from any card.
-  const others = Object.values(state.game?.revealed ?? {})
-    .filter((t) => t.show === "clue" && t.memory === item.memory && t.n !== item.n)
-    .map((t) => t.n)
-    .sort();
+  const earned = state.game?.clues?.[item.memory] ?? 0; // clues come in order: 0, 1, 2
+  const others = [...Array(earned).keys()].filter((n) => n !== item.n);
   if (others.length) {
     const list = document.createElement("ul");
     list.className = "card-others";

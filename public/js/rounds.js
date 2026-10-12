@@ -1,129 +1,186 @@
-// Rounds: everyone picks a square anywhere on the field at the same time and taps
-// Ready. When all are ready, or 20 seconds after the first Ready (so one
-// player who stepped away can't stall the game), every picked square turns
-// over at once. Others see which squares are picked, never by whom.
-// Instead of turning over a square, a player can send one of their sheep
-// to graze a line of five squares.
+// Rounds (docs/game-design.md, v4):
+// 1. Flash: 6 squares show their pictures for 4 s (3 of them the kind that
+//    will be asked, a mix of others), timed in server time so every device
+//    sees the same flash.
+// 2. Pause: about a second; nobody can move until the grass is back.
+// 3. The card: which picture to find. Everyone picks a different square
+//    (sheep can help), then Ready. The round ends when everyone is ready, or
+//    20 s after the first Ready.
+// 4. Result: half the players (rounded up) on right, different squares earn
+//    the next clue to the current memory; otherwise the night falls a step.
+//    The replay (replay.js) shows each player walking and their square's
+//    picture, then the grass covers it again.
 import { update, runTransaction } from "./firebase.js";
 import { SIZE, sessionRef, myRef, myId } from "./session.js";
 import { state, rememberPosition } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
-import { key, now, revealSquare, checkEnd, nextGuess } from "./game.js";
-import { playBleat } from "./sound.js";
-import { replayActive } from "./replay.js";
-import { isAuthor } from "./guess.js";
+import { key, now, PICTURES, CENTRE_KEY, checkEnd, nextGuess, currentMemory, cluesOf } from "./game.js";
+import { playBleat, playMunch } from "./sound.js";
+import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS } from "./replay.js";
 
-export const SHEEP_PER_PLAYER = 3; // per game
-export const SHEEP_LENGTH = 5; // squares a sheep grazes; keep in sync with the graze animation in style.css
+export const FLASH_SQUARES = 6;
+// Of the flashed squares, how many show the kind that will be asked: what the
+// family needs to succeed, plus one (2 for 1-2 players, 3 for 3-4...).
+const flashTargets = (players) => Math.ceil(players / 2) + 1;
+const BUSY_WAIT_MS = 30000; // the next flash waits for open windows, but not forever
+export const FLASH_MS = 4000;
+export const PAUSE_MS = 1200; // after the flash, before the card: nobody moves yet
+const FLASH_LEAD_MS = 800; // a round's flash starts a little after it's decided, so every device has it
+const RESULT_MS = 3500; // after the replay, before the next flash: the result and the clue card
 const READY_WAIT_MS = 20000; // after the first Ready, how long the others have
 const gameRef = sessionRef("game");
 
-// Players can go anywhere on the field: the walk itself is the risk.
 export const inReach = (x, y) => x >= 0 && y >= 0 && x < SIZE && y < SIZE;
-// Rounds pause while a memory is being guessed.
-export const choosing = () => state.joined && state.game?.status === "playing" && !state.game.guess;
 export const myPick = () => state.game?.picks?.[myId];
-export const sheepLeft = () => SHEEP_PER_PLAYER - (state.game?.sheepUsed?.[myId] ?? 0);
+export const sheepLeft = () => (state.game?.sheepUsed?.[myId] ? 0 : 1); // one per player, per game
 
-// A sheep's line: the tapped square and the next four in its direction.
-// Tapping the 🐑 square again turns it: up, right, down, left. Near an edge
-// the line shifts back so it stays on the field. ("h" and "v" are the two
-// directions from before, kept for games already in progress.)
-const STEPS = { up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0], h: [1, 0], v: [0, 1] };
-const TURN = { up: "right", right: "down", down: "left", left: "up", h: "down", v: "left" };
-export const FIRST_DIRECTION = "up";
-
-export function sheepLine(x, y, dir) {
-  const [dx, dy] = STEPS[dir] ?? STEPS.up;
-  const shift = (start, step) => {
-    const end = start + (SHEEP_LENGTH - 1) * step;
-    if (end < 0) return start - end;
-    if (end > SIZE - 1) return start - (end - (SIZE - 1));
-    return start;
-  };
-  const sx = shift(x, dx);
-  const sy = shift(y, dy);
-  return Array.from({ length: SHEEP_LENGTH }, (_, i) => [sx + i * dx, sy + i * dy]); // in the order the sheep walks
+// Where the round is, on this device's clock (server time).
+export function roundPhase() {
+  const game = state.game;
+  if (!game || game.status !== "playing") return "over";
+  if (game.guess) return "guess";
+  if (game.phase !== "flash" || !game.flash) return "result";
+  const t = now() - game.flash.at;
+  if (t < 0) return "countdown"; // 3, 2, 1, then the flash
+  if (t < FLASH_MS) return "flash";
+  if (t < FLASH_MS + PAUSE_MS) return "pause";
+  return "choose";
 }
+export const choosing = () => state.joined && roundPhase() === "choose";
+export const targetPicture = () => PICTURES[state.game?.flash?.target] ?? "";
+
+// 3, 2, 1 before a flash (server time), or null.
+export function flashCountdown() {
+  const game = state.game;
+  if (game?.phase !== "flash" || !game.flash) return null;
+  const left = Math.ceil((game.flash.at - now()) / COUNT_MS);
+  return left >= 1 && left <= 3 ? left : null;
+}
+
+// Someone has a window open (rules, a clue card, the chest...): the next
+// flash waits for them, unless it's been open a long time (they've wandered off).
+const someoneBusy = () => state.players.some((p) => p.busy && now() - p.busy < BUSY_WAIT_MS);
 
 // Every change to a round goes through a transaction on the game, tied to
 // the game and round I'm looking at, so a late tap can never land in the
 // next round or the next game. `edit` returns false to abort.
-// Taps show at once (applied locally). Anything random (ending a round)
-// passes { applyLocally: false }: the device waits for the server, so it
-// never shows its own flowers if another device's version wins.
 function changeRound(edit, options) {
   const seen = state.game;
   if (!seen) return Promise.resolve();
   return runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen.id || game.round !== seen.round || game.status !== "playing" || game.guess) return;
+    if (game.phase !== "flash") return;
     game.picks ??= {};
-    game.revealed ??= {};
-    game.board ??= {};
     return edit(game) === false ? undefined : game;
   }, options);
 }
 
-// --- Sheep mode: on this device only, until the round ends ---
+// --- Starting a round: any device, once the last one's result has been seen ---
+let starting = false;
+
+export function maybeStartRound() {
+  const game = state.game;
+  if (starting || !state.joined || !game || game.status !== "playing" || game.guess) return;
+  if (game.phase === "flash" || now() < (game.nextRoundAt ?? 0) || replayActive()) return;
+  if (!currentMemory(game)) return; // nothing to play for yet: waiting for a memory
+  if (someoneBusy()) return; // nobody misses the flash behind a window
+  starting = true;
+  const seen = game.id;
+  runTransaction(gameRef, (g) => {
+    if (!g || g.id !== seen || g.status !== "playing" || g.guess || g.phase === "flash") return;
+    if (now() < (g.nextRoundAt ?? 0) || !currentMemory(g) || someoneBusy()) return;
+    // The kind to find: never the same twice in a row.
+    const kinds = PICTURES.map((_, i) => i).filter((i) => i !== g.lastTarget);
+    const target = kinds[Math.floor(Math.random() * kinds.length)];
+    const squares = Object.keys(g.board);
+    const shuffle = (list) => list.sort(() => Math.random() - 0.5);
+    const rightCount = flashTargets(state.players.length);
+    const right = shuffle(squares.filter((k) => g.board[k] === target)).slice(0, rightCount);
+    const others = shuffle(squares.filter((k) => g.board[k] !== target)).slice(0, FLASH_SQUARES - rightCount);
+    g.round = (g.round ?? 0) + 1;
+    g.phase = "flash";
+    // 3, 2, 1 first, so everyone is looking when it flashes.
+    g.flash = { at: now() + FLASH_LEAD_MS + 3 * COUNT_MS, squares: shuffle([...right, ...others]), target };
+    g.moves = null; // last round's moves are done
+    g.picks = null;
+    g.grazing = null;
+    g.deadline = null;
+    g.updatedAt = now();
+    return g;
+  }, { applyLocally: false }).finally(() => { starting = false; });
+}
+
+// --- Sheep: one per player per game, placed during the choosing phase ---
 let sheepRound = null; // the round in which I tapped 🐑, or null
 export const inSheepMode = () => sheepRound !== null && sheepRound === state.game?.round;
 
 function toggleSheep() {
-  if (!choosing() || replayActive() || myPick()?.ready) return;
+  if (!choosing() || myPick()?.ready) return;
   if (!inSheepMode() && sheepLeft() <= 0) return nudgeStatus();
   sheepRound = inSheepMode() ? null : state.game.round;
   if (inSheepMode()) playBleat(); // "bêêê", here I come
-  // Switching between a sheep and a square: start the pick afresh.
-  changeRound((game) => {
-    if (!game.picks[myId]) return false;
-    delete game.picks[myId];
-  });
   render();
 }
 
 document.getElementById("sheep").addEventListener("click", toggleSheep);
 
-// Tap a square (or move with the arrows): that's my pick, not ready yet.
-// In sheep mode, it places the sheep's line; tapping the same square again
-// turns it to the next direction (up, right, down, left).
-export function pickSquare(x, y) {
-  if (!choosing() || replayActive()) return; // watch the replay first
-  if (!inReach(x, y)) return nudgeStatus();
-  if (inSheepMode()) {
-    const pick = myPick();
-    const turn = pick?.sheep && pick.x === x && pick.y === y;
-    const dir = turn ? (TURN[pick.sheep] ?? FIRST_DIRECTION) : (pick?.sheep ?? FIRST_DIRECTION);
-    return changeRound((game) => { game.picks[myId] = { x, y, sheep: dir, ready: false }; });
-  }
-  changeRound((game) => { game.picks[myId] = { x, y, ready: false }; });
+// The sheep grazes the 3x3 around it: those squares that don't hide this
+// round's picture show short grass until the end of the round.
+function placeSheep(x, y) {
+  sheepRound = null;
+  changeRound((game) => {
+    game.sheepUsed ??= {};
+    if (game.sheepUsed[myId]) return false;
+    game.sheepUsed[myId] = true;
+    game.grazing ??= {};
+    game.grazing[myId] = key(x, y);
+  });
+  playMunch();
+  render();
 }
 
-// R on a keyboard: turn my sheep's line, as tapping its square again does.
-export function turnSheep() {
-  const pick = myPick();
-  if (inSheepMode() && pick?.sheep && !pick.ready) pickSquare(pick.x, pick.y);
+export function grazedSquares(game = state.game) {
+  const out = new Set();
+  for (const k of Object.values(game?.grazing ?? {})) {
+    const [cx, cy] = k.split("_").map(Number);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const sq = key(cx + dx, cy + dy);
+        if (game.board[sq] !== undefined && game.board[sq] !== game.flash?.target) out.add(sq);
+      }
+    }
+  }
+  return out;
+}
+
+// --- Choosing a square ---
+// Tap a square (or move with the arrows): that's my pick, not ready yet. No
+// two players can pick the same square.
+export function pickSquare(x, y) {
+  if (!choosing()) return;
+  if (!inReach(x, y)) return nudgeStatus();
+  if (inSheepMode()) return placeSheep(x, y);
+  const k = key(x, y);
+  const taken = (game) => Object.entries(game.picks ?? {}).some(([id, p]) => id !== myId && key(p.x, p.y) === k);
+  if (taken(state.game)) return nudgeStatus();
+  changeRound((game) => {
+    if (taken(game)) return false;
+    game.picks[myId] = { x, y, ready: false };
+  });
 }
 
 export function movePick(dx, dy) {
   const from = myPick() ?? state.me;
-  const x = from.x + dx;
-  const y = from.y + dy;
-  if (inSheepMode() && myPick()?.sheep) {
-    if (!inReach(x, y)) return nudgeStatus();
-    const dir = myPick().sheep; // arrows move the line, they don't turn it
-    return changeRound((game) => { game.picks[myId] = { x, y, sheep: dir, ready: false }; });
-  }
-  pickSquare(x, y);
+  pickSquare(from.x + dx, from.y + dy);
 }
 
-// Ready with no pick means "the square I'm standing on". In sheep mode, the
-// line has to be placed first.
+// Ready with no pick means "the square I'm standing on".
 export function ready() {
-  if (!choosing() || replayActive()) return;
-  if (inSheepMode() && !myPick()?.sheep) return nudgeStatus();
+  if (!choosing()) return;
+  if (inSheepMode()) sheepRound = null;
   changeRound((game) => {
     const pick = game.picks[myId] ?? { x: state.me.x, y: state.me.y };
-    game.picks[myId] = { ...pick, ready: true };
+    game.picks[myId] = { x: pick.x, y: pick.y, ready: true };
     game.deadline ??= now() + READY_WAIT_MS; // the first Ready starts the clock
   });
 }
@@ -132,37 +189,14 @@ document.getElementById("ready").addEventListener("click", ready);
 
 // --- Ending a round ---
 function roundOver(game) {
+  if (game.phase !== "flash" || !game.flash || now() < game.flash.at + FLASH_MS + PAUSE_MS) return false;
   const picks = game.picks ?? {};
   const allReady = state.players.length > 0 && state.players.every((p) => picks[p.id]?.ready);
   return allReady || (game.deadline != null && now() >= game.deadline);
 }
 
-// A sheep grazes its line: empty squares turn over (no night, the sheep is
-// careful); a square hiding a memory or a trap is refused and stays covered,
-// marked with ❓ for the rest of the game. Returns what happened, for the
-// animation everyone sees.
-function graze(game, pick) {
-  const line = sheepLine(pick.x, pick.y, pick.sheep).map(([x, y]) => key(x, y));
-  const refused = line.filter((k) => clear(game, k) === "refused");
-  return { line, dir: pick.sheep, refused };
-}
-
-// A sheep grazing a square: empty grass turns over; a square hiding a clue
-// or a trap is left covered with a ❓.
-function clear(game, k) {
-  if (game.revealed[k]) return "done";
-  if (game.board[k]) {
-    game.sniffed ??= {};
-    game.sniffed[k] = true;
-    return "refused";
-  }
-  revealSquare(game, k);
-  return "cleared";
-}
-
-// The squares a player walks through on the way (not the start, not where
-// they land), along the same staircase path their circle is drawn walking
-// (and the footprints show before Ready).
+// The squares a player walks through on the way, along the same staircase
+// path their circle is drawn walking.
 export function pathBetween(from, to) {
   const squares = [];
   let { x, y } = from;
@@ -176,25 +210,8 @@ export function pathBetween(from, to) {
   return squares.slice(0, -1);
 }
 
-// Walking through a square: grass turns over, a trap goes off (the sky
-// darkens), and a clue is spotted (🔍!) but not read: someone has to land
-// on it for that.
-function walkThrough(game, k) {
-  if (game.revealed[k]) return;
-  if (game.board[k]?.kind === "clue") {
-    game.spotted ??= {};
-    game.spotted[k] = true;
-    return;
-  }
-  revealSquare(game, k);
-}
-
 // Any device can end the round; the transaction makes sure it happens once.
-// Ready players go to their pick. Anyone not ready stays where they stand,
-// and that square turns over. Two players on one square turn it over once.
-// A player who sent a sheep stays put and turns nothing over themselves.
-// One request at a time: while the server answers, the clock keeps ticking
-// but this device doesn't ask again.
+// Ready players go to their pick; anyone not ready stays where they are.
 let resolving = false;
 
 export function maybeResolve() {
@@ -202,56 +219,46 @@ export function maybeResolve() {
   resolving = true;
   changeRound((game) => {
     if (!roundOver(game)) return false;
-    game.sheepUsed ??= {};
+    const target = game.flash.target;
     const moves = {};
-    const squares = new Map(); // "x_y" -> the players turning it over
-    const walked = []; // squares walked through on the way
-    const sheep = [];
     const actions = []; // the order the replay plays things in (replay.js)
-    const before = new Set(Object.keys(game.revealed)); // turned over in earlier rounds
+    const chosen = new Set();
     for (const p of state.players) {
       const pick = game.picks[p.id];
-      const used = game.sheepUsed[p.id] ?? 0;
-      if (pick?.ready && pick.sheep && used < SHEEP_PER_PLAYER) {
-        game.sheepUsed[p.id] = used + 1;
-        sheep.push(pick);
-        moves[p.id] = { x: p.x, y: p.y };
-        continue;
-      }
-      const to = pick?.ready && !pick.sheep ? { x: pick.x, y: pick.y } : { x: p.x, y: p.y };
+      const to = pick?.ready ? { x: pick.x, y: pick.y } : { x: p.x, y: p.y };
       moves[p.id] = to;
       const k = key(to.x, to.y);
-      squares.set(k, [...(squares.get(k) ?? []), p]);
-      walked.push(...pathBetween(p, to));
+      if (k !== CENTRE_KEY) chosen.add(k);
       actions.push({ kind: "walk", player: p.id, from: { x: p.x, y: p.y }, path: [...pathBetween(p, to), k] });
     }
-    for (const [k, players] of squares) {
-      // My own clue can't be turned over by me alone (it would give my
-      // memory away): it stays covered with a ❓, like a sheep's refusal.
-      const hidden = game.board[k];
-      const memory = hidden?.kind === "clue" && state.memories[hidden.memory];
-      if (memory && !game.revealed[k] && players.every((p) => isAuthor(p, memory))) {
-        game.sniffed ??= {};
-        game.sniffed[k] = true;
-        continue;
-      }
-      revealSquare(game, k);
-    }
-    // Then the squares walked through: after the landings, so a square one
-    // player lands on turns over (and is read) even if another walks past it.
-    for (const k of walked) walkThrough(game, k);
-    game.grazed = sheep.map((pick) => graze(game, pick)); // after the players: they get there first
-    game.grazed.forEach((_, run) => actions.push({ kind: "graze", run }));
-    if (game.grazed.length === 0) game.grazed = null;
-    nextGuess(game); // all of a memory's clues found: guess it first
+    // Found: half the players, rounded up, on right squares, all different.
+    const found = [...chosen].filter((k) => game.board[k] === target).length;
+    const needed = Math.ceil(state.players.length / 2);
+    const success = found >= needed;
+    const memory = currentMemory(game);
+    game.clues ??= {};
+    if (success && memory) game.clues[memory] = cluesOf(game, memory) + 1;
+    else if (!success) game.night = (game.night ?? 0) + 1;
+    nextGuess(game); // all three clues: guess it first
     checkEnd(game);
     game.moves = moves; // each device moves its own player (see applyMyMove)
-    game.round += 1;
-    // Only squares turned over in this round are replayed: walking over old
-    // ones (or old traps) must not hide them again or undo the night.
-    const fresh = Object.keys(game.revealed).filter((k) => !before.has(k));
-    game.replay = { tag: `${game.id}:${game.round}`, actions, fresh: Object.fromEntries(fresh.map((k) => [k, true])) };
+    game.replay = {
+      tag: `${game.id}:${game.round}`,
+      actions,
+      success,
+      found,
+      needed,
+      target,
+      memory: success ? memory : null,
+      clue: success && memory ? cluesOf(game, memory) - 1 : null, // which clue was just earned (0, 1, 2)
+    };
+    game.lastTarget = target;
+    game.phase = "result";
+    // The next flash after everyone has seen the replay and the result.
+    const walks = actions.reduce((t, a) => t + a.path.length * STEP_MS + WALK_PAUSE_MS, 0);
+    game.nextRoundAt = now() + 3 * COUNT_MS + walks + SHOW_MS + RESULT_MS;
     game.picks = null;
+    game.grazing = null;
     game.deadline = null;
     game.updatedAt = now();
   }, { applyLocally: false }).finally(() => { resolving = false; });
@@ -264,8 +271,8 @@ let movedFor = null;
 export function applyMyMove() {
   const game = state.game;
   const to = game?.moves?.[myId];
-  const tag = `${game?.id}:${game?.round}`;
-  if (!to || movedFor === tag) return;
+  const tag = game?.replay?.tag; // one per round result
+  if (!to || !tag || movedFor === tag) return;
   movedFor = tag;
   if (to.x === state.me.x && to.y === state.me.y) return;
   state.me.x = to.x;
@@ -274,10 +281,19 @@ export function applyMyMove() {
   rememberPosition();
 }
 
-// The clock: redraw the timer bar and check the deadline a few times a second.
+// The clock: redraw when the round changes step (flash, pause, card), keep
+// the timer bar moving, and check whether a round should end or begin.
+let lastPhase = null;
 setInterval(() => {
+  const phase = roundPhase();
+  if (phase !== lastPhase) {
+    lastPhase = phase;
+    if (phase !== "choose") sheepRound = null;
+    render();
+  }
   renderTimer();
   maybeResolve();
-}, 250);
+  maybeStartRound();
+}, 200);
 
 export { READY_WAIT_MS };
