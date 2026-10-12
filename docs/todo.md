@@ -9,18 +9,26 @@ End of 11 October 2026. Deadline: Wednesday 14 October, 12:00.
 - [ ] Export the last session(s) into `sessions/`.
 - [ ] Email: live link (https://higlo-grid.web.app), repository, sessions, write-up.
 
+## Next (after playtest 5, 12 October)
+
+- [ ] Rework the flash: showing all the cards at once is super overwhelming, and there's a balance issue. Rethink which cards get shown, and how.
+- [ ] Remove every random event except the UFO: a 25% chance of it appearing once the sky is past dusk, at most once per game.
+- [ ] Line up a proper multiplayer session with Mum, my sister and the kids (depending on their constraints).
+- [ ] Revisit how someone joining or leaving is signalled, to make it more noticeable.
+- [ ] Once the game feels balanced and fun, polish: SVGs, music, sound effects. Make interactions satisfying and rewarding.
+
 ## Sound design
 
-The current sounds are generated in the browser (`public/js/sound.js`), which keeps the game light but sounds synthetic. Replace them with short recorded or designed sounds, kept as files like the images:
+Done 12 October: the generated sounds were rendered to WAV files in `public/sfx/` (see its README), ready to be replaced by recorded or designed ones. Better sounds are part of the polish step above.
 
-- [ ] Choose the sounds: flip and pop, clue found, trap and night step, guessed (fanfare), wolf howl, sheep bleat and munching, the six sky events, heart, message.
-- [ ] Put them in `public/sfx/` with a README (file, use, licence, credit), small (MP3, a few tens of KB each).
-- [ ] Load them in `sound.js` and keep the generated sounds as a fallback. (No mute button: devices and browsers have their own.)
+- [x] Choose the sounds: flip and pop, clue found, trap and night step, guessed (fanfare), wolf howl, sheep bleat and munching, the six sky events, heart, message.
+- [x] Put them in `public/sfx/` with a README (file, use, licence, credit), small (MP3, a few tens of KB each).
+- [x] Load them in `sound.js` and keep the generated sounds as a fallback. (No mute button: devices and browsers have their own.)
 
 ## Known gaps
 
-- A refresh gives a fresh set of 3 sheep.
+- ~~A refresh gives a fresh set of 3 sheep.~~ Discarded: one sheep per game now, kept in the game.
 - Memories written before author keys or clues can't be kept, and aren't hidden any more.
-- Balance simulated, not yet playtested: 7x7, 7 traps, night at 7. Replay length with 4 players and the 20 s timer after the first Ready still to try.
+- ~~Balance simulated, not yet playtested: 7x7, 7 traps, night at 7.~~ Discarded: that was the field (v3); the memory garden's balance is in "Next" above. Replay length with 4 players and the 20 s timer after the first Ready still to try.
 - QR code next to the share link (needs a small library: ask first).
 - Kinder wrong guesses (show ❌ only to the author), French, screen-reader support, a child-as-expert role, a garden that persists between games.
