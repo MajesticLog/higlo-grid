@@ -15,8 +15,8 @@
           "$pid": {
             ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
             ".validate": "newData.hasChildren(['x', 'y'])",
-            "x": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
-            "y": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
+            "x": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 6" },
+            "y": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 6" },
             "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
             "color": { ".validate": "newData.isString() && newData.val().length <= 20" },

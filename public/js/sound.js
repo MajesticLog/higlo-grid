@@ -1,11 +1,8 @@
 // Sounds made in the browser with the Web Audio API: no audio files, no
 // licences. Browsers only allow sound after a tap or key press, so the
-// audio starts on the first one. A button turns sound off (remembered).
-const MUTE_KEY = "higlo:muted";
-
+// audio starts on the first one. To mute it, use the device's or browser's
+// own sound controls (there's no button in the game).
 let ctx = null;
-let muted = false;
-try { muted = localStorage.getItem(MUTE_KEY) === "1"; } catch { /* private mode: sound on */ }
 
 // Browsers only count some gestures as permission to play: a key press, a
 // click, or a finger *lifting* (a finger touching down doesn't count). So
@@ -22,7 +19,7 @@ for (const gesture of ["pointerup", "touchend", "click", "keydown"]) {
   document.addEventListener(gesture, unlock, { passive: true });
 }
 
-const ready = () => ctx && ctx.state === "running" && !muted;
+const ready = () => ctx && ctx.state === "running";
 
 // One note with a soft start and end, through an optional low-pass filter.
 function note(freq, start, length, { type = "triangle", volume = 0.12, filter } = {}) {
@@ -263,18 +260,3 @@ export function playMunch() {
       .connect(envelope(t, 0.07, 0.005, 0.03, 0.04));
   }
 }
-
-// --- The sound on/off button ---
-const button = document.getElementById("sound");
-
-function showButton() {
-  button.textContent = muted ? "🔇 Sound off" : "🔊 Sound on";
-  button.setAttribute("aria-pressed", String(!muted));
-}
-
-button.addEventListener("click", () => {
-  muted = !muted;
-  try { localStorage.setItem(MUTE_KEY, muted ? "1" : "0"); } catch { /* fine */ }
-  showButton();
-});
-showButton();

@@ -5,7 +5,8 @@ import { runLobby } from "./lobby.js";
 import { syncGame, spawnSquare } from "./game.js";
 import { state, rememberPosition, savedPosition } from "./state.js";
 import { render } from "./render.js";
-import { pickSquare, movePick, inReach, choosing, maybeResolve } from "./rounds.js";
+import { pickSquare, movePick, inReach, choosing, maybeResolve, ready, turnSheep } from "./rounds.js";
+import { playersChanged } from "./announce.js";
 import { openCard } from "./card.js";
 import { gameChanged, maybeStartAgain } from "./end.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
@@ -41,8 +42,10 @@ onValue(ref(db, ".info/connected"), async (snap) => {
 });
 
 onValue(playersRef, (snap) => {
-  state.players = [];
-  snap.forEach((child) => { state.players.push({ id: child.key, ...child.val() }); });
+  const players = [];
+  snap.forEach((child) => { players.push({ id: child.key, ...child.val() }); });
+  playersChanged(players); // "🐶 Mathilde has joined the game!"
+  state.players = players;
   render();
   maybeResolve(); // the last player we were waiting for may have left
   maybeStartAgain(); // ...or the last one to choose at the end of a game
@@ -56,11 +59,18 @@ const MOVES = {
   ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
 };
 
+// Enter: Ready. R: turn my sheep's line.
 document.addEventListener("keydown", (e) => {
+  // Not while typing (a guess, a message) or while a card, the rules or the chest is open.
+  if (e.target.closest?.("input, textarea") || document.querySelector('[role="dialog"]:not([hidden])')) return;
+  // On a focused button, Enter presses that button instead.
+  if (e.key === "Enter" && !e.target.closest?.("button")) {
+    e.preventDefault();
+    return ready();
+  }
+  if (e.key === "r" || e.key === "R") return turnSheep();
   const move = MOVES[e.key];
   if (!move) return;
-  // Not while typing (a guess) or while a card, the rules or the chest is open.
-  if (e.target.closest?.("input, textarea") || document.querySelector('[role="dialog"]:not([hidden])')) return;
   e.preventDefault(); // stop the arrows from scrolling the page
   movePick(...move);
 });

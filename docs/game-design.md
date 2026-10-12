@@ -41,7 +41,7 @@ Everyone opens the family link, lands in a lobby where they type their name and 
 
 ## 2. The grid
 
-- The grid is covered in tall, unkept grass. Hidden under it: clues, wolf traps, and empty squares. The bottom row, where everyone starts, hides nothing.
+- The grid is 7 × 7 (it was 11 × 11, then 9 × 9: squares were too small to tap comfortably on a phone). It's covered in tall, unkept grass. Hidden under it: clues, wolf traps, and empty squares. Everyone starts in the middle, spread over the centre square and the 8 around it, which hide nothing.
 - Each player's three clues are hidden near each other, within a 5×5 area, but never touching. Finding one tells the group the others are close: that's the quest.
 - Turned-over squares are short grass: plain, with little flowers (dots of colour), or with an insect (15%) that flies or walks away.
 - Found clues stay visible on their square for the rest of the game: a 🔍 on a pale card framed in the author's colour, with their animal and the clue's number (1, 2, 3). Tap one to read it again.
@@ -111,6 +111,7 @@ Everyone opens the family link, lands in a lobby where they type their name and 
 ## 9. Talking and sharing
 
 - 💬 A short message (40 characters) pops up in a bubble above its sender for everyone, then fades.
+- 👋 When someone joins, everyone sees "🐶 Mathilde has joined the game!" at the top and a sparkle on their circle; when someone leaves, "… has left the game". A refresh says nothing.
 - ❤️ Tapping another player sends them a heart. Players who meet on a square get one each.
 - Sky events every 1 to 2 minutes, for whimsy only: a hot-air balloon, birds, a rain shower (day); an owl, a shooting star, a UFO (night). Same moment for everyone, with soft sounds.
 
@@ -132,10 +133,9 @@ See docs/best_practices.md and docs/benchmark.md.
 
 ## Current values
 
-Grid size: 11*11
+Grid size: 7*7 (was 11*11, then 9*9), everyone starting in the middle 3*3, which hides nothing
 1 memory and 3 clues per player, clues hidden in a 5×5 area, never touching
-8 "trap" squares (was 12: with 3 clues per player, 12 traps made winning nearly impossible)
-Takes 6 traps for the wolf to show up - to be adapted after playtesting
+7 "trap" squares, and the wolf comes once all 7 have gone off. Chosen by simulating thousands of games on the 7*7 field: families win about 3 times in 5 with 2 players and 7 in 10 with 3 or 4, in 8 to 15 rounds (with 12, then 8 traps and night at 6 on 11*11, they won about 1 time in 5 without early guessing)
 3 sheep bonus per player, grazing 5 squares
 Players can move anywhere; traps on the path go off
 Timer set to 20s, from the first player ready
@@ -154,3 +154,5 @@ Sky events every 1 to 2 minutes
 - **Movement limited to 3 squares, with glowing reachable squares** (playtest 3): too slow and visually heavy. Replaced by free movement where the path itself is the risk.
 - **Clearing the 8 squares around where you land**: tried, then replaced by turning over only the path walked.
 - **Short grass and flowers as textures**: only the tall grass kept a texture; the short grass reads better as a simple drawing.
+- **A sound on/off button**: removed, phones and browsers already let people mute a page.
+- **Starting on the bottom row**: replaced by starting in the middle, as in the brief, spread over neighbouring squares.

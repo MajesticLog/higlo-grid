@@ -4,13 +4,20 @@
   display: none !important;
 }
 
+/* Nothing ever makes the page wider than the screen (the wolf trotting in
+   from the side used to push the field over for a moment). */
+html, body { overflow-x: clip; }
+
 body {
   margin: 0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Centred with auto margins (below) rather than justify-content: when the
+     page is taller than the screen, it starts at the top instead of being
+     cut off above it. */
+  justify-content: flex-start;
   background: #f4f1ea;
   color: #333;
   font-family: system-ui, sans-serif;
@@ -20,7 +27,9 @@ body {
 
 main {
   /* One width for the board, shared by the grid and the bars around it. */
-  --board: min(92vw, calc(100vh - 350px)); /* room for the status bar above, the message row and buttons below */
+  /* Room for the status bar above, the message row and buttons below; but
+     never smaller than 300px (a phone held sideways): the page scrolls instead. */
+  --board: min(92vw, max(calc(100vh - 350px), 300px));
   padding: 16px;
   text-align: center;
 }
@@ -95,9 +104,9 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   50%      { opacity: 1;    transform: scale(1.1); }
 }
 
-/* 11 x 11 squares; the grid fits the smaller side of the screen. */
+/* 7 x 7 squares (SIZE in session.js); the grid fits the smaller side of the screen. */
 #grid {
-  --size: 11;
+  --size: 7;
   width: var(--board);
   margin: 0 auto;
   aspect-ratio: 1;
@@ -114,7 +123,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
     linear-gradient(to right, rgba(20, 50, 10, 0.35) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(20, 50, 10, 0.35) 1px, transparent 1px),
     url("/img/grass-tall.webp");
-  background-size: calc(100% / 11) calc(100% / 11), calc(100% / 11) calc(100% / 11), 100% 100%;
+  background-size: calc(100% / 7) calc(100% / 7), calc(100% / 7) calc(100% / 7), 100% 100%;
   border: 3px solid #689f38;
   border-radius: 6px;
   position: relative; /* anchors the wolf */
@@ -426,14 +435,28 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   font-weight: 700;
 }
 
+/* Each part of the bar keeps its space, empty or not, so the bar is always
+   the same height and the field below doesn't jump. */
+#status-text { min-height: 1.3em; }
+
 #status-detail {
   margin: 4px 0 0;
+  min-height: 1.4em;
   font-size: max(14px, 1.8vmin);
   color: #555;
 }
 
+#status-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 60px;
+}
+
 #ready, #end-open, #sheep {
-  margin-top: 8px;
+  margin-top: 0;
   min-height: 52px;
   min-width: 150px;
   padding: 0 22px;
@@ -449,6 +472,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* A calm bar emptying after the first Ready: no numbers, no red. */
 #timer {
+  visibility: hidden; /* shown by render.js once the clock starts */
   margin-top: 10px;
   height: 6px;
   border-radius: 3px;
@@ -465,7 +489,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 /* The sheep button: one 🐑 per sheep left. Pressed while aiming a sheep. */
 #sheep {
   min-width: 0;
-  margin-right: 8px;
   padding: 0 14px;
   background: #fff;
   border: 3px solid #cfd8dc;
@@ -1359,20 +1382,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 /* --- Memory chest: a button in the top-right corner, and its panel --- */
-#chest {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
-  z-index: 2; /* above the field; events pass over it but never block taps */
-  width: 60px;
-  height: 56px;
-  padding: 6px;
-  border-radius: 16px;
-  border: 2px solid #e0c9a6;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-}
 
 #chest img {
   display: block;
@@ -1449,10 +1458,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   gap: 4px;
 }
 
-/* On phones the chest sits above the sky strip, so leave room for it. */
-@media (max-width: 700px), (orientation: portrait) {
-  main#field { padding-top: 80px; }
-}
 
 /* --- Guessing a memory (guess.js): above the clue card, under the chest --- */
 #guess {
@@ -1549,20 +1554,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* --- How to play (rules.js) --- */
 /* ❔ in the top-left corner, matching the chest on the right. */
-#help {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  left: max(12px, env(safe-area-inset-left));
-  z-index: 2;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  border: 2px solid #e0c9a6;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  font-size: 28px;
-  cursor: pointer;
-}
 
 #rules {
   position: fixed;
@@ -1746,20 +1737,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 /* 💡 under ❔ in the top-left corner. */
-#clues {
-  position: fixed;
-  top: calc(max(12px, env(safe-area-inset-top)) + 64px);
-  left: max(12px, env(safe-area-inset-left));
-  z-index: 2;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  border: 2px solid #e0c9a6;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  font-size: 28px;
-  cursor: pointer;
-}
 
 #clues-panel {
   position: fixed;
@@ -1804,3 +1781,79 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 .chest-players { margin: -4px 0 8px; color: #666; font-size: 14px; }
+
+/* --- Arrivals and departures (announce.js): a message at the top --- */
+#toasts {
+  position: fixed;
+  top: calc(max(12px, env(safe-area-inset-top)) + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: calc(100vw - 160px); /* clear of the ❔ and chest buttons */
+  pointer-events: none;
+}
+
+.toast {
+  --c: #999;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 3px solid var(--c);
+  background: #fff;
+  color: #222;
+  font-size: max(15px, 2vmin);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  animation: toast 4s ease-out both;
+}
+
+@keyframes toast {
+  0%   { transform: translateY(-20px) scale(0.9); opacity: 0; }
+  8%   { transform: translateY(0) scale(1.03); opacity: 1; }
+  12%  { transform: scale(1); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+/* --- ❔ 💡 on the left, 🧺 on the right: a row above the field --- */
+#lobby, main { margin-top: auto; }
+#share { margin-bottom: auto; }
+
+#corner-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: var(--board);
+  margin: 0 auto 8px;
+}
+
+#corner-buttons > div { display: flex; gap: 8px; }
+
+.corner {
+  position: relative; /* anchors the chest's count */
+  width: 52px;
+  height: 52px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 2px solid #e0c9a6;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#chest img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

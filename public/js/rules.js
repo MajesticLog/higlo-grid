@@ -16,7 +16,7 @@ const CARDS = [
   {
     picture: "👆 ✓",
     title: "Pick a square",
-    text: "Each round, everyone taps any square, then ✓ Ready. Footprints show your way. "
+    text: "Each round, everyone taps any square, then ✓ Ready (or Enter). Footprints show your way. "
       + "The square you land on turns over, and so does the grass you walk through: "
       + "watch out, a trap on your way goes off! A clue you pass shows 🔍! until someone lands on it.",
   },
@@ -43,7 +43,7 @@ const CARDS = [
     picture: "🐑".repeat(SHEEP_PER_PLAYER),
     title: "Your sheep",
     text: `Instead of turning over a square, send a sheep: it grazes ${SHEEP_LENGTH} squares in a line. `
-      + `It won't touch a clue or a trap, and leaves a ❓ there. You have ${SHEEP_PER_PLAYER} sheep each game.`,
+      + `It won't touch a clue or a trap, and leaves a ❓ there. You have ${SHEEP_PER_PLAYER} sheep each game. Tap the 🐑 square again (or press R) to turn it.`,
   },
   {
     picture: "🧺",

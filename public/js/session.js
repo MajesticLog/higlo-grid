@@ -1,7 +1,7 @@
 // Which session this page is in, and who "I" am in it.
 import { db, ref, push } from "./firebase.js";
 
-export const SIZE = 11;
+export const SIZE = 7; // was 11, then 9: bigger squares, easier to tap (playtest feedback)
 export const CENTRE = Math.floor(SIZE / 2);
 
 // Read the session from the path, or start a new one.

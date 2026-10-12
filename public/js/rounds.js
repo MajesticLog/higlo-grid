@@ -98,6 +98,12 @@ export function pickSquare(x, y) {
   changeRound((game) => { game.picks[myId] = { x, y, ready: false }; });
 }
 
+// R on a keyboard: turn my sheep's line, as tapping its square again does.
+export function turnSheep() {
+  const pick = myPick();
+  if (inSheepMode() && pick?.sheep && !pick.ready) pickSquare(pick.x, pick.y);
+}
+
 export function movePick(dx, dy) {
   const from = myPick() ?? state.me;
   const x = from.x + dx;
@@ -112,7 +118,7 @@ export function movePick(dx, dy) {
 
 // Ready with no pick means "the square I'm standing on". In sheep mode, the
 // line has to be placed first.
-function ready() {
+export function ready() {
   if (!choosing() || replayActive()) return;
   if (inSheepMode() && !myPick()?.sheep) return nudgeStatus();
   changeRound((game) => {

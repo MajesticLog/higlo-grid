@@ -13,9 +13,10 @@ import { renderGuess, maybeAdvance } from "./guess.js";
 import { CLUES, myMemoryId, backToLobby } from "./lobby.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
-export const TRAPS = 8; // was 12: with 3 clues per player, 12 made winning nearly impossible
-export const NIGHT_STEPS = 6; // traps turned over before the wolf comes
-export const START_ROW = SIZE - 1;
+// 7 and 7 after simulating thousands of games on the 9x9 field: families win
+// about two times out of three with 2 players, four out of five with 3 or 4.
+export const TRAPS = 7;
+export const NIGHT_STEPS = 7; // traps gone off before the wolf comes
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
 
 const INSECT_CHANCE = 0.15; // share of empty squares that show an insect
@@ -108,20 +109,26 @@ let serverOffset = 0;
 onValue(ref(db, ".info/serverTimeOffset"), (snap) => { serverOffset = snap.val() || 0; });
 export const now = () => Date.now() + serverOffset;
 
-// The start row, filled from the middle outwards: 5, 4, 6, 3, 7...
-const START_COLUMNS = [...Array(SIZE).keys()]
-  .sort((a, b) => Math.abs(a - CENTRE) - Math.abs(b - CENTRE) || a - b);
+// Everyone starts in the middle: the centre square, then the 8 around it
+// (straight neighbours before diagonals). Nothing is hidden there.
+const inStart = (x, y) => Math.max(Math.abs(x - CENTRE), Math.abs(y - CENTRE)) <= 1;
+const START_SQUARES = [];
+for (let y = CENTRE - 1; y <= CENTRE + 1; y++) {
+  for (let x = CENTRE - 1; x <= CENTRE + 1; x++) START_SQUARES.push({ x, y });
+}
+START_SQUARES.sort((a, b) =>
+  Math.abs(a.x - CENTRE) + Math.abs(a.y - CENTRE) - (Math.abs(b.x - CENTRE) + Math.abs(b.y - CENTRE)));
 
-// Joining: the first free start square (shared if the row is full).
+// Joining: the first free start square (shared once they're all taken).
 export function spawnSquare(players) {
   const taken = new Set(players.map((p) => `${p.x},${p.y}`));
-  const x = START_COLUMNS.find((c) => !taken.has(`${c},${START_ROW}`)) ?? CENTRE;
-  return { x, y: START_ROW };
+  return { ...(START_SQUARES.find((s) => !taken.has(`${s.x},${s.y}`)) ?? START_SQUARES[0]) };
 }
 
 function newGame() {
   const game = {
     id: now().toString(36),
+    size: SIZE, // a board from another grid size gets replaced
     status: "playing",
     updatedAt: now(), // also bumped by every reveal (step 3)
     nextEventAt: firstEventAt(now()), // something crossing the sky (events.js)
@@ -148,7 +155,7 @@ function freeSquare(game) {
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const k = key(x, y);
-      if (y !== START_ROW && !game.board[k] && !game.revealed[k]) options.push(k);
+      if (!inStart(x, y) && !game.board[k] && !game.revealed[k]) options.push(k);
     }
   }
   return options.length ? pick(options) : null;
@@ -164,10 +171,13 @@ const touching = (a, b) => {
 };
 
 function clueSquares(game) {
-  const free = (k) => !k.endsWith(`_${START_ROW}`) && !game.board[k] && !game.revealed[k];
+  const free = (k) => {
+    const [x, y] = k.split("_").map(Number);
+    return x >= 0 && y >= 0 && x < SIZE && y < SIZE && !inStart(x, y) && !game.board[k] && !game.revealed[k];
+  };
   for (let tries = 0; tries < 300; tries++) {
-    const cx = 2 + Math.floor(Math.random() * (SIZE - 4)); // 2..8
-    const cy = 2 + Math.floor(Math.random() * (START_ROW - 4)); // 2..7: the area stays off the start row
+    const cx = 2 + Math.floor(Math.random() * (SIZE - 4)); // the 5x5 area stays on the field
+    const cy = 2 + Math.floor(Math.random() * (SIZE - 4));
     const area = [];
     for (let dy = -2; dy <= 2; dy++) {
       for (let dx = -2; dx <= 2; dx++) {
@@ -212,7 +222,7 @@ function hideMissingMemories(game) {
 export function syncGame() {
   if (!state.joined) return;
   runTransaction(gameRef, (game) => {
-    const fresh = !game || now() - (game.updatedAt ?? 0) > IDLE_MS;
+    const fresh = !game || game.size !== SIZE || now() - (game.updatedAt ?? 0) > IDLE_MS;
     if (fresh) game = newGame();
     game.entered ??= {};
     if (game.status !== "playing") return; // abort; a finished game waits for "play again"
@@ -262,13 +272,13 @@ onValue(gameRef, (snap) => {
   maybeResolve();
 });
 
-// A new board: everyone goes back to the start row. Each device moves its own
-// player to the column matching its place in the join order, so nobody collides.
+// A new board: everyone goes back to the middle. Each device moves its own
+// player to the start square matching its place in the join order, so
+// nobody collides.
 function backToStart() {
   if (!state.joined) return;
   const index = Math.max(0, state.players.findIndex((p) => p.id === myId));
-  state.me.x = START_COLUMNS[index % SIZE];
-  state.me.y = START_ROW;
+  ({ x: state.me.x, y: state.me.y } = START_SQUARES[index % START_SQUARES.length]);
   update(myRef, { x: state.me.x, y: state.me.y });
   rememberPosition();
 }

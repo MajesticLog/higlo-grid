@@ -340,9 +340,10 @@ const SKY = [
 
 function renderSky() {
   const night = nightShown(Math.min(state.game?.night ?? 0, NIGHT_STEPS)); // traps go off as reached
-  document.body.dataset.night = night;
+  const step = Math.round((night / NIGHT_STEPS) * 6); // the sky has 6 steps (style.css), whatever NIGHT_STEPS is
+  document.body.dataset.night = step;
   document.body.style.setProperty("--night", (night / NIGHT_STEPS).toFixed(3));
-  for (const star of stars) star.hidden = night < Number(star.dataset.from);
+  for (const star of stars) star.hidden = step < Number(star.dataset.from);
   const [icon, top, along] = SKY[Math.round((night / NIGHT_STEPS) * 6)];
   skyIcon.textContent = stripIcon.textContent = icon;
   skyIcon.style.top = `${top}%`;
@@ -499,10 +500,11 @@ const sheepButton = document.getElementById("sheep");
 const statusDetail = document.getElementById("status-detail");
 
 // The bar: what to do, big; the details small, underneath.
+// Every line of the bar keeps its place even when empty (style.css), so the
+// bar never changes height and the field below never jumps.
 function say(main, detail = "") {
   statusText.textContent = main;
   statusDetail.textContent = detail;
-  statusDetail.hidden = !detail;
 }
 const timer = document.getElementById("timer");
 const timerFill = timer.firstElementChild;
@@ -565,8 +567,9 @@ function renderStatus() {
 // After the first Ready, a calm bar shows the time left (no numbers).
 export function renderTimer() {
   const deadline = state.game?.deadline;
-  timer.hidden = !deadline || !choosing();
-  if (timer.hidden) return;
+  const off = !deadline || !choosing();
+  timer.style.visibility = off ? "hidden" : "visible"; // keeps its space either way
+  if (off) return;
   const left = Math.max(0, deadline - now());
   timerFill.style.width = `${(left / READY_WAIT_MS) * 100}%`;
 }
