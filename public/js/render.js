@@ -10,6 +10,7 @@ import {
   updateReplay, setReplayTick, replayActive, replayIsFresh, countdown, pictureAge, replayPosition, nightShown,
 } from "./replay.js";
 import { CLUES } from "./lobby.js";
+import { renderPause } from "./pause.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const POP_MS = 2000; // must match the pop-up animation in style.css
@@ -47,6 +48,7 @@ export function render() {
   renderSky();
   renderStatus();
   renderTimer();
+  renderPause();
 }
 
 // Squares are keyed "x_y" in the database.
@@ -390,12 +392,15 @@ function cluesLine(game) {
 function renderStatus() {
   const game = state.game;
   readyButton.hidden = sheepButton.hidden = endOpen.hidden = true;
-  targetCard.style.visibility = "hidden"; // keeps its space
+  // The card only takes room when it shows something, so the buttons stay
+  // centred (the row itself keeps its height either way).
+  targetCard.hidden = true;
   const showTarget = (icon) => {
     targetCard.textContent = icon;
-    targetCard.style.visibility = icon ? "visible" : "hidden";
+    targetCard.hidden = !icon;
   };
   if (state.joined && !state.online) return say("📶 Connection lost, reconnecting…");
+  if (game?.paused) return say("⏸️ Paused", "Anyone can resume when everyone's back");
   // During a replay, nothing else yet: not the wolf, not the end, not guessing.
   if (replayActive()) {
     showTarget(PICTURES[game.replay?.target] ?? "");
@@ -413,6 +418,19 @@ function renderStatus() {
   }
   if (!state.joined || !game) return say("Joining…");
   const phase = roundPhase();
+  if (phase === "waiting") {
+    // Before the first round: time to arrive, walk around and read the rules.
+    const total = state.players.length;
+    const readyCount = state.players.filter((p) => game.playReady?.[p.id]).length;
+    const mine = game.playReady?.[myId];
+    readyButton.hidden = Boolean(mine);
+    readyButton.textContent = "✓ Ready to play";
+    const count = total > 1 ? ` · ${readyCount} of ${total} ready` : "";
+    return mine
+      ? say("✓ Ready! Waiting for the others…", `Walk around while you wait${count}`)
+      : say("🌱 Ready to play?", `Read the rules by tapping ❓${count}`);
+  }
+  readyButton.textContent = "✓ Ready";
   if (phase === "guess") return say("🔍 Time to guess a memory!", "All its clues are found.");
   if (phase === "countdown") return say("👀 Get ready to remember!", cluesLine(game));
   if (phase === "flash") return say("👀 Remember the pictures!", cluesLine(game) || "Which one will you need to find?");

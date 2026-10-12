@@ -1,5 +1,5 @@
 // Entry point: lobby, then join the field, keep the player list, wire up the controls.
-import { db, ref, get, set, update, onValue, onDisconnect } from "./firebase.js";
+import { db, ref, get, set, update, remove, onValue, onDisconnect } from "./firebase.js";
 import { SIZE, sessionRef, playersRef, myRef, myId } from "./session.js";
 import { runLobby } from "./lobby.js";
 import { syncGame, spawnSquare, now } from "./game.js";
@@ -18,10 +18,17 @@ document.getElementById("link").textContent = location.href;
 // The lobby first: pick an animal and a colour, hide a memory.
 Object.assign(state.me, await runLobby());
 document.getElementById("field").hidden = false;
-hintHelp(); // the ❔ glows for anyone who hasn't opened the rules yet
+hintHelp(); // the ❓ glows for anyone who hasn't opened the rules yet
 // Back on my square after a refresh in the same game; otherwise the start row.
 const [players, gameNow] = await Promise.all([get(playersRef), get(sessionRef("game"))]);
 const gameId = gameNow.val()?.id;
+
+// A reload (a phone that froze the page in the background, a refresh) leaves
+// my previous circle behind until the server notices it's gone, which can
+// take a minute. Remove it now: same tab, so it's me.
+players.forEach((child) => {
+  if (child.key !== myId && child.val()?.tab && child.val().tab === state.me.tab) remove(child.ref);
+});
 Object.assign(state.me, savedPosition(gameId) ?? spawnSquare());
 rememberPosition(gameId);
 

@@ -1,10 +1,11 @@
 // Arrivals and departures: a short message at the top ("🐶 Mathilde has
-// joined the game!") and a little sparkle on the newcomer, so everyone knows
+// joined the game!"), a doorbell "ding-dong" and a sparkle on the newcomer, so everyone knows
 // who comes and who goes. A refresh (leaving and coming straight back from
 // the same tab) says nothing.
 import { myId } from "./session.js";
 import { state } from "./state.js";
 import { showFloat } from "./render.js";
+import { playDing } from "./sound.js";
 
 const TOAST_MS = 4000; // must match the toast animation in style.css
 const LEAVE_WAIT_MS = 4000; // a refresh comes back within this: no message
@@ -40,10 +41,13 @@ export function playersChanged(players) {
       continue;
     }
     toast(`${who(p)} has joined the game!`, p.color);
+    playDing();
     setTimeout(() => showFloat(p.id, "✨"), 0);
   }
   for (const p of known) {
     if (now.has(p.id) || p.id === myId) continue;
+    // Still here from the same tab (a reload replaced their old circle): not leaving.
+    if (p.tab && players.some((q) => q.tab === p.tab)) continue;
     const key = p.tab ?? p.id;
     leaving.set(key, setTimeout(() => {
       leaving.delete(key);

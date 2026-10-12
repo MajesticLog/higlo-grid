@@ -44,7 +44,7 @@ Unchanged from v3:
 - A player with a memory still waiting to be guessed can **keep it** for this game.
 - Players can skip writing (a young child, a reluctant player). "← Back" returns to name, animal and colour.
 - Someone joining mid-game brings their memory into the game in progress.
-- "How to play" never opens by itself: the ❔ above the field glows until a player opens it once on that device.
+- "How to play" never opens by itself: the ❓ above the field glows until a player opens it once on that device.
 - The author is recognised by a key made of their device and name.
 
 ## 2. The garden
@@ -54,7 +54,12 @@ Unchanged from v3:
 - The board is drawn once at the start of a game and stays the same until the game ends, so remembering where things are pays off round after round.
 - Squares are always covered with grass, except while they flash, while they're revealed after a round, or while a sheep has grazed them.
 
-## 3. A typical round
+## 3. Before the first round
+
+- The bar asks "Ready to play?" and suggests reading the rules (❓). Players can walk around freely while they wait: tap a square and their circle walks there; nothing is turned over.
+- The first round starts once everyone in the garden has tapped "Ready to play", or a minute after the first one did (so nobody who wandered off holds everyone up). Players joining later arrive in the game in progress.
+
+## 4. A typical round
 
 1. **Flash.** "3, 2, 1", then six squares show their pictures for **4 seconds**: a mix of kinds, and among them the kind that will be asked (players don't know which yet), as many as the family needs to succeed plus one (2 for 1 or 2 players, 3 for 3 or 4). Then the grass covers them again. The flash waits while anyone has a window open (rules, a clue card…), for up to 30 seconds.
 2. **Pause.** About a second, with a message on screen ("Who remembers what?"), so nobody feels stuck. Nobody can move until every square is covered again.
@@ -67,14 +72,14 @@ Unchanged from v3:
 
 Everything stays collective: the game never shows who picked a wrong square.
 
-## 4. Sheep
+## 5. Sheep
 
 - Each player has **1 sheep per game**.
 - During the choosing phase, a player can place it on any square. It grazes the 3 × 3 area around it: the squares there that don't hide this round's picture become short grass until the end of the round. What's left standing in that area is where the picture is.
 - Placing the sheep doesn't replace choosing a square: the player still picks one and taps Ready.
 - A short, funny sheep animation and a munching sound.
 
-## 5. Memories, clues and guessing
+## 6. Memories, clues and guessing
 
 - **One memory at a time**, in the order the players joined. Its clues are the rewards: each round found gives the next clue (1, then 2, then 3), as a card for everyone. The 💡 button lists the clues found so far.
 - The memory's author helps find squares like everyone else, but doesn't guess.
@@ -82,13 +87,13 @@ Everything stays collective: the game never shows who picked a wrong square.
 - **Ready to guess!** From the 💡 list, anyone but the author can start guessing before all three clues are in. If nobody gets it, the memory stays secret and the clues keep coming.
 - After a guess (right, or revealed when nobody got it), the next memory begins.
 
-## 6. Night and the wolf
+## 7. Night and the wolf
 
 - The sky starts sunny. Each missed round makes it darker by one step, through dusk to night, with stars and the moon.
 - At full night (5 misses), the wolf appears and everyone runs off. "The wolf is out, let's go to bed!"
 - Losing doesn't punish anyone: memories not guessed wait in the chest for next time.
 
-## 7. End of game
+## 8. End of game
 
 **Win:** every memory found (guessed, or revealed after three clues) before full night. Fireflies, a short fanfare, the family around a teapot with the memories of this game.
 
@@ -96,21 +101,22 @@ Everything stays collective: the game never shows who picked a wrong square.
 
 **Both:** each player chooses Play again. When everyone has, everyone goes back to the lobby to keep their memory or write a new one. "New game" does the same at any time. Only memories of people who are playing are used.
 
-## 8. Persistence
+## 9. Persistence
 
 - Memories belong to the family link: the memory chest (top right) keeps every memory found, grouped by game, with the date and who played, and can save them as a page.
 - A game nobody has touched for 2 hours is replaced by a fresh one.
 
-## 9. Talking and sharing
+## 10. Talking and sharing
 
 - 💬 A short message (40 characters) pops up in a bubble above its sender for everyone.
 - ❤️ Tapping another player sends them a heart. Players who meet on a square get one each.
-- 👋 "🐶 Mathilde has joined the game!" / "… has left the game" at the top; a refresh says nothing.
+- 👋 "🐶 Mathilde has joined the game!" (with a doorbell ding) / "… has left the game" at the top; a refresh says nothing.
+- ⏸️ Anyone can pause if they need to step away: everyone sees who paused, anyone can resume, and every clock carries on from where it stopped.
 - Sky events every 1 to 2 minutes, for whimsy only, with soft sounds.
 
-## 10. How to play
+## 11. How to play
 
-- A few picture cards, opened with ❔ (never by themselves; the ❔ glows for anyone who hasn't opened it yet on that device): the garden and its pictures, the flash and the card, choosing and Ready, finding versus missing (clues and the night), sheep, guessing, the memory chest.
+- A few picture cards, opened with ❓ (never by themselves; the ❓ glows for anyone who hasn't opened it yet on that device): the garden and its pictures, the flash and the card, choosing and Ready, finding versus missing (clues and the night), sheep, guessing, the memory chest.
 
 ## Principles this follows
 

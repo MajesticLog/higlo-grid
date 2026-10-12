@@ -260,3 +260,25 @@ export function playMunch() {
       .connect(envelope(t, 0.07, 0.005, 0.03, 0.04));
   }
 }
+
+// Someone joined: a soft two-note "ding-dong", like a doorbell.
+export function playDing() {
+  if (!ready()) return;
+  const start = ctx.currentTime + 0.02;
+  [[1046, 0], [784, 0.18]].forEach(([freq, at]) => {
+    const t = start + at;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    gain.connect(ctx.destination);
+    // A bell: the note, plus a quieter, brighter partial.
+    for (const [multiple, level] of [[1, 1], [2.4, 0.25]]) {
+      const partial = ctx.createGain();
+      partial.gain.value = level;
+      const o = osc("sine", t, 0.95);
+      o.frequency.value = freq * multiple;
+      o.connect(partial).connect(gain);
+    }
+  });
+}

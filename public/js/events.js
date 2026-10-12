@@ -32,7 +32,7 @@ export const firstEventAt = (t) => t + between(FIRST_EVENT_MS);
 // never plays an event of its own that loses to another device's.
 setInterval(() => {
   const seen = state.game;
-  if (!state.joined || !seen || seen.status !== "playing" || seen.guess) return; // none while guessing
+  if (!state.joined || !seen || seen.status !== "playing" || seen.guess || seen.paused) return; // none while guessing or paused
   if (seen.phase === "flash" && seen.flash && now() < seen.flash.at + 6000) return; // nor during a flash
   if (seen.nextEventAt && now() < seen.nextEventAt) return;
   runTransaction(gameRef, (game) => {

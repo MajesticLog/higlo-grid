@@ -1,5 +1,5 @@
 // How to play: a few cards, mostly pictures and few words, opened with the
-// ❔ button (which glows for newcomers). The numbers come
+// ❓ button (which glows for newcomers). The numbers come
 // from the game's settings, so the rules stay true when they're tuned.
 import { FLASH_MS } from "./rounds.js";
 import { NIGHT_STEPS, PICTURES } from "./game.js";
@@ -82,7 +82,7 @@ export function openRules() {
 }
 
 // The rules never open by themselves (a window in the way; and links opened
-// from a messaging app often forget they've been shown). Instead, the ❔
+// from a messaging app often forget they've been shown). Instead, the ❓
 // glows for anyone who hasn't opened it yet on this device.
 const helpButton = document.getElementById("help");
 

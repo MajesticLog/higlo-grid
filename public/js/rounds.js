@@ -38,6 +38,8 @@ export const sheepLeft = () => (state.game?.sheepUsed?.[myId] ? 0 : 1); // one p
 export function roundPhase() {
   const game = state.game;
   if (!game || game.status !== "playing") return "over";
+  if (game.paused) return "paused"; // nothing moves (pause.js)
+  if (game.started === false) return "waiting"; // before "Ready to play" (older games: started)
   if (game.guess) return "guess";
   if (game.phase !== "flash" || !game.flash) return "result";
   const t = now() - game.flash.at;
@@ -80,14 +82,15 @@ let starting = false;
 
 export function maybeStartRound() {
   const game = state.game;
-  if (starting || !state.joined || !game || game.status !== "playing" || game.guess) return;
+  if (starting || !state.joined || !game || game.status !== "playing" || game.guess || game.paused) return;
+  if (game.started === false) return maybeStartGame();
   if (game.phase === "flash" || now() < (game.nextRoundAt ?? 0) || replayActive()) return;
   if (!currentMemory(game)) return; // nothing to play for yet: waiting for a memory
   if (someoneBusy()) return; // nobody misses the flash behind a window
   starting = true;
   const seen = game.id;
   runTransaction(gameRef, (g) => {
-    if (!g || g.id !== seen || g.status !== "playing" || g.guess || g.phase === "flash") return;
+    if (!g || g.id !== seen || g.status !== "playing" || g.guess || g.paused || g.phase === "flash") return;
     if (now() < (g.nextRoundAt ?? 0) || !currentMemory(g) || someoneBusy()) return;
     // The kind to find: never the same twice in a row.
     const kinds = PICTURES.map((_, i) => i).filter((i) => i !== g.lastTarget);
@@ -108,6 +111,48 @@ export function maybeStartRound() {
     g.updatedAt = now();
     return g;
   }, { applyLocally: false }).finally(() => { starting = false; });
+}
+
+// --- Before the first round: "Ready to play?" ---
+// Everyone can walk around freely and read the rules (❓). The first round
+// starts once everyone in the garden is ready, or a minute after the first
+// one is (so someone who wandered off can't hold everyone up).
+const START_WAIT_MS = 60000;
+
+function walkFreely(x, y) {
+  if (!inReach(x, y)) return;
+  state.me.x = x;
+  state.me.y = y;
+  update(myRef, { x, y }); // the circle walks there (render.js)
+  rememberPosition();
+  render();
+}
+
+function readyToPlay() {
+  const seen = state.game?.id;
+  runTransaction(gameRef, (game) => {
+    if (!game || game.id !== seen || game.started !== false) return;
+    game.playReady ??= {};
+    game.playReady[myId] = true;
+    game.firstReadyAt ??= now();
+    return game;
+  });
+}
+
+let startingGame = false;
+function maybeStartGame() {
+  const game = state.game;
+  const everyone = (g) => state.players.length > 0 && state.players.every((p) => g.playReady?.[p.id]);
+  const due = (g) => everyone(g) || (g.firstReadyAt && now() - g.firstReadyAt > START_WAIT_MS);
+  if (startingGame || !due(game)) return;
+  startingGame = true;
+  runTransaction(gameRef, (g) => {
+    if (!g || g.id !== game.id || g.started !== false || !due(g)) return;
+    g.started = true;
+    g.nextRoundAt = now() + 1000;
+    g.updatedAt = now();
+    return g;
+  }).finally(() => { startingGame = false; });
 }
 
 // --- Sheep: one per player per game, placed during the choosing phase ---
@@ -157,6 +202,7 @@ export function grazedSquares(game = state.game) {
 // Tap a square (or move with the arrows): that's my pick, not ready yet. No
 // two players can pick the same square.
 export function pickSquare(x, y) {
+  if (state.joined && roundPhase() === "waiting") return walkFreely(x, y);
   if (!choosing()) return;
   if (!inReach(x, y)) return nudgeStatus();
   if (inSheepMode()) return placeSheep(x, y);
@@ -170,12 +216,13 @@ export function pickSquare(x, y) {
 }
 
 export function movePick(dx, dy) {
-  const from = myPick() ?? state.me;
+  const from = roundPhase() === "waiting" ? state.me : (myPick() ?? state.me);
   pickSquare(from.x + dx, from.y + dy);
 }
 
 // Ready with no pick means "the square I'm standing on".
 export function ready() {
+  if (state.joined && roundPhase() === "waiting") return readyToPlay();
   if (!choosing()) return;
   if (inSheepMode()) sheepRound = null;
   changeRound((game) => {

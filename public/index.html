@@ -47,13 +47,16 @@
     <main id="field" hidden>
       <div id="corner-buttons">
         <div>
-          <button id="help" class="corner" type="button" aria-label="How to play">❔</button>
+          <button id="help" class="corner" type="button" aria-label="How to play">❓</button>
           <button id="clues" class="corner" type="button" aria-label="Clues found">💡</button>
         </div>
-        <button id="chest" class="corner" type="button" aria-label="Memory chest">
-          <img src="/img/chest.svg" alt="">
-          <span id="chest-count" hidden>0</span>
-        </button>
+        <div>
+          <button id="pause" class="corner" type="button" aria-label="Pause the game" hidden>⏸️</button>
+          <button id="chest" class="corner" type="button" aria-label="Memory chest">
+            <img src="/img/chest.svg" alt="">
+            <span id="chest-count" hidden>0</span>
+          </button>
+        </div>
       </div>
       <div id="sky-strip" aria-hidden="true"><span id="sky-strip-icon">☀️</span></div>
       <div id="status" aria-live="polite">
@@ -101,6 +104,16 @@
           <button id="end-again" class="primary" type="button">🔄 Play again</button>
           <p id="end-waiting" hidden>✅ Waiting for the others to choose…</p>
           <button id="end-garden" class="quiet" type="button">🌼 See the garden</button>
+        </div>
+      </div>
+    </div>
+    <div id="paused" role="dialog" aria-modal="true" aria-labelledby="paused-title" hidden>
+      <div class="rules-body">
+        <p id="paused-picture" aria-hidden="true">⏸️</p>
+        <h2 id="paused-title">Paused</h2>
+        <p id="paused-who"></p>
+        <div class="end-buttons">
+          <button id="resume" class="primary" type="button">▶️ Resume</button>
         </div>
       </div>
     </div>

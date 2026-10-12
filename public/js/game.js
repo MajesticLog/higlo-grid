@@ -63,6 +63,8 @@ function newGame() {
     night: 0, // missed rounds
     round: 0,
     board: newBoard(), // "x_y" -> picture (index in PICTURES)
+    started: false, // false until everyone has said "Ready to play" (rounds.js)
+    playReady: {}, // playerId -> true
     phase: "result", // "flash" while a round is on (flash, pause, choosing); "result" between rounds
     nextRoundAt: now() + FIRST_ROUND_MS,
     entered: {}, // memoryId -> true: the memories of the players in this game

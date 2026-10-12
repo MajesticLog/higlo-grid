@@ -1553,7 +1553,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 .end-clues { font-size: 14px; color: #555; }
 
 /* --- How to play (rules.js) --- */
-/* ❔ in the top-left corner, matching the chest on the right. */
+/* ❓ in the top-left corner, matching the chest on the right. */
 
 #rules {
   position: fixed;
@@ -1736,7 +1736,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   cursor: pointer;
 }
 
-/* 💡 under ❔ in the top-left corner. */
+/* 💡 under ❓ in the top-left corner. */
 
 #clues-panel {
   position: fixed;
@@ -1794,7 +1794,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   align-items: center;
   gap: 6px;
   width: max-content;
-  max-width: calc(100vw - 160px); /* clear of the ❔ and chest buttons */
+  max-width: calc(100vw - 160px); /* clear of the ❓ and chest buttons */
   pointer-events: none;
 }
 
@@ -1824,7 +1824,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   .toast { animation: none; }
 }
 
-/* --- ❔ 💡 on the left, 🧺 on the right: a row above the field --- */
+/* --- ❓ 💡 on the left, 🧺 on the right: a row above the field --- */
 #lobby, main { margin-top: auto; }
 #share { margin-bottom: auto; }
 
@@ -1886,7 +1886,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   background: #fffdf5;
   font-size: 36px;
   line-height: 1;
-  visibility: hidden; /* shown by render.js; keeps its space */
 }
 
 /* The sheep placed this round, munching in the middle of what it grazed. */
@@ -1904,7 +1903,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   animation: munch 0.4s ease-in-out infinite alternate;
 }
 
-/* ❔ for newcomers: a soft glow until it's opened once. */
+/* ❓ for newcomers: a soft glow until it's opened once. */
 #help.glow {
   border-color: #f4c430;
   animation: help-glow 1.6s ease-in-out infinite alternate;
@@ -1918,3 +1917,20 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 @media (prefers-reduced-motion: reduce) {
   #help.glow { animation: none; box-shadow: 0 0 0 4px rgba(244, 196, 48, 0.6); }
 }
+
+/* --- Pause (pause.js): the same window for everyone --- */
+#paused {
+  position: fixed;
+  inset: 0;
+  z-index: 26; /* above everything, end screen included */
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+#paused-picture { margin: 4px 0 0; font-size: 56px; line-height: 1; }
+#paused-title { margin: 8px 0 0; font-size: 26px; }
+#paused-who { margin: 8px 0 0; font-size: 18px; }
+
+#corner-buttons > div:last-child { gap: 8px; }
