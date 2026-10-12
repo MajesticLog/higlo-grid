@@ -11,7 +11,7 @@ const CARDS = [
   {
     picture: PICTURES.join(""),
     title: "The garden",
-    text: "Under the grass hide garden pictures, 8 of each. They stay in the same places all game.",
+    text: "Under the grass hide garden pictures. They stay in the same places all game.",
   },
   {
     picture: "👀 🌷 🐌",

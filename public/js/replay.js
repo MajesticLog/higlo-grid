@@ -2,7 +2,8 @@
 // back in order so everyone can follow what happened: "3, 2, 1", then each
 // player walks to their square, one after another, and the picture under it
 // shows (popping above them) for a moment before the grass covers it again.
-// The clue card or the night comes after. Someone who arrives mid-replay just
+// After a miss, the squares they should have found turn over too. The clue
+// card or the night comes after. Someone who arrives mid-replay just
 // sees the result.
 //
 // The round's transaction stores game.replay: {tag, actions, success, ...},
@@ -14,6 +15,8 @@ export const COUNT_MS = 650; // each of 3, 2, 1
 export const STEP_MS = 220; // a circle walking one square
 export const PAUSE_MS = 350; // between one player's walk and the next
 export const SHOW_MS = 2200; // how long a chosen square shows its picture
+export const MISSED_MS = 3000; // after a miss: how long the missed squares show
+const MISSED_STAGGER_MS = 150; // the missed squares turn one after another
 
 let current = null; // the replay being played: its timeline
 let ticker = null;
@@ -44,8 +47,15 @@ export function updateReplay(arriving) {
     if (!shown.has(landing)) shown.set(landing, landed);
     t = landed + PAUSE_MS;
   }
-  const end = Math.max(t, ...[...shown.values()].map((at) => at + SHOW_MS));
-  current = { tag: replay.tag, start, end, shown, walks, replay, fresh: !arriving };
+  // After a miss, once everyone has walked: where the picture was.
+  const missed = new Map(); // "x_y" -> when it turns over
+  (replay.missed ?? []).forEach((k, i) => missed.set(k, t + i * MISSED_STAGGER_MS));
+  const end = Math.max(
+    t,
+    ...[...shown.values()].map((at) => at + SHOW_MS),
+    ...[...missed.values()].map((at) => at + MISSED_MS - MISSED_STAGGER_MS * (missed.size - 1)),
+  );
+  current = { tag: replay.tag, start, end, shown, missed, walks, replay, fresh: !arriving };
   if (replayActive() && !ticker) {
     ticker = setInterval(() => {
       if (!replayActive()) {
@@ -78,6 +88,20 @@ export function pictureAge(k) {
   const age = performance.now() - at;
   return age >= 0 && age < SHOW_MS ? age : null;
 }
+
+// A missed square turned over right now: how long it has shown (ms), and how
+// long it stays; or null.
+export function missedAge(k) {
+  if (!replayActive()) return null;
+  const at = current.missed.get(k);
+  if (at === undefined) return null;
+  const age = performance.now() - at;
+  return age >= 0 ? { age, life: current.end - at } : null;
+}
+
+// True while the missed squares are showing (for the status bar).
+export const showingMissed = () =>
+  replayActive() && [...current.missed.values()].some((at) => performance.now() >= at);
 
 // Where a player's circle is in the replay: still at the start, on the way,
 // or landed. Null when there's no replay for them.

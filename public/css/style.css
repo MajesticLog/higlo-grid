@@ -104,7 +104,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   50%      { opacity: 1;    transform: scale(1.1); }
 }
 
-/* 7 x 7 squares (SIZE in session.js); the grid fits the smaller side of the screen. */
+/* 5 x 5 to 7 x 7 squares (--size, set from SIZE in session.js); the grid fits the smaller side of the screen. */
 #grid {
   --size: 7;
   width: var(--board);
@@ -115,15 +115,18 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   grid-template-rows: repeat(var(--size), 1fr);
   /* Tall, unkept grass covers every square that hasn't been turned over: one
      seamless texture stretched over the whole field (CC0, Grass_03 from
-     "Tileable Grass Textures - Set 1" by Cethiel, OpenGameArt), under faint
-     grid lines.
+     "Tileable Grass Textures - Set 1" by Cethiel, OpenGameArt), under grid
+     lines: a dark groove with a light edge, so the squares read clearly.
      Turned-over squares are short grass (.tile). */
   background-color: #6b8e23;
   background-image:
-    linear-gradient(to right, rgba(20, 50, 10, 0.35) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(20, 50, 10, 0.35) 1px, transparent 1px),
+    linear-gradient(to right, rgba(20, 45, 10, 0.6) 2px, rgba(255, 255, 255, 0.22) 2px 3px, transparent 3px),
+    linear-gradient(to bottom, rgba(20, 45, 10, 0.6) 2px, rgba(255, 255, 255, 0.22) 2px 3px, transparent 3px),
     url("/img/grass-tall.webp");
-  background-size: calc(100% / 7) calc(100% / 7), calc(100% / 7) calc(100% / 7), 100% 100%;
+  background-size:
+    calc(100% / var(--size)) calc(100% / var(--size)),
+    calc(100% / var(--size)) calc(100% / var(--size)),
+    100% 100%;
   border: 3px solid #689f38;
   border-radius: 6px;
   position: relative; /* anchors the wolf */
@@ -139,10 +142,13 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* A square out of the tall grass: short grass (img/grass-short.svg), cut a
    little lower than the tall grass around it. A square a sheep has grazed
-   looks like this; a square showing its picture (.tile.pic) draws a pale card
-   over it. The night shade goes on top. */
+   looks like this, and so does the back of a picture card (.card-back). The
+   night shade goes on top. */
 .tile {
   margin: 3%;
+}
+
+.tile, .card-back {
   border-radius: 10%;
   background-color: #8bc34a;
   background-image:
@@ -161,18 +167,51 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   pointer-events: none;
 }
 
-/* Squares turned over while you watch: the short grass grows into place
-   from the middle of the square, with a little bounce. (A flip used to show
-   plain green blocks squeezed into thin rectangles.)
-   0.6s; keep in sync with FLIP_MS in render.js. */
-.tile.flip {
-  animation: flip 0.6s ease-out both;
+/* A picture card (the flash, the replay): short grass on the back, the
+   picture on a pale front. It turns face up like a playing card, stays, then
+   turns face down; render.js sets both animations' delays (card-down is 0.5s,
+   keep in sync with TURN_DOWN_MS). */
+.card {
+  margin: 3%;
+  perspective: 300px;
+  container-type: inline-size;
 }
 
-@keyframes flip {
-  0%   { transform: scale(0.2); opacity: 0; }
-  60%  { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1); }
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: card-up 0.6s ease-out both, card-down 0.5s ease-in forwards;
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-front {
+  border-radius: 10%;
+  background: #fffdf5;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.card-front .icon { font-size: 64cqi; }
+.card-back { transform: rotateY(180deg); }
+
+@keyframes card-up {
+  0%   { transform: rotateY(180deg) scale(1); }
+  50%  { transform: rotateY(90deg) scale(1.12); }
+  100% { transform: rotateY(0deg) scale(1); }
+}
+
+@keyframes card-down {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(180deg); }
 }
 
 /* A square someone picked: a plain dashed ring, so it doesn't say who. */
@@ -239,7 +278,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile.flip { animation: none; }
+  .card-inner { animation: none; }
   .pop .icon { animation: fade-out 2s ease-in both !important; }
 }
 
@@ -1629,21 +1668,22 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 /* --- Memory garden (v4) --- */
-/* A square showing its picture: during the flash, or when chosen in the
-   replay. A pale card so the picture reads clearly. */
-.tile.pic {
-  background: #fffdf5;
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12);
-}
-
-.tile.pic .icon { font-size: 64cqi; }
-
 /* In the replay: the right picture glows green; the others stay plain. */
-.tile.pic.right {
+.card.right .card-front {
   box-shadow: 0 0 0 3px #43a047, 0 0 12px 4px rgba(67, 160, 71, 0.6);
 }
 
-.tile.pic.wrong { opacity: 0.85; }
+.card.wrong { opacity: 0.85; }
+
+/* After a miss: where the picture was, in a gently pulsing gold ring. */
+.card.missed .card-front {
+  animation: missed-ring 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes missed-ring {
+  from { box-shadow: 0 0 0 3px #ffb300, 0 0 4px 2px rgba(255, 179, 0, 0.4); }
+  to   { box-shadow: 0 0 0 3px #ffb300, 0 0 14px 6px rgba(255, 179, 0, 0.7); }
+}
 
 /* The card with the picture to find, in the status bar. */
 #target {

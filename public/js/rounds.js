@@ -11,17 +11,20 @@
 //    The replay (replay.js) shows each player walking and their square's
 //    picture, then the grass covers it again.
 import { update, runTransaction } from "./firebase.js";
-import { SIZE, sessionRef, myRef, myId } from "./session.js";
+import { SIZE, sizeFor, sessionRef, myRef, myId } from "./session.js";
 import { state, rememberPosition } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
-import { key, now, PICTURES, CENTRE_KEY, checkEnd, nextGuess, currentMemory, cluesOf } from "./game.js";
+import { key, now, PICTURES, newBoard, checkEnd, nextGuess, currentMemory, cluesOf } from "./game.js";
 import { playBleat, playMunch } from "./sound.js";
-import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS } from "./replay.js";
+import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS, MISSED_MS } from "./replay.js";
 
 export const FLASH_SQUARES = 6;
 // Of the flashed squares, how many show the kind that will be asked: what the
 // family needs to succeed, plus one (2 for 1-2 players, 3 for 3-4...).
 const flashTargets = (players) => Math.ceil(players / 2) + 1;
+// Of the flashed squares, how many were shown in an earlier flash, so some
+// places come back and stick (playtest 5). The others are new when possible.
+const FLASH_REPEATS = 2;
 const BUSY_WAIT_MS = 30000; // the next flash waits for open windows, but not forever
 export const FLASH_MS = 4000;
 export const PAUSE_MS = 1200; // after the flash, before the card: nobody moves yet
@@ -96,10 +99,13 @@ export function maybeStartRound() {
     const kinds = PICTURES.map((_, i) => i).filter((i) => i !== g.lastTarget);
     const target = kinds[Math.floor(Math.random() * kinds.length)];
     const squares = Object.keys(g.board);
-    const shuffle = (list) => list.sort(() => Math.random() - 0.5);
-    const rightCount = flashTargets(state.players.length);
-    const right = shuffle(squares.filter((k) => g.board[k] === target)).slice(0, rightCount);
-    const others = shuffle(squares.filter((k) => g.board[k] !== target)).slice(0, FLASH_SQUARES - rightCount);
+    const rightSquares = squares.filter((k) => g.board[k] === target);
+    const rightCount = Math.min(flashTargets(state.players.length), rightSquares.length);
+    const before = g.flashed ?? {}; // every square flashed so far this game
+    const repeatsRight = Math.floor(Math.random() * (FLASH_REPEATS + 1));
+    const right = flashPick(rightSquares, rightCount, before, repeatsRight);
+    const others = flashPick(squares.filter((k) => g.board[k] !== target), FLASH_SQUARES - rightCount, before, FLASH_REPEATS - repeatsRight);
+    g.flashed = { ...before, ...Object.fromEntries([...right, ...others].map((k) => [k, true])) };
     g.round = (g.round ?? 0) + 1;
     g.phase = "flash";
     // 3, 2, 1 first, so everyone is looking when it flashes.
@@ -113,10 +119,23 @@ export function maybeStartRound() {
   }, { applyLocally: false }).finally(() => { starting = false; });
 }
 
+const shuffle = (list) => list.sort(() => Math.random() - 0.5);
+
+// `count` squares from `pool` for the flash: `repeats` of them flashed before
+// (if there are that many), the rest new ones, then old ones once every
+// square has been shown.
+function flashPick(pool, count, before, repeats) {
+  const old = shuffle(pool.filter((k) => before[k]));
+  const fresh = shuffle(pool.filter((k) => !before[k]));
+  const again = old.splice(0, Math.min(repeats, count));
+  return [...again, ...fresh, ...old].slice(0, count);
+}
+
 // --- Before the first round: "Ready to play?" ---
 // Everyone can walk around freely and read the rules (❓). The first round
 // starts once everyone in the garden is ready, or a minute after the first
-// one is (so someone who wandered off can't hold everyone up).
+// one is (so someone who wandered off can't hold everyone up). The board is
+// drawn then, at the size for the family there; it stays all game.
 const START_WAIT_MS = 60000;
 
 function walkFreely(x, y) {
@@ -149,10 +168,12 @@ function maybeStartGame() {
   runTransaction(gameRef, (g) => {
     if (!g || g.id !== game.id || g.started !== false || !due(g)) return;
     g.started = true;
+    g.size = sizeFor(state.players.length);
+    g.board = newBoard(g.size);
     g.nextRoundAt = now() + 1000;
     g.updatedAt = now();
     return g;
-  }).finally(() => { startingGame = false; });
+  }, { applyLocally: false }).finally(() => { startingGame = false; }); // a random board: only the server's
 }
 
 // --- Sheep: one per player per game, placed during the choosing phase ---
@@ -275,7 +296,7 @@ export function maybeResolve() {
       const to = pick?.ready ? { x: pick.x, y: pick.y } : { x: p.x, y: p.y };
       moves[p.id] = to;
       const k = key(to.x, to.y);
-      if (k !== CENTRE_KEY) chosen.add(k);
+      chosen.add(k);
       actions.push({ kind: "walk", player: p.id, from: { x: p.x, y: p.y }, path: [...pathBetween(p, to), k] });
     }
     // Found: half the players, rounded up, on right squares, all different.
@@ -298,12 +319,15 @@ export function maybeResolve() {
       target,
       memory: success ? memory : null,
       clue: success && memory ? cluesOf(game, memory) - 1 : null, // which clue was just earned (0, 1, 2)
+      // A miss: the flashed squares with the picture that nobody chose, shown
+      // at the end of the replay.
+      missed: success ? null : (game.flash.squares ?? []).filter((k) => game.board[k] === target && !chosen.has(k)),
     };
     game.lastTarget = target;
     game.phase = "result";
     // The next flash after everyone has seen the replay and the result.
     const walks = actions.reduce((t, a) => t + a.path.length * STEP_MS + WALK_PAUSE_MS, 0);
-    game.nextRoundAt = now() + 3 * COUNT_MS + walks + SHOW_MS + RESULT_MS;
+    game.nextRoundAt = now() + 3 * COUNT_MS + walks + (success ? SHOW_MS : MISSED_MS) + RESULT_MS;
     game.picks = null;
     game.grazing = null;
     game.deadline = null;

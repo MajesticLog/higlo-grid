@@ -1,10 +1,10 @@
 // The memory garden (docs/game-design.md, v4): one game at a time per family
-// link. Under the grass of the 7x7 field, 48 garden pictures (6 kinds, 8 of
-// each) stay in place all game. Rounds (rounds.js) flash some of them, ask
+// link. Under the grass, garden pictures (6 kinds, the same number of each)
+// stay in place all game; the garden's size follows the family. Rounds (rounds.js) flash some of them, ask
 // for one kind, and reward the family with the next clue to one memory at a
 // time. Missed rounds bring the night.
 import { db, ref, update, onValue, runTransaction } from "./firebase.js";
-import { SIZE, CENTRE, sessionRef, myRef } from "./session.js";
+import { SIZE, sizeFor, setSize, sessionRef, myRef } from "./session.js";
 import { state, rememberPosition } from "./state.js";
 import { render } from "./render.js";
 import { applyMyMove, maybeResolve, maybeStartRound } from "./rounds.js";
@@ -16,35 +16,48 @@ import { CLUES, myMemoryId, backToLobby } from "./lobby.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const PICTURES = ["🌸", "🌷", "🐌", "🐛", "🍄", "🐦"]; // sakura, tulip, snail, caterpillar, mushroom, bird
-const EACH = 8; // of each picture: 6 x 8 = 48, every square but the centre
 export const NIGHT_STEPS = 5; // missed rounds before the wolf comes
 const FIRST_ROUND_MS = 4000; // a moment to settle in before the first flash
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
-const VERSION = 4; // the memory garden
+const VERSION = 5; // the memory garden, with a garden sized for the family
 
 const gameRef = sessionRef("game");
 const memoriesRef = sessionRef("memories");
 
 // Squares are keyed "x_y" (database keys can't contain dots).
 export const key = (x, y) => `${x}_${y}`;
-export const CENTRE_KEY = key(CENTRE, CENTRE);
 
 // Server time, so devices with different clocks agree on when things happen.
 let serverOffset = 0;
 onValue(ref(db, ".info/serverTimeOffset"), (snap) => { serverOffset = snap.val() || 0; });
 export const now = () => Date.now() + serverOffset;
 
-// Everyone starts together on the centre square (drawn at the size players
-// have when they share a square). It hides no picture.
-export const spawnSquare = () => ({ x: CENTRE, y: CENTRE });
-
-// The pictures, shuffled once per game over every square but the centre.
-function newBoard() {
+// The middle of the garden: the centre square (5 x 5, 7 x 7), or the middle
+// four (6 x 6 has no centre).
+function middleSquares(size) {
+  const low = Math.floor((size - 1) / 2);
+  const high = Math.floor(size / 2);
   const squares = [];
-  for (let y = 0; y < SIZE; y++) {
-    for (let x = 0; x < SIZE; x++) if (key(x, y) !== CENTRE_KEY) squares.push(key(x, y));
+  for (let y = low; y <= high; y++) for (let x = low; x <= high; x++) squares.push({ x, y });
+  return squares;
+}
+
+// Everyone starts together in the middle (drawn at the size players have when
+// they share a square); on 6 x 6, on one of the middle four.
+export function spawnSquare() {
+  const middle = middleSquares(SIZE);
+  return { ...middle[Math.floor(Math.random() * middle.length)] };
+}
+
+// The pictures, shuffled once per game, the same number of each: on 5 x 5
+// and 7 x 7 every square but the centre (24 or 48), on 6 x 6 every square (36).
+export function newBoard(size) {
+  const centre = size % 2 === 1 ? key((size - 1) / 2, (size - 1) / 2) : null;
+  const squares = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) if (key(x, y) !== centre) squares.push(key(x, y));
   }
-  const kinds = PICTURES.flatMap((_, kind) => Array(EACH).fill(kind));
+  const kinds = PICTURES.flatMap((_, kind) => Array(squares.length / PICTURES.length).fill(kind));
   for (let i = kinds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
@@ -55,14 +68,14 @@ function newBoard() {
 function newGame() {
   return {
     id: now().toString(36),
-    version: VERSION, // a game from an earlier design (v3 field) gets replaced
-    size: SIZE, // and one from another grid size
+    version: VERSION, // a game from an earlier design gets replaced
     status: "playing",
     updatedAt: now(),
     nextEventAt: firstEventAt(now()), // something crossing the sky (events.js)
     night: 0, // missed rounds
     round: 0,
-    board: newBoard(), // "x_y" -> picture (index in PICTURES)
+    // board ("x_y" -> picture, index in PICTURES) and size: set when the
+    // first round starts, for the family there then (rounds.js).
     started: false, // false until everyone has said "Ready to play" (rounds.js)
     playReady: {}, // playerId -> true
     phase: "result", // "flash" while a round is on (flash, pause, choosing); "result" between rounds
@@ -98,12 +111,12 @@ export function checkEnd(game) {
 }
 
 // Start a game if there isn't one (or the last one went quiet, or is from
-// another grid size), and bring my memory into it. One transaction, so two
+// an earlier design), and bring my memory into it. One transaction, so two
 // devices can't create two games or enter a memory twice.
 export function syncGame() {
   if (!state.joined) return;
   runTransaction(gameRef, (game) => {
-    const fresh = !game || game.version !== VERSION || game.size !== SIZE || now() - (game.updatedAt ?? 0) > IDLE_MS;
+    const fresh = !game || game.version !== VERSION || now() - (game.updatedAt ?? 0) > IDLE_MS;
     if (fresh) game = newGame();
     game.entered ??= {};
     game.queue ??= [];
@@ -117,6 +130,28 @@ export function syncGame() {
     if (!fresh && !entering) return; // nothing to do: abort
     return game;
   }, { applyLocally: false }); // a random board: only show the one the server kept
+}
+
+// The garden's size: the game's, once its board is drawn; before that, the
+// size for the family in the garden now.
+export const gridSize = (game, players) => (game?.board && game.size ? game.size : sizeFor(players));
+
+// Keep the grid at the right size, and my circle on it (render.js calls this
+// before drawing). A garden that shrank while waiting brings me to the
+// nearest square still there.
+const gridEl = document.getElementById("grid");
+export function fitGrid() {
+  if (!state.game?.board && state.players.length === 0) return; // players not loaded yet
+  const size = gridSize(state.game, state.players.length);
+  if (size !== SIZE) setSize(size);
+  gridEl.style.setProperty("--size", size);
+  const x = Math.min(state.me.x, size - 1);
+  const y = Math.min(state.me.y, size - 1);
+  if (x === state.me.x && y === state.me.y) return;
+  state.me.x = x;
+  state.me.y = y;
+  if (state.joined) update(myRef, { x, y });
+  rememberPosition();
 }
 
 // "New game": replace the game I'm looking at. If someone else already
@@ -151,9 +186,10 @@ onValue(gameRef, (snap) => {
   maybeStartRound();
 });
 
-// A new game: everyone back to the centre square.
+// A new game: everyone back to the middle, of a garden sized for who's here.
 function backToStart() {
   if (!state.joined) return;
+  fitGrid();
   ({ x: state.me.x, y: state.me.y } = spawnSquare());
   update(myRef, { x: state.me.x, y: state.me.y });
   rememberPosition();

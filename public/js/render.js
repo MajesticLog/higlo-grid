@@ -1,19 +1,22 @@
 // Drawing: everything on screen comes from `state`.
 import { myId } from "./session.js";
 import { state } from "./state.js";
-import { now, NIGHT_STEPS, PICTURES, currentMemory, cluesOf } from "./game.js";
+import { now, NIGHT_STEPS, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
+import { SIZE } from "./session.js";
 import {
-  READY_WAIT_MS, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
+  READY_WAIT_MS, FLASH_MS, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
 import {
   updateReplay, setReplayTick, replayActive, replayIsFresh, countdown, pictureAge, replayPosition, nightShown,
+  SHOW_MS, missedAge, showingMissed,
 } from "./replay.js";
 import { CLUES } from "./lobby.js";
 import { renderPause } from "./pause.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const POP_MS = 2000; // must match the pop-up animation in style.css
+const TURN_DOWN_MS = 500; // must match card-down in style.css
 
 const grid = document.getElementById("grid");
 // Test aid: add ?peek to the link to see every picture under the grass.
@@ -23,6 +26,7 @@ setReplayTick(() => render());
 const countdownEl = document.getElementById("countdown");
 
 export function render() {
+  fitGrid(); // the garden's size can change before the first round
   // A new round result: start its replay (unless I've only just arrived).
   if (state.game) {
     updateReplay(gameSeen !== state.game.id);
@@ -67,8 +71,9 @@ function cardForResult() {
 
 // The garden. Squares are tall grass (the grid's own background) except:
 // the flash (6 pictures for a few seconds), a chosen square showing its
-// picture during the replay, and squares a sheep has grazed (short grass).
-const flashSeen = new Map(); // "round:x_y" -> when this device first drew it in the flash
+// picture during the replay, after a miss the squares that had the picture,
+// and squares a sheep has grazed (short grass). Pictures are cards that turn
+// over, then turn back.
 let pops = []; // pictures to pop above the players: [{k, icon, age}]
 
 function drawTiles() {
@@ -78,11 +83,8 @@ function drawTiles() {
   const phase = roundPhase();
   // The flash.
   if (phase === "flash") {
-    for (const k of game.flash.squares ?? []) {
-      const id = `${game.round}:${k}`;
-      if (!flashSeen.has(id)) flashSeen.set(id, performance.now());
-      tile(k, "pic flip", PICTURES[game.board[k]], performance.now() - flashSeen.get(id));
-    }
+    const age = now() - game.flash.at; // the same moment on every device
+    for (const k of game.flash.squares ?? []) card(k, "", PICTURES[game.board[k]], age, FLASH_MS);
   }
   // Squares a sheep has grazed this round: not the picture, so short grass.
   if (phase === "choose") {
@@ -95,8 +97,12 @@ function drawTiles() {
       const age = pictureAge(k);
       if (age === null) continue;
       const right = game.board[k] === target;
-      tile(k, `pic flip ${right ? "right" : "wrong"}`, PICTURES[game.board[k]], age);
+      card(k, right ? "right" : "wrong", PICTURES[game.board[k]], age, SHOW_MS);
       if (age < POP_MS) pops.push({ k, icon: PICTURES[game.board[k]], age });
+    }
+    for (const k of game.replay?.missed ?? []) {
+      const shown = missedAge(k);
+      if (shown) card(k, "missed", PICTURES[game.board[k]], shown.age, shown.life);
     }
   }
   if (!peek) return;
@@ -109,13 +115,31 @@ function drawTiles() {
   }
 }
 
-function tile(k, className, icon, age = Infinity) {
+// A picture as a card: it turns face up (card-up), shows for `life` ms, then
+// turns face down again (card-down). `age`: how long it has been showing, so
+// the turn carries on smoothly through redraws.
+function card(k, className, icon, age, life) {
+  const el = document.createElement("div");
+  el.className = `card ${className}`;
+  place(el, ...squareOf(k));
+  const inner = document.createElement("div");
+  inner.className = "card-inner";
+  inner.style.animationDelay = `${-age}ms, ${life - TURN_DOWN_MS - age}ms`;
+  const front = document.createElement("div");
+  front.className = "card-face card-front";
+  front.append(iconSpan(icon));
+  const back = document.createElement("div");
+  back.className = "card-face card-back";
+  inner.append(front, back);
+  el.append(inner);
+  grid.append(el);
+}
+
+// A square of short grass (grazed by a sheep).
+function tile(k, className) {
   const el = document.createElement("div");
   el.className = `tile ${className}`;
   place(el, ...squareOf(k));
-  if (icon) el.append(iconSpan(icon));
-  if (age < 600) el.style.animationDelay = `${-age}ms`; // keep the flip going through redraws
-  else el.classList.remove("flip");
   grid.append(el);
 }
 
@@ -228,9 +252,10 @@ function iconSpan(icon) {
   return el;
 }
 
+// Clamped, so a circle not yet moved onto a smaller grid doesn't add a column.
 function place(el, x, y) {
-  el.style.gridColumn = x + 1; // CSS grid lines start at 1
-  el.style.gridRow = y + 1;
+  el.style.gridColumn = Math.min(x, SIZE - 1) + 1; // CSS grid lines start at 1
+  el.style.gridRow = Math.min(y, SIZE - 1) + 1;
 }
 
 function animalSpan(animal) {
@@ -404,6 +429,7 @@ function renderStatus() {
   // During a replay, nothing else yet: not the wolf, not the end, not guessing.
   if (replayActive()) {
     showTarget(PICTURES[game.replay?.target] ?? "");
+    if (showingMissed()) return say("🔎 Here's where they were", "The night falls a little");
     return say("👀 Watch what happens…", "Each player shows the square they chose");
   }
   if (game?.status === "lost") {

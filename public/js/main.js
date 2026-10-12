@@ -1,8 +1,8 @@
 // Entry point: lobby, then join the field, keep the player list, wire up the controls.
 import { db, ref, get, set, update, remove, onValue, onDisconnect } from "./firebase.js";
-import { SIZE, sessionRef, playersRef, myRef, myId } from "./session.js";
+import { SIZE, setSize, sessionRef, playersRef, myRef, myId } from "./session.js";
 import { runLobby } from "./lobby.js";
-import { syncGame, spawnSquare, now } from "./game.js";
+import { syncGame, spawnSquare, gridSize, now } from "./game.js";
 import { state, rememberPosition, savedPosition } from "./state.js";
 import { render } from "./render.js";
 import { pickSquare, movePick, maybeResolve, ready } from "./rounds.js";
@@ -29,6 +29,10 @@ const gameId = gameNow.val()?.id;
 players.forEach((child) => {
   if (child.key !== myId && child.val()?.tab && child.val().tab === state.me.tab) remove(child.ref);
 });
+// The garden's size with me in it, so I start in its middle.
+let count = 1;
+players.forEach((child) => { if (child.val()?.tab !== state.me.tab) count += 1; });
+setSize(gridSize(gameNow.val(), count));
 Object.assign(state.me, savedPosition(gameId) ?? spawnSquare());
 rememberPosition(gameId);
 
