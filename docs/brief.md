@@ -74,3 +74,4 @@ By **[Wed 14 October, 12:00]**, email us:
 ## Help
 
 If you get stuck on Firebase, Claude Code or deploying, email us. We'd much rather help than have you lose time on setup.
+

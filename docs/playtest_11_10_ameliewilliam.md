@@ -15,3 +15,12 @@ Amélie & William, Paris, France, 20:18 - 20:59
 - turn all the tiles players move on on their way to the selected square
 - all players have the option to say yes someone guessed it. They shouldn't. That popup also shows unrelated previous answers from players.
 - this is about communication and interactions: we should have the option to type a short message that would appear as a pop in, fade out bubble that all can read.
+
+
+**PLAYTEST 3, follow-up**
+
+William, conversation the morning after, 12 October 2026
+
+Guessing the memory is fun.
+There is no real incentive to move: every square is the same until it's turned over.
+Suggested a Memory game, played together: the youngest and the oldest players sometimes have a weaker memory, so remembering as a group helps them.
