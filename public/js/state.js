@@ -20,7 +20,7 @@ const POSITION_KEY = `higlo:${sessionId}:position`;
 export function rememberPosition(gameId = state.game?.id) {
   try {
     sessionStorage.setItem(POSITION_KEY, JSON.stringify({ game: gameId, x: state.me.x, y: state.me.y }));
-  } catch { /* private mode: a refresh starts on the flower row */ }
+  } catch { /* private mode: a refresh starts on the centre square */ }
 }
 
 export function savedPosition(gameId) {

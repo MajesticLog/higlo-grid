@@ -40,7 +40,7 @@ main, #lobby, #share {
   z-index: 1;
 }
 
-/* --- The sky: one step darker per trap (data-night 0..6, set in render.js) --- */
+/* --- The sky: one step darker per missed round (data-night 0..6, set in render.js) --- */
 body[data-night="1"] { background: #f6e7c8; }
 body[data-night="2"] { background: #f3c99b; }
 body[data-night="3"] { background: #d98c7a; }
@@ -137,20 +137,16 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   -webkit-user-select: none;
 }
 
-/* A turned-over square: bare earth with what was underneath. */
-/* A turned-over square: short, mown grass, a little lighter than the tall
-   grass so it reads as "done". Darkens with the night. */
-/* A turned-over square: short grass (img/grass-short.svg), with little
-   flowers on some (img/flowers-N.svg), cut a little lower than the tall
-   grass around it. The night shade goes on top. */
+/* A square out of the tall grass: short grass (img/grass-short.svg), cut a
+   little lower than the tall grass around it. A square a sheep has grazed
+   looks like this; a square showing its picture (.tile.pic) draws a pale card
+   over it. The night shade goes on top. */
 .tile {
-  --flowers: none;
   margin: 3%;
   border-radius: 10%;
   background-color: #8bc34a;
   background-image:
     linear-gradient(rgba(25, 35, 70, calc(var(--night, 0) * 0.55)), rgba(25, 35, 70, calc(var(--night, 0) * 0.55))),
-    var(--flowers),
     url("/img/grass-short.svg");
   background-size: 100% 100%;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), inset 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -165,59 +161,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   pointer-events: none;
 }
 
-/* A found memory: framed in its author's colour. Tap it to read it again. */
-.tile.memory {
-  --c: #999;
-  border: 3px solid var(--c);
-  background: #fff;
-}
-
-/* Little flowers on short grass: four patterns of coloured dots. */
-.tile.flower.f0 { --flowers: url("/img/flowers-1.svg"); }
-.tile.flower.f1 { --flowers: url("/img/flowers-2.svg"); }
-.tile.flower.f2 { --flowers: url("/img/flowers-3.svg"); }
-.tile.flower.f3 { --flowers: url("/img/flowers-4.svg"); }
-
-/* A found clue: a 🔍 on a pale card framed in the author's colour, their
-   animal small at the top left, the clue's number at the bottom right.
-   Flat and square, so it never looks like a player. Tap it to reread. */
-.tile.clue {
-  --c: #999;
-  position: relative;
-  margin: 6%;
-  border-radius: 14%;
-  border: 3px solid var(--c);
-  background: #fffdf5;
-  box-shadow: none;
-}
-
-.tile.clue .icon { font-size: 46cqi; }
-
-.clue-animal {
-  position: absolute;
-  left: -10%;
-  top: -10%;
-  font-size: 34cqi;
-  line-height: 1;
-  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
-}
-
-.clue-number {
-  position: absolute;
-  right: -8%;
-  bottom: -8%;
-  min-width: 36cqi;
-  height: 36cqi;
-  border-radius: 999px;
-  background: var(--c);
-  color: #fff;
-  font-size: 26cqi;
-  font-weight: 700;
-  line-height: 36cqi;
-  text-align: center;
-  box-shadow: 0 0 0 2px #fff;
-}
-
 /* Squares turned over while you watch: the short grass grows into place
    from the middle of the square, with a little bounce. (A flip used to show
    plain green blocks squeezed into thin rectangles.)
@@ -230,17 +173,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   0%   { transform: scale(0.2); opacity: 0; }
   60%  { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1); }
-}
-
-/* My sheep's square: tap it again to turn the line. */
-.turn-hint {
-  position: absolute;
-  right: 4%;
-  top: 0;
-  font-size: 40cqi;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 0 3px #000;
 }
 
 /* A square someone picked: a plain dashed ring, so it doesn't say who. */
@@ -304,33 +236,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   48%     { transform: translateY(-65%) scale(1.1); }
   80%     { transform: translateY(-85%) scale(1.1); opacity: 1; }
   100%    { transform: translateY(-105%) scale(1.1); opacity: 0; }
-}
-
-/* Ladybirds and crickets fly off, wobbling; --dir is 1 (right) or -1 (left). */
-.pop.fly .icon {
-  animation: fly-away 2.2s ease-in both;
-}
-
-@keyframes fly-away {
-  0%, 22% { transform: translate(0, 0) scale(0.5); opacity: 0; }
-  30%     { transform: translate(0, -20%) scale(1.2); opacity: 1; }
-  50%     { transform: translate(calc(var(--dir) * 50%), -90%) rotate(calc(var(--dir) * -15deg)) scale(1.1); }
-  70%     { transform: translate(calc(var(--dir) * 110%), -150%) rotate(calc(var(--dir) * 12deg)) scale(1.1); opacity: 1; }
-  100%    { transform: translate(calc(var(--dir) * 220%), -280%) rotate(0) scale(1); opacity: 0; }
-}
-
-/* Caterpillars and ants scurry off sideways, facing the way they go. */
-.pop.walk .icon {
-  animation: walk-away 2.2s linear both;
-}
-
-@keyframes walk-away {
-  0%, 22% { transform: translate(0, 0) scaleX(calc(var(--dir) * -1)); opacity: 0; }
-  30%     { transform: translate(0, -8%) scaleX(calc(var(--dir) * -1)); opacity: 1; }
-  45%     { transform: translate(calc(var(--dir) * 45%), 0) scaleX(calc(var(--dir) * -1)); }
-  60%     { transform: translate(calc(var(--dir) * 90%), -8%) scaleX(calc(var(--dir) * -1)); }
-  75%     { transform: translate(calc(var(--dir) * 135%), 0) scaleX(calc(var(--dir) * -1)); opacity: 1; }
-  100%    { transform: translate(calc(var(--dir) * 230%), -8%) scaleX(calc(var(--dir) * -1)); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1018,24 +923,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   .firefly { opacity: 0.8; }
 }
 
-/* --- Sheep --- */
-/* A square a sheep refused: something is hiding there. */
-.sniffed {
-  display: grid;
-  place-items: center;
-  container-type: inline-size;
-  pointer-events: none;
-}
-
-.sniffed .icon {
-  font-size: 50cqi;
-  filter: drop-shadow(0 0 2px #fff);
-}
-
-/* Picks: a sheep's 🐑 on the square tapped. */
-.pick .icon {
-  font-size: 50cqi;
-}
+/* --- Picks: the squares chosen this round --- */
 
 .pick {
   display: grid;
@@ -1043,100 +931,9 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   container-type: inline-size;
 }
 
-/* The sheep trotting along its line of five squares, 0.8s per square
-   (SHEEP_STEP_MS in render.js), then a moment to fade. */
-.graze {
-  position: relative;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.walker {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: grid;
-  place-items: center;
-  container-type: inline-size;
-  animation: graze-h 4.8s linear both;
-}
-
-.graze.h .walker { width: calc(100% / 5); height: 100%; }
-.graze.v .walker { width: 100%; height: calc(100% / 5); animation-name: graze-v; }
-
-.walker .icon {
-  font-size: 80cqi;
-  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
-  animation: munch 0.4s ease-in-out infinite alternate;
-}
-
-/* Sheep emoji face left: flip it when it walks to the right. Going left or
-   up, it walks the lane backwards. */
-.graze.face-right .walker .icon { transform: scaleX(-1); }
-.graze.reverse .walker { animation-direction: reverse; }
-
-/* Five squares (SHEEP_LENGTH), 0.8 s each: on the first square at 1/6 of
-   the walk, the last at 5/6, then a moment to fade. */
-@keyframes graze-h {
-  0%     { transform: translateX(0); opacity: 0; }
-  6%     { opacity: 1; }
-  16.7%  { transform: translateX(0); }
-  33.3%  { transform: translateX(100%); }
-  50%    { transform: translateX(200%); }
-  66.7%  { transform: translateX(300%); }
-  83.3%  { transform: translateX(400%); opacity: 1; }
-  100%   { transform: translateX(400%); opacity: 0; }
-}
-
-@keyframes graze-v {
-  0%     { transform: translateY(0); opacity: 0; }
-  6%     { opacity: 1; }
-  16.7%  { transform: translateY(0); }
-  33.3%  { transform: translateY(100%); }
-  50%    { transform: translateY(200%); }
-  66.7%  { transform: translateY(300%); }
-  83.3%  { transform: translateY(400%); opacity: 1; }
-  100%   { transform: translateY(400%); opacity: 0; }
-}
-
 @keyframes munch {
   from { translate: 0 0; }
   to   { translate: 0 -6%; }
-}
-
-/* "Baa?" where the sheep refuses to go, as it gets there. */
-.baa {
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-  z-index: 6;
-}
-
-.baa span {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #fff;
-  color: #222;
-  font-size: max(12px, 2vmin);
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  animation: baa 1.6s ease-out both;
-}
-
-@keyframes baa {
-  0%   { transform: translateY(0) scale(0.4); opacity: 0; }
-  20%  { transform: translateY(-60%) scale(1.15); opacity: 1; }
-  30%  { transform: translateY(-55%) scale(1) rotate(-6deg); }
-  40%  { transform: translateY(-55%) rotate(6deg); }
-  50%  { transform: translateY(-55%) rotate(0); }
-  80%  { opacity: 1; }
-  100% { transform: translateY(-80%); opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .walker, .walker .icon { animation: none; }
-  .walker { opacity: 0.8; }
 }
 
 /* --- Random events crossing the sky (events.js) ---
@@ -1381,7 +1178,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   20%, 80% { opacity: 1; }
 }
 
-/* --- Memory chest: a button in the top-right corner, and its panel --- */
+/* --- Memory chest: its count and its panel --- */
 
 #chest img {
   display: block;
@@ -1457,7 +1254,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   display: grid;
   gap: 4px;
 }
-
 
 /* --- Guessing a memory (guess.js): above the clue card, under the chest --- */
 #guess {
@@ -1553,8 +1349,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 .end-clues { font-size: 14px; color: #555; }
 
 /* --- How to play (rules.js) --- */
-/* ❓ in the top-left corner, matching the chest on the right. */
-
 #rules {
   position: fixed;
   inset: 0;
@@ -1616,28 +1410,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* Anchors the ↻ on my sheep's square. */
 .pick.mine { position: relative; }
-
-/* A clue someone walked past: 🔍 with a "!", not read yet. */
-.spotted { position: relative; }
-
-.spotted-bang {
-  position: absolute;
-  right: 8%;
-  top: 2%;
-  font-size: 40cqi;
-  font-weight: 900;
-  color: #ffeb3b;
-  text-shadow: 0 0 2px #000, 0 0 4px #000;
-}
-
-/* The way to my pick: small, light footprints. */
-.footstep {
-  margin: 38%;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-}
 
 /* --- Replay: 3, 2, 1 over the field before the moves play --- */
 #countdown {
@@ -1735,8 +1507,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   color: #fff;
   cursor: pointer;
 }
-
-/* 💡 under ❓ in the top-left corner. */
 
 #clues-panel {
   position: fixed;

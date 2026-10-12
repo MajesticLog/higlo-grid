@@ -1,8 +1,55 @@
-// Sounds made in the browser with the Web Audio API: no audio files, no
-// licences. Browsers only allow sound after a tap or key press, so the
-// audio starts on the first one. To mute it, use the device's or browser's
-// own sound controls (there's no button in the game).
+// Sounds: files in /sfx (easy to replace, see sfx/README.md), played with the
+// Web Audio API. Each sound can also be made in the browser (the functions
+// below), which is what plays if its file hasn't loaded. Browsers only allow
+// sound after a tap or key press, so the audio starts on the first one. To
+// mute it, use the device's or browser's own sound controls.
 let ctx = null;
+
+// The sound files, and how loud to play each (1 = as recorded). The files that
+// come with the game are quiet on purpose, to sit under a family call; a
+// louder replacement can be turned down here.
+const SOUNDS = {
+  fanfare: { file: "/sfx/fanfare.wav", volume: 1 }, // every memory found
+  howl: { file: "/sfx/howl.wav", volume: 1 }, // full night: the wolf
+  swoosh: { file: "/sfx/swoosh.wav", volume: 1 }, // hot-air balloon
+  caws: { file: "/sfx/caws.wav", volume: 1 }, // birds
+  rain: { file: "/sfx/rain.wav", volume: 1 }, // rain shower
+  hoot: { file: "/sfx/hoot.wav", volume: 1 }, // owl
+  twinkle: { file: "/sfx/twinkle.wav", volume: 1 }, // shooting star; a memory guessed
+  theremin: { file: "/sfx/theremin.wav", volume: 1 }, // UFO
+  bleat: { file: "/sfx/bleat.wav", volume: 1 }, // sheep
+  munch: { file: "/sfx/munch.wav", volume: 1 }, // sheep grazing
+  ding: { file: "/sfx/ding.wav", volume: 1 }, // someone joined
+};
+const buffers = {}; // name -> decoded sound, once loaded
+
+// Load every file once sound is allowed. Any that fails (offline, a bad
+// replacement) falls back to the generated sound.
+let loading = false;
+function loadSounds() {
+  if (loading || !ctx) return;
+  loading = true;
+  for (const [name, { file }] of Object.entries(SOUNDS)) {
+    fetch(file)
+      .then((response) => response.arrayBuffer())
+      .then((data) => ctx.decodeAudioData(data))
+      .then((decoded) => { buffers[name] = decoded; })
+      .catch(() => { /* the generated sound plays instead */ });
+  }
+}
+
+// Plays a sound's file if it's loaded; false if not (then generate it).
+function playFile(name) {
+  const decoded = buffers[name];
+  if (!decoded) return false;
+  const source = ctx.createBufferSource();
+  source.buffer = decoded;
+  const gain = ctx.createGain();
+  gain.gain.value = SOUNDS[name].volume;
+  source.connect(gain).connect(ctx.destination);
+  source.start();
+  return true;
+}
 
 // Browsers only count some gestures as permission to play: a key press, a
 // click, or a finger *lifting* (a finger touching down doesn't count). So
@@ -14,6 +61,7 @@ function unlock() {
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
   }
   if (ctx.state !== "running") ctx.resume().catch(() => {});
+  loadSounds();
 }
 for (const gesture of ["pointerup", "touchend", "click", "keydown"]) {
   document.addEventListener(gesture, unlock, { passive: true });
@@ -44,7 +92,7 @@ function note(freq, start, length, { type = "triangle", volume = 0.12, filter } 
 
 // A short, cheerful fanfare: G C E G ... E G.
 export function playTrumpet() {
-  if (!ready()) return;
+  if (!ready() || playFile("fanfare")) return;
   const t = ctx.currentTime + 0.05;
   const brass = { type: "sawtooth", volume: 0.08, filter: 1800 };
   for (const [freq, at, length] of [
@@ -55,7 +103,7 @@ export function playTrumpet() {
 
 // A soft, faraway howl: a gentle rise and fall with a little wobble.
 export function playHowl() {
-  if (!ready()) return;
+  if (!ready() || playFile("howl")) return;
   const t = ctx.currentTime + 0.05;
   const osc = ctx.createOscillator();
   const wobble = ctx.createOscillator();
@@ -80,7 +128,7 @@ export function playHowl() {
   wobble.stop(t + 2);
 }
 
-// --- Event sounds (events.js): short and soft, under the family's voices ---
+// --- Generated versions (the fallback), and event sounds (events.js) ---
 
 // A gain that rises, holds and falls: the shape of each sound.
 function envelope(t, peak, attack, hold, release) {
@@ -127,7 +175,7 @@ function osc(type, t, length) {
 
 // Hot-air balloon: a light swoosh, like a gust past the basket.
 export function playSwoosh() {
-  if (!ready()) return;
+  if (!ready() || playFile("swoosh")) return;
   const t = ctx.currentTime + 0.05;
   const band = filter("bandpass", 300, 1.5);
   band.frequency.setValueAtTime(300, t);
@@ -138,7 +186,7 @@ export function playSwoosh() {
 
 // Birds: three crow-like caws, raspy and falling.
 export function playCaws() {
-  if (!ready()) return;
+  if (!ready() || playFile("caws")) return;
   const start = ctx.currentTime + 0.05;
   [0, 0.42, 0.95].forEach((at, i) => {
     const t = start + at;
@@ -157,7 +205,7 @@ export function playCaws() {
 // Shower: gentle drops pattering on leaves (little "plinks" at random
 // pitches), over a very soft, low hush. No hiss.
 export function playRainAndWind() {
-  if (!ready()) return;
+  if (!ready() || playFile("rain")) return;
   const start = ctx.currentTime + 0.05;
   noiseSource(start, 4).connect(filter("lowpass", 500)).connect(envelope(start + 0.5, 0.025, 1, 1.5, 1));
   for (let i = 0; i < 45; i++) {
@@ -176,7 +224,7 @@ export function playRainAndWind() {
 
 // Owl: "hoo... hoo-hoo".
 export function playHoot() {
-  if (!ready()) return;
+  if (!ready() || playFile("hoot")) return;
   const start = ctx.currentTime + 0.05;
   for (const [at, length] of [[0, 0.45], [0.75, 0.22], [1.05, 0.5]]) {
     const t = start + at;
@@ -189,7 +237,7 @@ export function playHoot() {
 
 // Shooting star: a twinkling run of little bells, like a carillon.
 export function playTwinkle() {
-  if (!ready()) return;
+  if (!ready() || playFile("twinkle")) return;
   const start = ctx.currentTime + 0.05;
   [2093, 2637, 3136, 2349, 2794, 3520].forEach((freq, i) => {
     const t = start + i * 0.09;
@@ -210,7 +258,7 @@ export function playTwinkle() {
 
 // UFO: a wobbly, slightly spooky theremin swooping up and down.
 export function playTheremin() {
-  if (!ready()) return;
+  if (!ready() || playFile("theremin")) return;
   const t = ctx.currentTime + 0.05;
   const o = osc("sine", t, 3.2);
   o.frequency.setValueAtTime(520, t);
@@ -228,7 +276,7 @@ export function playTheremin() {
 
 // Sheep: a wobbly "bêêê" (a buzzy voice with a fast tremolo).
 export function playBleat() {
-  if (!ready()) return;
+  if (!ready() || playFile("bleat")) return;
   const t = ctx.currentTime + 0.05;
   const voice = filter("bandpass", 1100, 3);
   voice.connect(envelope(t, 0.14, 0.04, 0.5, 0.25));
@@ -252,7 +300,7 @@ export function playBleat() {
 
 // Sheep munching grass: a few soft, crunchy nibbles.
 export function playMunch() {
-  if (!ready()) return;
+  if (!ready() || playFile("munch")) return;
   const start = ctx.currentTime + 0.02;
   for (let i = 0; i < 3; i++) {
     const t = start + i * 0.14 + Math.random() * 0.03;
@@ -263,7 +311,7 @@ export function playMunch() {
 
 // Someone joined: a soft two-note "ding-dong", like a doorbell.
 export function playDing() {
-  if (!ready()) return;
+  if (!ready() || playFile("ding")) return;
   const start = ctx.currentTime + 0.02;
   [[1046, 0], [784, 0.18]].forEach(([freq, at]) => {
     const t = start + at;
