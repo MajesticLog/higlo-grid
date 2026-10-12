@@ -1,11 +1,11 @@
 // Which session this page is in, and who "I" am in it.
 import { db, ref, push } from "./firebase.js";
 
-// The garden's size follows the family (docs/game-design.md): 5 x 5 for 1 or 2
-// players, 6 x 6 for 3, 7 x 7 for 4 or more. fitGrid() in game.js sets it;
+// The garden's size follows the family (docs/game-design.md): 6 x 6 for 1 to 3
+// players, 7 x 7 for 4 or more (5 x 5 was too easy). fitGrid() in game.js sets it;
 // every module reads SIZE live (an ES module export follows its variable).
 export let SIZE = 7;
-export const sizeFor = (players) => (players <= 2 ? 5 : players === 3 ? 6 : 7);
+export const sizeFor = (players) => (players <= 3 ? 6 : 7);
 export function setSize(size) { SIZE = size; }
 
 // Read the session from the path, or start a new one.

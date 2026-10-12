@@ -104,7 +104,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   50%      { opacity: 1;    transform: scale(1.1); }
 }
 
-/* 5 x 5 to 7 x 7 squares (--size, set from SIZE in session.js); the grid fits the smaller side of the screen. */
+/* 6 x 6 or 7 x 7 squares (--size, set from SIZE in session.js); the grid fits the smaller side of the screen. */
 #grid {
   --size: 7;
   width: var(--board);
@@ -142,13 +142,9 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* A square out of the tall grass: short grass (img/grass-short.svg), cut a
    little lower than the tall grass around it. A square a sheep has grazed
-   looks like this, and so does the back of a picture card (.card-back). The
-   night shade goes on top. */
+   looks like this. The night shade goes on top. */
 .tile {
   margin: 3%;
-}
-
-.tile, .card-back {
   border-radius: 10%;
   background-color: #8bc34a;
   background-image:
@@ -167,52 +163,19 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   pointer-events: none;
 }
 
-/* A picture card (the flash, the replay): short grass on the back, the
-   picture on a pale front. It turns face up like a playing card, stays, then
-   turns face down; render.js sets both animations' delays (card-down is 0.5s,
-   keep in sync with TURN_DOWN_MS). */
+/* A picture (the flash, the replay): on a pale card over its square, so it
+   reads clearly. It shows and goes without animation. */
 .card {
   margin: 3%;
-  perspective: 300px;
-  container-type: inline-size;
-}
-
-.card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  animation: card-up 0.6s ease-out both, card-down 0.5s ease-in forwards;
-}
-
-.card-face {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.card-front {
   border-radius: 10%;
   background: #fffdf5;
   box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12);
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
 }
 
-.card-front .icon { font-size: 64cqi; }
-.card-back { transform: rotateY(180deg); }
-
-@keyframes card-up {
-  0%   { transform: rotateY(180deg) scale(1); }
-  50%  { transform: rotateY(90deg) scale(1.12); }
-  100% { transform: rotateY(0deg) scale(1); }
-}
-
-@keyframes card-down {
-  0%   { transform: rotateY(0deg); }
-  100% { transform: rotateY(180deg); }
-}
+.card .icon { font-size: 64cqi; }
 
 /* A square someone picked: a plain dashed ring, so it doesn't say who. */
 .pick {
@@ -278,7 +241,6 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card-inner { animation: none; }
   .pop .icon { animation: fade-out 2s ease-in both !important; }
 }
 
@@ -1669,20 +1631,15 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 /* --- Memory garden (v4) --- */
 /* In the replay: the right picture glows green; the others stay plain. */
-.card.right .card-front {
+.card.right {
   box-shadow: 0 0 0 3px #43a047, 0 0 12px 4px rgba(67, 160, 71, 0.6);
 }
 
 .card.wrong { opacity: 0.85; }
 
-/* After a miss: where the picture was, in a gently pulsing gold ring. */
-.card.missed .card-front {
-  animation: missed-ring 1.2s ease-in-out infinite alternate;
-}
-
-@keyframes missed-ring {
-  from { box-shadow: 0 0 0 3px #ffb300, 0 0 4px 2px rgba(255, 179, 0, 0.4); }
-  to   { box-shadow: 0 0 0 3px #ffb300, 0 0 14px 6px rgba(255, 179, 0, 0.7); }
+/* After a miss: where the picture was, in a gold ring. */
+.card.missed {
+  box-shadow: 0 0 0 3px #ffb300, 0 0 12px 4px rgba(255, 179, 0, 0.6);
 }
 
 /* The card with the picture to find, in the status bar. */
@@ -1713,10 +1670,44 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   animation: munch 0.4s ease-in-out infinite alternate;
 }
 
-/* ❓ for newcomers: a soft glow until it's opened once. */
+/* Done grazing: it trots off and fades (0.7s, SHEEP_LEAVE_MS in render.js). */
+.sheep-sitting.leaving .icon {
+  animation: sheep-leave 0.7s ease-in var(--leave-delay, 0ms) forwards;
+}
+
+@keyframes sheep-leave {
+  from { opacity: 1; transform: translate(0, 0); }
+  to   { opacity: 0; transform: translate(40%, -30%) scale(0.8); }
+}
+
+/* ❓ for newcomers: a pulse, and an arrow pointing at it ("How to play"),
+   until it's opened once (playtest 5: a glow alone went unnoticed). */
 #help.glow {
+  z-index: 6; /* the arrow over the bar and the field below */
   border-color: #f4c430;
-  animation: help-glow 1.6s ease-in-out infinite alternate;
+  animation: help-glow 0.9s ease-in-out infinite alternate;
+}
+
+#help.glow::after {
+  content: "👆 How to play";
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #f4c430;
+  color: #222;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  animation: help-arrow 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes help-arrow {
+  from { transform: translateY(0); }
+  to   { transform: translateY(6px); }
 }
 
 @keyframes help-glow {
@@ -1724,8 +1715,15 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   to   { box-shadow: 0 0 0 6px rgba(244, 196, 48, 0.55), 0 0 16px 6px rgba(244, 196, 48, 0.5); }
 }
 
+/* The sheep's first round: the same pulse, so it's noticed. */
+#sheep.hint {
+  border-color: #f4c430;
+  animation: help-glow 0.9s ease-in-out infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  #help.glow { animation: none; box-shadow: 0 0 0 4px rgba(244, 196, 48, 0.6); }
+  #help.glow, #sheep.hint { animation: none; box-shadow: 0 0 0 4px rgba(244, 196, 48, 0.6); }
+  #help.glow::after { animation: none; }
 }
 
 /* --- Pause (pause.js): the same window for everyone --- */

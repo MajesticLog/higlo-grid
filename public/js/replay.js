@@ -89,14 +89,11 @@ export function pictureAge(k) {
   return age >= 0 && age < SHOW_MS ? age : null;
 }
 
-// A missed square turned over right now: how long it has shown (ms), and how
-// long it stays; or null.
-export function missedAge(k) {
-  if (!replayActive()) return null;
+// A missed square showing its picture right now.
+export function missedShown(k) {
+  if (!replayActive()) return false;
   const at = current.missed.get(k);
-  if (at === undefined) return null;
-  const age = performance.now() - at;
-  return age >= 0 ? { age, life: current.end - at } : null;
+  return at !== undefined && performance.now() >= at;
 }
 
 // True while the missed squares are showing (for the status bar).

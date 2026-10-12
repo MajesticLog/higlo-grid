@@ -32,8 +32,8 @@ let serverOffset = 0;
 onValue(ref(db, ".info/serverTimeOffset"), (snap) => { serverOffset = snap.val() || 0; });
 export const now = () => Date.now() + serverOffset;
 
-// The middle of the garden: the centre square (5 x 5, 7 x 7), or the middle
-// four (6 x 6 has no centre).
+// The middle of the garden: the centre square (7 x 7), or the middle four
+// (6 x 6 has no centre).
 function middleSquares(size) {
   const low = Math.floor((size - 1) / 2);
   const high = Math.floor(size / 2);
@@ -49,8 +49,8 @@ export function spawnSquare() {
   return { ...middle[Math.floor(Math.random() * middle.length)] };
 }
 
-// The pictures, shuffled once per game, the same number of each: on 5 x 5
-// and 7 x 7 every square but the centre (24 or 48), on 6 x 6 every square (36).
+// The pictures, shuffled once per game, the same number of each: on 7 x 7
+// every square but the centre (48), on 6 x 6 every square (36).
 export function newBoard(size) {
   const centre = size % 2 === 1 ? key((size - 1) / 2, (size - 1) / 2) : null;
   const squares = [];

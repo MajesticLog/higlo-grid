@@ -83,7 +83,8 @@ export function openRules() {
 
 // The rules never open by themselves (a window in the way; and links opened
 // from a messaging app often forget they've been shown). Instead, the ❓
-// glows for anyone who hasn't opened it yet on this device.
+// pulses, with an arrow pointing at it, for anyone who hasn't opened it yet
+// on this device.
 const helpButton = document.getElementById("help");
 
 export function hintHelp() {

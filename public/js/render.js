@@ -4,19 +4,19 @@ import { state } from "./state.js";
 import { now, NIGHT_STEPS, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
 import { SIZE } from "./session.js";
 import {
-  READY_WAIT_MS, FLASH_MS, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
+  READY_WAIT_MS, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
 import {
   updateReplay, setReplayTick, replayActive, replayIsFresh, countdown, pictureAge, replayPosition, nightShown,
-  SHOW_MS, missedAge, showingMissed,
+  missedShown, showingMissed,
 } from "./replay.js";
 import { CLUES } from "./lobby.js";
+import { playBleat } from "./sound.js";
 import { renderPause } from "./pause.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
 const POP_MS = 2000; // must match the pop-up animation in style.css
-const TURN_DOWN_MS = 500; // must match card-down in style.css
 
 const grid = document.getElementById("grid");
 // Test aid: add ?peek to the link to see every picture under the grass.
@@ -72,8 +72,7 @@ function cardForResult() {
 // The garden. Squares are tall grass (the grid's own background) except:
 // the flash (6 pictures for a few seconds), a chosen square showing its
 // picture during the replay, after a miss the squares that had the picture,
-// and squares a sheep has grazed (short grass). Pictures are cards that turn
-// over, then turn back.
+// and squares a sheep has grazed (short grass, until the end of the choosing).
 let pops = []; // pictures to pop above the players: [{k, icon, age}]
 
 function drawTiles() {
@@ -83,8 +82,7 @@ function drawTiles() {
   const phase = roundPhase();
   // The flash.
   if (phase === "flash") {
-    const age = now() - game.flash.at; // the same moment on every device
-    for (const k of game.flash.squares ?? []) card(k, "", PICTURES[game.board[k]], age, FLASH_MS);
+    for (const k of game.flash.squares ?? []) card(k, "", PICTURES[game.board[k]]);
   }
   // Squares a sheep has grazed this round: not the picture, so short grass.
   if (phase === "choose") {
@@ -97,12 +95,11 @@ function drawTiles() {
       const age = pictureAge(k);
       if (age === null) continue;
       const right = game.board[k] === target;
-      card(k, right ? "right" : "wrong", PICTURES[game.board[k]], age, SHOW_MS);
+      card(k, right ? "right" : "wrong", PICTURES[game.board[k]]);
       if (age < POP_MS) pops.push({ k, icon: PICTURES[game.board[k]], age });
     }
     for (const k of game.replay?.missed ?? []) {
-      const shown = missedAge(k);
-      if (shown) card(k, "missed", PICTURES[game.board[k]], shown.age, shown.life);
+      if (missedShown(k)) card(k, "missed", PICTURES[game.board[k]]);
     }
   }
   if (!peek) return;
@@ -115,23 +112,12 @@ function drawTiles() {
   }
 }
 
-// A picture as a card: it turns face up (card-up), shows for `life` ms, then
-// turns face down again (card-down). `age`: how long it has been showing, so
-// the turn carries on smoothly through redraws.
-function card(k, className, icon, age, life) {
+// A picture on a pale card, over its square.
+function card(k, className, icon) {
   const el = document.createElement("div");
   el.className = `card ${className}`;
   place(el, ...squareOf(k));
-  const inner = document.createElement("div");
-  inner.className = "card-inner";
-  inner.style.animationDelay = `${-age}ms, ${life - TURN_DOWN_MS - age}ms`;
-  const front = document.createElement("div");
-  front.className = "card-face card-front";
-  front.append(iconSpan(icon));
-  const back = document.createElement("div");
-  back.className = "card-face card-back";
-  inner.append(front, back);
-  el.append(inner);
+  el.append(iconSpan(icon));
   grid.append(el);
 }
 
@@ -160,12 +146,28 @@ function drawPicks() {
   }
 }
 
-// The sheep placed this round, munching in the middle of what it grazed.
+// A sheep placed this round munches in the middle of what it grazed for a
+// moment, then fades away with a "bêêê", so it never hides a player standing
+// on that square. The grass it grazed stays short until the end of the
+// choosing. Timed from when this device first saw it.
+const SHEEP_MS = 2500; // munching
+const SHEEP_LEAVE_MS = 700; // fading away; keep in sync with sheep-leave in style.css
+const sheepPlacedAt = new Map(); // "round:x_y" -> when this device first drew it
+
 function drawSheep() {
   if (roundPhase() !== "choose") return;
   for (const k of Object.values(state.game.grazing ?? {})) {
+    const id = `${state.game.round}:${k}`;
+    if (!sheepPlacedAt.has(id)) {
+      sheepPlacedAt.set(id, performance.now());
+      setTimeout(() => { playBleat(); render(); }, SHEEP_MS); // off it goes
+      setTimeout(render, SHEEP_MS + SHEEP_LEAVE_MS); // and it's gone
+    }
+    const age = performance.now() - sheepPlacedAt.get(id);
+    if (age >= SHEEP_MS + SHEEP_LEAVE_MS) continue;
     const el = document.createElement("div");
-    el.className = "sheep-sitting";
+    el.className = age >= SHEEP_MS ? "sheep-sitting leaving" : "sheep-sitting";
+    if (age >= SHEEP_MS) el.style.setProperty("--leave-delay", `${SHEEP_MS - age}ms`); // through redraws
     place(el, ...squareOf(k));
     el.append(iconSpan("🐑"));
     grid.append(el);
@@ -484,9 +486,30 @@ function renderStatus() {
   readyButton.hidden = Boolean(mine?.ready);
   // One sheep per game: shown until it's been used.
   sheepButton.hidden = Boolean(mine?.ready) || sheepLeft() <= 0;
+  const hint = !sheepButton.hidden && sheepHint(game.round);
+  sheepButton.classList.toggle("hint", hint);
   sheepButton.textContent = "🐑";
   sheepButton.setAttribute("aria-pressed", String(inSheepMode()));
   sheepButton.setAttribute("aria-label", "Send your sheep");
+}
+
+// The 🐑 button pulses during my first round choosing on this
+// device (playtest 5: the sheep went unnoticed). Once I've tapped it, or that
+// round is over, it's plain.
+const SHEEP_SEEN_KEY = "higlo:sheep-seen";
+let sheepHintRound = null; // the round the hint was shown in
+let sheepSeen = (() => {
+  try { return Boolean(localStorage.getItem(SHEEP_SEEN_KEY)); } catch { return false; }
+})();
+
+function sheepHint(round) {
+  if (!sheepSeen && (inSheepMode() || (sheepHintRound !== null && round !== sheepHintRound))) {
+    sheepSeen = true;
+    try { localStorage.setItem(SHEEP_SEEN_KEY, "1"); } catch { /* fine */ }
+  }
+  if (sheepSeen) return false;
+  sheepHintRound ??= round;
+  return true;
 }
 
 // After the first Ready, a calm bar shows the time left (no numbers).
