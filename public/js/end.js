@@ -1,5 +1,5 @@
-// End of a game. Won: fireflies and a little fanfare, then the family around a
-// cup of herbal tea. Night: the wolf howls, then everyone goes to bed. Both
+// End of a game. Won: fireflies and a little fanfare, then "What a team!" with
+// the family together. Night: the wolf howls, then everyone goes to bed. Both
 // show the memories found this game. Each player then chooses: play again,
 // or back to the lobby to write a new memory. The screen stays until they
 // choose, and the new board starts once everyone in the field has chosen.
@@ -69,9 +69,12 @@ function drawEnd() {
   const again = game.again ?? {};
   screen.classList.toggle("won", won);
   screen.classList.toggle("lost", !won);
-  title.textContent = won ? "☕ Tea time!" : "🌙 Let's go to bed!";
+  // Plain words any family understands (playtest 5: "tea time" wasn't clear).
+  // Counted from the game itself: the memories' own records may arrive a moment later.
+  const count = (game.queue ?? []).filter((id) => game.guessed?.[id]).length;
+  title.textContent = won ? "🎉 What a team!" : "🌙 Let's go to bed!";
   note.textContent = won
-    ? "Every memory found before nightfall. Time for a cup of herbal tea together!"
+    ? `Well done! You found ${count} ${count === 1 ? "memory" : "memories"}!`
     : "The wolf is out, everyone runs off to bed! The memories not guessed aren't lost: next game, their authors can hide them again.";
   drawFamily(won, again);
   drawMemories(game);
@@ -107,13 +110,13 @@ export function maybeStartAgain() {
   if (state.players.length > 0 && state.players.every((p) => again[p.id])) newGameForAll();
 }
 
-// Everyone in a ring: around a teapot, each with a cup, or tucked in with 💤.
+// Everyone in a ring: around a trophy, each with a star, or tucked in with 💤.
 // A ✅ shows who has chosen to play again, readable without reading.
 function drawFamily(won, again) {
   family.replaceChildren();
   const centre = document.createElement("span");
   centre.className = "end-centre";
-  centre.textContent = won ? "🫖" : "🏡";
+  centre.textContent = won ? "🏆" : "🏡";
   family.append(centre);
   const players = state.players;
   players.forEach((p, i) => {
@@ -128,7 +131,7 @@ function drawFamily(won, again) {
     circle.textContent = p.animal;
     const badge = document.createElement("span");
     badge.className = "end-badge";
-    badge.textContent = won ? "🍵" : "💤";
+    badge.textContent = won ? "⭐" : "💤";
     circle.append(badge);
     if (again[p.id]) {
       const check = document.createElement("span");
@@ -145,10 +148,12 @@ function drawFamily(won, again) {
 }
 
 // The memories found in this game, in the order they turned up.
+const foundThisGame = (game) => Object.values(state.memories)
+  .filter((m) => m.gameId === game.id && m.foundAt && (!m.clues || m.revealedAt))
+  .sort((a, b) => a.foundAt - b.foundAt);
+
 function drawMemories(game) {
-  const found = Object.values(state.memories)
-    .filter((m) => m.gameId === game.id && m.foundAt && (!m.clues || m.revealedAt))
-    .sort((a, b) => a.foundAt - b.foundAt);
+  const found = foundThisGame(game);
   memoriesTitle.hidden = found.length === 0;
   list.replaceChildren();
   for (const m of found) {

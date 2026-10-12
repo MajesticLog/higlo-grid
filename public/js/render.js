@@ -441,8 +441,8 @@ function renderStatus() {
   }
   if (game?.status === "won") {
     endOpen.hidden = false;
-    endOpen.textContent = "☕ Back to the tea";
-    return say("✨ Every memory found!");
+    endOpen.textContent = "🎉 Back to the team";
+    return say("🎉 What a team! Every memory found!");
   }
   if (!state.joined || !game) return say("Joining…");
   const phase = roundPhase();

@@ -770,7 +770,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   70%      { opacity: 0.3; }
 }
 
-/* --- End screen: tea time, or bedtime --- */
+/* --- End screen: "What a team!", or bedtime --- */
 #end {
   position: fixed;
   inset: 0;
@@ -800,7 +800,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 #end-title { margin: 0; font-size: 30px; }
 #end-note { margin: 12px 0 0; font-size: 18px; line-height: 1.4; }
 
-/* Everyone in a ring around the teapot (or the house, at bedtime). */
+/* Everyone in a ring around the trophy (or the house, at bedtime). */
 #end-family {
   position: relative;
   width: min(100%, 300px);

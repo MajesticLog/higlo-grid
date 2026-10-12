@@ -15,7 +15,7 @@ making the sound itself.
 
 | File | When it plays |
 |---|---|
-| `fanfare.wav` | Every memory found: fireflies and tea time |
+| `fanfare.wav` | Every memory found: fireflies and "What a team!" |
 | `howl.wav` | Full night: the wolf comes out |
 | `twinkle.wav` | A shooting star crosses the sky; a memory is guessed |
 | `ding.wav` | Someone joins the garden |
