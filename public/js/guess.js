@@ -17,7 +17,7 @@
 import { update, runTransaction } from "./firebase.js";
 import { sessionRef, myId } from "./session.js";
 import { state } from "./state.js";
-import { now, nextGuess, checkEnd, currentMemory, cluesOf } from "./game.js";
+import { now, nextGuess, checkEnd, startBetween, currentMemory, cluesOf } from "./game.js";
 import { CLUES, foundKey } from "./lobby.js";
 import { playTwinkle } from "./sound.js";
 import { replayEndsAt } from "./replay.js";
@@ -102,6 +102,7 @@ function keepForLater(game) {
   game.guessed[memory] = "kept";
   nextGuess(game);
   checkEnd(game);
+  startBetween(game);
   game.updatedAt = now();
 }
 
@@ -129,6 +130,7 @@ function finish(game, guessed) {
   game.guessed[memory] = guessed ? "guessed" : "revealed";
   nextGuess(game); // the next memory, if it already has its clues
   checkEnd(game);
+  startBetween(game); // a break before the next memory
   game.updatedAt = now();
 }
 

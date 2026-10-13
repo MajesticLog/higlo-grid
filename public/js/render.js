@@ -220,12 +220,20 @@ function drawPops() {
   }
 }
 
-// Full night: the wolf comes out onto the field (nothing scary).
+// Full night: the wolf comes out onto the field (nothing scary). The grid is
+// redrawn on every change, so it picks up its animation where it is: it
+// trots in and howls once (playtest 6: three times).
+const HOWL_DELAY_MS = 1400; // the bubble after the wolf: keep in sync with .howl in style.css
+let wolfSince = null; // {game, at}: when this device first drew it
 function drawWolf() {
   if (state.game?.status !== "lost" || replayActive()) return; // after the replay
+  if (wolfSince?.game !== state.game.id) wolfSince = { game: state.game.id, at: performance.now() };
   const el = document.createElement("div");
   el.className = "wolf";
   el.innerHTML = '<span class="wolf-icon">🐺</span><span class="howl">Ahouuu!</span>';
+  const since = wolfSince.at - performance.now(); // 0, then more and more negative
+  el.querySelector(".wolf-icon").style.animationDelay = `${since}ms`;
+  el.querySelector(".howl").style.animationDelay = `${HOWL_DELAY_MS + since}ms`;
   grid.append(el);
 }
 
@@ -531,6 +539,21 @@ function renderStatus() {
       : say("🌱 Ready to play?", `Read the rules by tapping ❓${count}`);
   }
   readyButton.textContent = "✓ Ready";
+  if (phase === "between") {
+    // A memory done: a break before the next one.
+    const total = state.players.length;
+    const readyCount = state.players.filter((p) => game.between.ready?.[p.id]).length;
+    const mine = game.between.ready?.[myId];
+    readyButton.hidden = Boolean(mine);
+    readyButton.textContent = "✓ Ready";
+    const memory = state.memories[currentMemory(game)];
+    const next = memory ? `Next: ${`${memory.animal ?? ""} ${memory.name ?? ""}`.trim()}'s memory` : "";
+    const count = total > 1 ? `${readyCount} of ${total} ready` : "";
+    const detail = [next, count].filter(Boolean).join(" · ");
+    return mine
+      ? say("✓ Ready! Waiting for the others…", detail)
+      : say("🔍 Ready for the next memory?", detail);
+  }
   if (phase === "guess") return say("🔍 Time to guess a memory!", "All its clues are found.");
   if (phase === "countdown") return say("👀 Look at the golden patch!", cluesLine(game));
   if (phase === "flash") return say("👀 Remember the pictures in the patch!", cluesLine(game) || "Which one will you need to find?");
@@ -557,7 +580,7 @@ function renderStatus() {
   else if (mine) say(`Find the ${targetPicture()}`, withCount("Tap ✓ Ready, or pick another square"));
   else say(`Find the ${targetPicture()}`, withCount("Pick a square where you remember one"));
   readyButton.hidden = Boolean(mine?.ready);
-  // One sheep per game: shown until it's been used.
+  // One sheep per memory: shown until it's been used.
   sheepButton.hidden = Boolean(mine?.ready) || sheepLeft() <= 0;
   const hint = !sheepButton.hidden && sheepHint(game.round);
   sheepButton.classList.toggle("hint", hint);

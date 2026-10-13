@@ -54,7 +54,7 @@ let played = null;
 export function eventChanged(game) {
   const ufo = game?.ufo;
   if (!ufo || !state.joined) return;
-  const tag = `${game.id}:${ufo.at}`;
+  const tag = game.id; // one UFO per game on each screen, whatever happens (playtest 6: three)
   if (played === tag) return;
   played = tag;
   if (now() - ufo.at > 4000) return; // old news (I just arrived)

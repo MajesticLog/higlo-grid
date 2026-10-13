@@ -115,6 +115,13 @@ export function nextGuess(game) {
   }
 }
 
+// A memory done and another one to play for: a break until everyone is
+// ready for it (rounds.js). Not when the next one is guessed straight away.
+export function startBetween(game) {
+  if (game.guess || game.status !== "playing" || !currentMemory(game)) return;
+  game.between = { at: now(), ready: {} };
+}
+
 // Every memory found (guessed, or revealed after its clues): a win. Full
 // night: the wolf. Guessing always finishes first.
 export function checkEnd(game) {

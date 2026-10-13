@@ -42,7 +42,7 @@ const CARDS = [
   {
     picture: "🐑",
     title: "Your sheep",
-    text: "Once per game, tap 🐑 and place your sheep on a square. It grazes all around it, and shows "
+    text: "Once per memory, tap 🐑 and place your sheep on a square. It grazes all around it, and shows "
       + "where the picture isn't. Then choose your square as usual.",
   },
   {

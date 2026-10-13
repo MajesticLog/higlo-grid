@@ -7,6 +7,7 @@ import { runTransaction } from "./firebase.js";
 import { sessionRef } from "./session.js";
 import { state } from "./state.js";
 import { now } from "./game.js";
+import { flashStartsAt, flashNotOver } from "./rounds.js";
 
 const gameRef = sessionRef("game");
 const button = document.getElementById("pause");
@@ -29,12 +30,16 @@ function resume() {
   runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen || !game.paused) return;
     const away = Math.max(0, now() - game.paused.at);
-    // Every clock moves on by the time spent paused.
-    if (game.flash) game.flash.at += away;
+    // Paused before the card: the round's look starts over (gold glow,
+    // "Ready?", the whole flash), so nobody misses it. Otherwise every clock
+    // moves on by the time spent paused.
+    if (flashNotOver(game, game.paused.at)) game.flash.at = flashStartsAt();
+    else if (game.flash) game.flash.at += away;
     if (game.deadline) game.deadline += away;
     if (game.nextRoundAt) game.nextRoundAt += away;
     if (game.ufoAt) game.ufoAt += away; // the UFO (events.js)
     if (game.firstReadyAt) game.firstReadyAt += away;
+    if (game.between?.firstReadyAt) game.between.firstReadyAt += away;
     game.paused = null;
     game.updatedAt = now();
     return game;

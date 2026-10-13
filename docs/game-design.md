@@ -91,7 +91,7 @@ Players can choose any square they remember holding the picture, not only square
 
 ## 5. Sheep
 
-- Each player has **1 sheep per game**.
+- Each player has **1 sheep per memory**.
 - During the choosing phase, a player can place it on any square. It grazes the 3 × 3 area around it: the squares there that don't hide this round's picture become short grass until the end of the choosing. What's left standing in that area is where the picture is. The sheep munches for a moment, then trots off with a "bêêê" and fades away, so it never hides a player on that square.
 - Placing the sheep doesn't replace choosing a square: the player still picks one and taps Ready.
 - A short, funny sheep animation and a munching sound.
@@ -105,7 +105,7 @@ Players can choose any square they remember holding the picture, not only square
 - **Ready to guess!** From the 💡 list, anyone but the author can start guessing before all three clues are in. If nobody gets it, the memory stays secret and the clues keep coming.
 - **A note to keep.** Once the guess is judged (or the memory revealed), everyone, the author too, can leave a short note (80 characters), such as "I'd forgotten the red bicycle!". Each person can leave as many as they like. The next round waits until everyone has closed the result window, however long that takes, so nobody is cut off mid-note. Notes appear for everyone, live, and are kept with the memory: shown on the end screen and in the memory chest, where "📝 Add a note" lets the family keep adding to it later, and saved in the chest's page.
 - **Nobody to guess.** When the only people in the garden are the memory's author (playing alone), nobody can guess it. The author chooses: **📖 Reveal it** (it goes in the chest, and notes can be added), or **🌱 Keep it for later** (it stays secret, counts as done for this game, and can be brought to the next game from the lobby). If someone joins in the meantime, they guess it as usual.
-- After a guess (right, or revealed when nobody got it), the next memory begins.
+- After a guess (right, or revealed when nobody got it), a break: "🔍 Ready for the next memory?", with whose memory comes next. The next round starts once everyone has tapped ✓ Ready, or a minute after the first one did. Everyone gets their sheep back. The day carries on where it was.
 - **Found without its author.** An open memory guessed while its author isn't in the garden isn't used up. Whoever is there sees the answer and says if they got it (the honour system; alone: "✅ Yes, I got it!" or "❌ Not this time"). Each of them is recorded on the memory, which stays hidden for the rest of the family until it's guessed with its author there. Their notes stay with it, out of the chest, so they spoil nothing.
 - **👀** next to an answer: that player has found this memory before. They still guess with everyone: it's not a competition, and answers only show once everyone has answered.
 - **Coming back:** the author sees "🎉 Zoé found your memory!", with whether they guessed it and their notes, and can reply with a note. The chest keeps these memories in a section only the author and the finders see.
@@ -162,7 +162,7 @@ Flash: a 3*3 patch (not the middle) glowing gold, "Ready?" (1.6 s), then its pic
 Missed round: the whole patch shows again for 4 seconds
 Found: half the players rounded up, on different squares
 Misses before the wolf: players + 3, at least 5
-Sheep: 1 per player per game, grazing 3*3
+Sheep: 1 per player per memory, grazing 3*3
 Clues: 3 per memory, one memory at a time
 Timer: 20 s from the first player ready
 
