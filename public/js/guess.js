@@ -4,6 +4,13 @@
 // together, so nobody copies; the author says yes or no. One round of
 // guesses: if nobody gets it, the memory is revealed and play carries on.
 //
+// A family memory found without its author (they left it open, lobby.js):
+// whoever is there sees the answer and says if they got it (the honour
+// system). It isn't used up: each of them is recorded on the memory
+// (foundBy), and it stays hidden for the rest of the family until it's
+// guessed with its author there. Players who've found it before still guess;
+// a 👀 by their answer says so.
+//
 // In the game: guess {memory, phase: "guessing" | "judging", answers, verdicts}
 // while it's on; guessed {memoryId: "guessed" | "revealed"} once done; and
 // lastGuess, the result everyone sees for a moment.
@@ -11,7 +18,7 @@ import { update, runTransaction } from "./firebase.js";
 import { sessionRef, myId } from "./session.js";
 import { state } from "./state.js";
 import { now, nextGuess, checkEnd, currentMemory, cluesOf } from "./game.js";
-import { CLUES } from "./lobby.js";
+import { CLUES, foundKey } from "./lobby.js";
 import { playTwinkle } from "./sound.js";
 import { replayEndsAt } from "./replay.js";
 import { noteBox } from "./notes.js";
@@ -51,6 +58,8 @@ const authorHere = (memory) => state.players.some((p) => isAuthor(p, memory));
 const guessers = (memory) => state.players.filter((p) => !isAuthor(p, memory));
 const amAuthor = (memory) => isAuthor({ ...state.me, id: myId }, memory);
 const who = (m) => `${m.animal ?? ""} ${m.name ?? ""}`.trim();
+// Has this player found this memory before, without its author?
+const seenBefore = (player, memory) => Boolean(player?.author && memory?.foundBy?.[foundKey(player.author)]);
 
 // --- Changing the guess, always in a transaction tied to its memory ---
 function changeGuess(edit) {
@@ -66,12 +75,20 @@ function changeGuess(edit) {
     // chest and the end screen. (Others may too; the writes agree.)
     const game = snapshot.val();
     const last = game?.lastGuess;
-    if (committed && last?.memory === seen.memory && !(last.early && !last.guessed)) {
-      // Found for good: into the chest, with this game.
-      update(sessionRef(`memories/${seen.memory}`), {
-        foundAt: last.at, revealedAt: last.at, guessed: last.guessed, gameId: game.id,
-      });
+    if (!committed || last?.memory !== seen.memory || (last.early && !last.guessed)) return;
+    if (last.finders) {
+      // Found without its author: each finder is recorded, and it stays hidden.
+      for (const f of last.finders) {
+        update(sessionRef(`memories/${seen.memory}/foundBy/${foundKey(f.author)}`), {
+          name: f.name, animal: f.animal, color: f.color, at: last.at, guessed: last.guessed, gameId: game.id,
+        });
+      }
+      return;
     }
+    // Found for good: into the chest, with this game.
+    update(sessionRef(`memories/${seen.memory}`), {
+      foundAt: last.at, revealedAt: last.at, guessed: last.guessed, gameId: game.id,
+    });
   });
 }
 
@@ -93,6 +110,13 @@ function keepForLater(game) {
 function finish(game, guessed) {
   const { memory, early = false, answers = null, verdicts = null } = game.guess;
   game.lastGuess = { memory, guessed, early, answers, verdicts, at: now() };
+  // Its author isn't here (and it's open to the family): not used up. Who
+  // was here is recorded on the memory instead (see changeGuess).
+  const m = state.memories[memory];
+  if (m?.open && !authorHere(m)) {
+    game.lastGuess.finders = guessers(m).filter((p) => p.author)
+      .map((p) => ({ author: p.author, name: p.name ?? "", animal: p.animal ?? "", color: p.color ?? "" }));
+  }
   game.guess = null;
   if (early && !guessed) {
     // Not yet: the memory stays secret and the search goes on.
@@ -131,7 +155,8 @@ export function maybeAdvance() {
 function answer(entry) {
   changeGuess((game) => {
     if (game.guess.phase !== "guessing") return false;
-    game.guess.answers[myId] = { ...entry, name: state.me.name ?? "", animal: state.me.animal ?? "" };
+    const seen = seenBefore(state.me, state.memories[game.guess.memory]) || null; // 👀
+    game.guess.answers[myId] = { ...entry, name: state.me.name ?? "", animal: state.me.animal ?? "", seen };
     if (allAnswered(game)) game.guess.phase = "judging";
   });
 }
@@ -238,8 +263,10 @@ function drawAnswers(answers = {}, verdicts = {}, judging = false) {
     const li = document.createElement("li");
     const text = document.createElement("span");
     text.className = "guess-text";
-    text.textContent = a.pass ? `${a.animal} ${a.name} 🤷 isn't sure yet`
-      : a.aloud ? `${a.animal} ${a.name} 🗣️ says it out loud` : `${a.animal} ${a.name}: “${a.text}”`;
+    const name = `${a.animal} ${a.name}${a.seen ? " 👀" : ""}`; // 👀: found it before
+    text.textContent = a.pass ? `${name} 🤷 isn't sure yet`
+      : a.aloud ? `${name} 🗣️ says it out loud` : `${name}: “${a.text}”`;
+    if (a.seen) li.title = "Has found this memory before";
     li.append(text);
     if (verdicts?.[id] === false) li.append(mark("❌"));
     if (judging && !a.aloud && !a.pass && verdicts?.[id] !== false) {
@@ -310,10 +337,13 @@ function drawGuess(guess, memory) {
       reveal.querySelector(".guess-memory").textContent = memory.text;
       reveal.querySelector(".guess-by").textContent = who(memory);
     }
+    const alone = guessers(memory).length === 1; // finding a family memory on my own
+    someoneButton.textContent = groupJudges && alone ? "✅ Yes, I got it!" : "✅ Yes, someone got it!";
+    nobodyButton.textContent = groupJudges && alone ? "❌ Not this time" : "❌ Nobody got it";
     statusText.textContent = mine
       ? "Did someone get it? Tap ✅ or ❌ next to each guess, or answer for the ones said out loud."
       : groupJudges
-        ? `${who(memory)} isn't here. Here's the answer: did someone get it?`
+        ? `${who(memory)} isn't here. Here's the answer: did ${alone ? "you" : "someone"} get it?`
         : `Waiting for ${who(memory)} to say if someone got it…`;
   }
   box.hidden = false;
@@ -351,7 +381,9 @@ function drawResult(game, last, memory) {
   aloneButtons.hidden = true;
   earlyButton.hidden = true;
   judgeButtons.hidden = true;
-  statusText.textContent = notYet ? "The memory stays a secret until you find more clues." : "";
+  statusText.textContent = notYet ? "The memory stays a secret until you find more clues."
+    : last.finders ? `${who(memory)} will see you found it. It stays hidden for the rest of the family.`
+      : "";
   reveal.hidden = notYet;
   reveal.querySelector(".guess-it-was").textContent = "It was…";
   reveal.querySelector(".guess-memory").textContent = memory.text;

@@ -64,6 +64,22 @@
             "revealedAt": { ".validate": "newData.isNumber()" },
             "gameId": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "guessed": { ".validate": "newData.isBoolean()" },
+            // The family can find it even when its author isn't there (lobby.js).
+            "open": { ".validate": "newData.isBoolean()" },
+            // Who found it without its author (guess.js), by author key: it
+            // stays hidden for the rest of the family.
+            "foundBy": {
+              "$who": {
+                ".validate": "newData.hasChildren(['at'])",
+                "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
+                "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "at": { ".validate": "newData.isNumber()" },
+                "guessed": { ".validate": "newData.isBoolean()" },
+                "gameId": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "$other": { ".validate": false }
+              }
+            },
             // Notes on a found memory (notes.js): added, never changed.
             "notes": {
               "$nid": {

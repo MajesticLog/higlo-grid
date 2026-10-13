@@ -205,6 +205,8 @@ function chooseCategory(c) {
   memory.focus();
 }
 
+const openBox = document.getElementById("open"); // "The family can find it even when I'm not here"
+
 // Ready to hide once there's a theme, a memory and all 3 clues.
 function updateHide() {
   hideButton.disabled = !category || !memory.value.trim() || clues.some((c) => !c.value.trim());
@@ -216,6 +218,7 @@ for (const input of [memory, ...clues]) input.addEventListener("input", updateHi
 let finishWriting = null;
 const writeMemory = () => {
   showKeep();
+  showFamily();
   return new Promise((resolve) => { finishWriting = resolve; });
 };
 
@@ -226,6 +229,18 @@ function useMemory(id) {
   tab.memoryId = id;
   write("sessionStorage", TAB_KEY, tab);
 }
+
+// A family memory I chose to find (left open by someone else), brought into
+// the game with mine.
+export const visitMemoryId = () => tab.visitId ?? null;
+function useVisit(id) {
+  tab.visitId = id;
+  write("sessionStorage", TAB_KEY, tab);
+}
+
+// Where a player is recorded on a memory they found without its author
+// (memories/<id>/foundBy/<key>): their author key, made safe for a database key.
+export const foundKey = (author) => author.replace(/[.#$/[\]]/g, "_");
 
 // A memory of mine still waiting to be guessed can be kept for this game.
 let memories = {};
@@ -245,6 +260,39 @@ function showKeep() {
   }
 }
 
+// Memories the family left open, by someone else, still waiting to be
+// guessed together, that I haven't found yet. Only who wrote it and its
+// theme show, never its words. The author is recognised by device and name
+// (lobby.js), and by name alone too, in case they're on another device.
+const familyBox = document.getElementById("family");
+const familyList = document.getElementById("family-list");
+const skipButton = document.getElementById("skip");
+
+function showFamily() {
+  const me = authorKey(playerName());
+  const open = Object.entries(memories)
+    .filter(([, m]) => m.open && m.clues?.length === CLUES && !m.revealedAt)
+    .filter(([, m]) => m.author !== me && m.name?.trim().toLowerCase() !== playerName().trim().toLowerCase())
+    .filter(([, m]) => !m.foundBy?.[foundKey(me)])
+    .sort(([, a], [, b]) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  if (!open.some(([id]) => id === tab.visitId)) useVisit(null);
+  familyBox.hidden = open.length === 0;
+  familyList.replaceChildren(...open.map(([id, m]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "family-pick";
+    b.textContent = `${m.animal ?? ""} ${m.name ?? ""} · ${m.prompt ?? ""}`.trim();
+    b.setAttribute("aria-pressed", String(id === tab.visitId));
+    b.addEventListener("click", () => {
+      useVisit(id === tab.visitId ? null : id); // tap again to change my mind
+      showFamily();
+    });
+    return b;
+  }));
+  // With one chosen, there's no need to write: "skip" becomes "just this one".
+  skipButton.textContent = tab.visitId ? "Find this memory 🔍" : "Skip for now";
+}
+
 document.getElementById("keep-it").addEventListener("click", () => {
   if (!keepId || !finishWriting) return;
   useMemory(keepId);
@@ -255,12 +303,14 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   updateHide();
   if (hideButton.disabled || !finishWriting) return;
-  // Memories belong to the family link, not to this game or this tab.
+  // Memories belong to the family link, not to this game or this tab. An
+  // open one can also be found by someone playing without me (guess.js).
   const ref = push(sessionRef("memories"), {
     text: memory.value.trim(),
     category: category.id,
     prompt: `${category.icon} ${category.label}`,
     clues: clues.map((c) => c.value.trim()),
+    open: openBox.checked,
     ...identity(),
     createdAt: serverTimestamp(),
   });

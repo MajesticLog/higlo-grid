@@ -33,9 +33,9 @@ smoothly. The uncompressed originals are kept out of the repository.
 
 | File | When it plays |
 |---|---|
-| `morning.mp3` | After the rooster, until noon (looped) |
-| `day.mp3` | From noon to dusk (looped) |
-| `night.mp3` | From dusk until the end of the game (looped) |
+| `morning.mp3` | Music: after the rooster, until nightfall (looped) |
+| `day.mp3` | Ambience, on top of the music: from noon to dusk (looped) |
+| `night.mp3` | Ambience, on top of the music: from dusk until the end of the game (looped) |
 
 ## Credits
 

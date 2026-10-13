@@ -606,7 +606,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   text-align: left;
 }
 
-#memory, #memory-fields input {
+#memory, #memory-fields input[type="text"] {
   box-sizing: border-box;
   width: 100%;
   min-height: 48px;
@@ -1528,7 +1528,55 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 #corner-buttons > div { display: flex; gap: 8px; }
 
-/* 🎵 opens a small music volume slider underneath (music.js; a test aid). */
+/* Family memories to find (lobby.js): who wrote it and its theme. */
+#family { margin: 0 0 16px; }
+#family-title { margin: 0 0 8px; font-weight: 600; }
+
+.family-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.family-pick {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid #e0c9a6;
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.family-pick[aria-pressed="true"] {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+  font-weight: 700;
+}
+
+.family-pick[aria-pressed="true"]::before { content: "✓ "; }
+
+/* "The family can find it even when I'm not here" (lobby.js). */
+.open-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 4px;
+  text-align: left;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.open-check input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin: 0;
+}
+
+/* 🎵 opens volume sliders for the music and the ambience (music.js; a test aid). */
 .music-wrap { position: relative; }
 
 #music-panel {
@@ -1536,9 +1584,10 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   top: calc(100% + 6px);
   left: 0;
   z-index: 9;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto; /* a label and its slider, per row */
   align-items: center;
-  gap: 8px;
+  gap: 8px 10px;
   padding: 8px 12px;
   border-radius: 14px;
   border: 2px solid #e0c9a6;
@@ -1550,7 +1599,8 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 #music-panel[hidden] { display: none; }
-#music-volume { width: 140px; }
+#music-panel label { text-align: left; }
+#music-panel input { width: 140px; }
 
 /* Credits for the music and sounds, small, at the bottom of How to play. */
 .credits {

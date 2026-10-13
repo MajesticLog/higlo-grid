@@ -12,7 +12,7 @@ import { gameChanged } from "./end.js";
 import { eventChanged } from "./events.js";
 import { renderChest } from "./chest.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
-import { CLUES, myMemoryId, backToLobby } from "./lobby.js";
+import { CLUES, myMemoryId, visitMemoryId, backToLobby } from "./lobby.js";
 import { refreshNotes } from "./notes.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
@@ -30,6 +30,7 @@ export const nightSteps = (game) => game?.nightSteps ?? NIGHT_STEPS;
 // misses allowed, so a bigger family's day lasts longer.
 export const SKY_NOON = 2;
 export const SKY_DUSK = 4;
+export const SKY_NIGHTFALL = 5; // the step before the wolf
 export const skyStep = (night, steps) => Math.round((Math.min(night, steps) / steps) * 6);
 const FIRST_ROUND_MS = 4000; // a moment to settle in before the first flash
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
@@ -134,11 +135,13 @@ export function syncGame() {
     game.entered ??= {};
     game.queue ??= [];
     if (game.status !== "playing") return; // abort; a finished game waits for "play again"
-    const mine = myMemoryId();
-    const entering = mine && state.memories[mine]?.clues?.length === CLUES && !game.entered[mine];
-    if (entering) {
-      game.entered[mine] = true;
-      game.queue.push(mine);
+    // Mine, and a family memory I chose to find (lobby.js).
+    let entering = false;
+    for (const id of [myMemoryId(), visitMemoryId()]) {
+      if (!id || state.memories[id]?.clues?.length !== CLUES || game.entered[id]) continue;
+      game.entered[id] = true;
+      game.queue.push(id);
+      entering = true;
     }
     if (!fresh && !entering) return; // nothing to do: abort
     return game;

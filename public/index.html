@@ -28,6 +28,10 @@
           <button id="keep-it" class="primary" type="button">Keep it for this game</button>
           <p class="keep-or">or write a new one below</p>
         </div>
+        <div id="family" hidden>
+          <p id="family-title">Find a family memory:</p>
+          <div id="family-list" class="family-list" role="group" aria-labelledby="family-title"></div>
+        </div>
         <p class="hint-text">Pick a theme, write your memory in a few words, then 3 clues.
           The clues get hidden in the field: the others find them and guess your memory!</p>
         <div id="categories" class="categories" role="group" aria-label="Theme"></div>
@@ -38,6 +42,10 @@
           <input id="clue-1" type="text" maxlength="60" autocomplete="off" aria-label="Clue 1">
           <input id="clue-2" type="text" maxlength="60" autocomplete="off" aria-label="Clue 2">
           <input id="clue-3" type="text" maxlength="60" autocomplete="off" aria-label="Clue 3">
+          <label class="open-check">
+            <input id="open" type="checkbox" checked>
+            <span>🌍 The family can find it even when I'm not here</span>
+          </label>
         </div>
         <button id="hide" class="primary" type="submit" disabled>Hide my clues in the field 🌱</button>
         <button id="skip" class="quiet" type="button">Skip for now</button>
@@ -50,10 +58,12 @@
           <button id="help" class="corner" type="button" aria-label="How to play">❓</button>
           <button id="clues" class="corner" type="button" aria-label="Clues found">💡</button>
           <div class="music-wrap">
-            <button id="music" class="corner" type="button" aria-label="Music volume">🎵</button>
+            <button id="music" class="corner" type="button" aria-label="Music and ambience volume">🎵</button>
             <div id="music-panel" hidden>
               <label for="music-volume">Music</label>
               <input id="music-volume" type="range" min="0" max="100" step="5">
+              <label for="ambience-volume">Ambience</label>
+              <input id="ambience-volume" type="range" min="0" max="100" step="5">
             </div>
           </div>
         </div>
