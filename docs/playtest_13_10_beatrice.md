@@ -6,6 +6,7 @@ Beatrice (Boopsie), with Zoé, 13 October 2026, evening (game from 21:09)
 - It's not clear enough that we are collaborating.
 - It's not clear which square the other players are choosing, as opposed to ours.
 - It's not clear that two players can't share a square (except the middle one).
+- It's not clear whether we have to look for the picture or for the sheep: which picture to find should be announced more clearly.
 - Wanted: an interactive tutorial for first-time players, played after writing a memory, that can be seen again with ❓.
 
 
