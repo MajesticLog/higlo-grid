@@ -49,6 +49,13 @@
         <div>
           <button id="help" class="corner" type="button" aria-label="How to play">❓</button>
           <button id="clues" class="corner" type="button" aria-label="Clues found">💡</button>
+          <div class="music-wrap">
+            <button id="music" class="corner" type="button" aria-label="Music volume">🎵</button>
+            <div id="music-panel" hidden>
+              <label for="music-volume">Music</label>
+              <input id="music-volume" type="range" min="0" max="100" step="5">
+            </div>
+          </div>
         </div>
         <div>
           <button id="pause" class="corner" type="button" aria-label="Pause the game" hidden>⏸️</button>
@@ -129,6 +136,8 @@
           <button id="rules-back" type="button">← Back</button>
           <button id="rules-next" class="primary" type="button">Next ➜</button>
         </div>
+        <p class="credits">Music: "Morning" by Kevin MacLeod (incompetech.com), CC BY 4.0.
+          Sounds from freesound.org by BenjaminNelan, n_audioman, The_Sound_Side and iainmccurdy, CC BY.</p>
       </div>
     </div>
     <div id="guess" role="dialog" aria-modal="true" aria-labelledby="guess-title" hidden>

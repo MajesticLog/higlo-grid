@@ -4,3 +4,5 @@ node_modules/
 Thumbs.db
 desktop.ini
 .DS_Store
+# Original, uncompressed sounds (converted copies are in public/sfx)
+sounds-original/

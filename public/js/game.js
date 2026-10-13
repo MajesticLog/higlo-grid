@@ -25,6 +25,12 @@ export const nightFor = (players) => Math.max(NIGHT_STEPS, players + NIGHT_EXTRA
 // This game's misses before the wolf (rounds.js sets it: it grows when someone
 // joins, and never shrinks when someone leaves, so the wolf never jumps closer).
 export const nightSteps = (game) => game?.nightSteps ?? NIGHT_STEPS;
+// The sky has 7 looks, from 0 to 6: dawn, morning, noon, afternoon, dusk,
+// evening, night (the wolf). Each miss moves it along, in proportion to the
+// misses allowed, so a bigger family's day lasts longer.
+export const SKY_NOON = 2;
+export const SKY_DUSK = 4;
+export const skyStep = (night, steps) => Math.round((Math.min(night, steps) / steps) * 6);
 const FIRST_ROUND_MS = 4000; // a moment to settle in before the first flash
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
 const VERSION = 5; // the memory garden, with a garden sized for the family
@@ -42,7 +48,7 @@ export const now = () => Date.now() + serverOffset;
 
 // The middle of the garden: the centre square (7 x 7), or the middle four
 // (6 x 6 has no centre).
-function middleSquares(size) {
+export function middleSquares(size) {
   const low = Math.floor((size - 1) / 2);
   const high = Math.floor(size / 2);
   const squares = [];

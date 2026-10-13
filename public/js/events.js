@@ -6,14 +6,13 @@
 import { runTransaction } from "./firebase.js";
 import { sessionRef } from "./session.js";
 import { state } from "./state.js";
-import { now, nightSteps } from "./game.js";
+import { now, nightSteps, skyStep, SKY_DUSK } from "./game.js";
 import { replayActive } from "./replay.js";
 import { playTheremin } from "./sound.js";
 
 // Test aid: with ?peek in the link, the UFO always comes.
 const fast = new URLSearchParams(location.search).has("peek");
 const UFO_CHANCE = fast ? 1 : 0.25; // once past dusk, the chance of a UFO this game
-const PAST_DUSK = 0.5; // past dusk: at least half the misses before the wolf (3 of 5, 4 of 7...)
 const UFO_DELAY_MS = [5000, 20000]; // how long after dusk, at a quiet moment
 
 const EVENT_MS = 5000; // the UFO crosses part of the screen in 5 s, fading in and out
@@ -35,7 +34,7 @@ function quiet(game) {
 setInterval(() => {
   const seen = state.game;
   if (!state.joined || !seen || seen.status !== "playing" || seen.ufo) return;
-  if ((seen.night ?? 0) / nightSteps(seen) < PAST_DUSK) return;
+  if (skyStep(seen.night ?? 0, nightSteps(seen)) < SKY_DUSK) return; // not before dusk
   if (seen.ufoAt != null && (seen.ufoAt === 0 || now() < seen.ufoAt || !quiet(seen))) return;
   runTransaction(gameRef, (game) => {
     if (!game || game.id !== seen.id || game.status !== "playing" || game.ufo) return;

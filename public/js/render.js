@@ -1,7 +1,7 @@
 // Drawing: everything on screen comes from `state`.
 import { myId } from "./session.js";
 import { state } from "./state.js";
-import { now, nightSteps, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
+import { now, nightSteps, skyStep, SKY_DUSK, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
 import { SIZE } from "./session.js";
 import {
   READY_WAIT_MS, someoneReading, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashReady,
@@ -256,24 +256,29 @@ for (let i = 0; i < 45; i++) {
   star.style.left = `${Math.random() * 100}%`;
   star.style.top = `${Math.random() * 100}%`;
   star.style.animationDelay = `-${(Math.random() * 3).toFixed(2)}s`;
-  star.dataset.from = String(3 + (i % 4)); // more stars each step from 3 to 6
+  // More stars each step from dusk to night. Only the offset here: game.js
+  // (SKY_DUSK) isn't loaded yet while this runs, as it imports this file.
+  star.dataset.after = String(i % 3);
   sky.append(star);
   stars.push(star);
 }
-// For each night step 0..6: sun or moon, how high it is in the corner (%
-// from the top), and how far along the phone strip (% from the left).
+// For each sky step 0..6 (dawn to night): sun or moon, how high it is in the
+// corner (% from the top), and how far along the phone strip (% from the left).
+// The sun starts high in the corner and sinks towards dusk; then the moon.
 const SKY = [
-  ["☀️", 6, 6], ["☀️", 14, 20], ["☀️", 24, 34], ["🌅", 34, 50],
-  ["🌙", 22, 66], ["🌙", 12, 80], ["🌕", 6, 94],
+  ["☀️", 6, 6], ["☀️", 12, 20], ["☀️", 18, 34], ["☀️", 26, 48],
+  ["🌅", 34, 62], ["🌙", 18, 78], ["🌕", 6, 94],
 ];
 
 function renderSky() {
   const steps = nightSteps(state.game); // misses before the wolf, this game
   const night = nightShown(Math.min(state.game?.night ?? 0, steps)); // a miss darkens it once it has played
-  const step = Math.round((night / steps) * 6); // the sky has 6 steps (style.css), whatever the misses
+  const step = skyStep(night, steps); // dawn to night (style.css), whatever the misses
   document.body.dataset.night = step;
-  document.body.style.setProperty("--night", (night / steps).toFixed(3));
-  for (const star of stars) star.hidden = step < Number(star.dataset.from);
+  // The squares darken from dusk only.
+  const dark = Math.max(0, (night / steps - SKY_DUSK / 6) / (1 - SKY_DUSK / 6));
+  document.body.style.setProperty("--night", dark.toFixed(3));
+  for (const star of stars) star.hidden = step < SKY_DUSK + Number(star.dataset.after);
   const [icon, top, along] = SKY[step];
   skyIcon.textContent = stripIcon.textContent = icon;
   skyIcon.style.top = `${top}%`;

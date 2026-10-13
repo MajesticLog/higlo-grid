@@ -13,7 +13,8 @@ const SOUNDS = {
   howl: { file: "/sfx/howl.wav", volume: 1 }, // full night: the wolf
   twinkle: { file: "/sfx/twinkle.wav", volume: 1 }, // a memory guessed
   theremin: { file: "/sfx/theremin.wav", volume: 1 }, // UFO
-  bleat: { file: "/sfx/bleat.wav", volume: 1 }, // sheep
+  sheep: { file: "/sfx/sheep.wav", volume: 1 }, // the sheep's "bêêê"
+  rooster: { file: "/sfx/rooster.wav", volume: 0.5 }, // the first round of a game (music.js)
   munch: { file: "/sfx/munch.wav", volume: 1 }, // sheep grazing
   ding: { file: "/sfx/ding.wav", volume: 1 }, // someone joined
   goodbye: { file: "/sfx/goodbye.wav", volume: 1 }, // someone left
@@ -53,18 +54,31 @@ function playFile(name) {
 // listen for all of them; on a phone, a refresh that skips the lobby (no
 // typing) would otherwise never get sound. Each gesture also wakes the sound
 // up if the phone suspended or interrupted it (a call, a notification).
+const gestureHooks = [];
 function unlock() {
   if (!ctx) {
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
   }
   if (ctx.state !== "running") ctx.resume().catch(() => {});
   loadSounds();
+  for (const hook of gestureHooks) hook();
 }
 for (const gesture of ["pointerup", "touchend", "click", "keydown"]) {
   document.addEventListener(gesture, unlock, { passive: true });
 }
 
 const ready = () => ctx && ctx.state === "running";
+
+// For the music (music.js): the audio, once sound is allowed (or null), and a
+// way to try again on each tap (a phone may block music until one).
+export const audio = () => (ready() ? ctx : null);
+export const onGesture = (hook) => gestureHooks.push(hook);
+
+// A rooster crowing: the first round of a game. No generated version: if the
+// file hasn't loaded, the morning tune just starts on its own.
+export function playRooster() {
+  if (ready()) playFile("rooster");
+}
 
 // One note with a soft start and end, through an optional low-pass filter.
 function note(freq, start, length, { type = "triangle", volume = 0.12, filter } = {}) {
@@ -211,7 +225,7 @@ export function playTheremin() {
 
 // Sheep: a wobbly "bêêê" (a buzzy voice with a fast tremolo).
 export function playBleat() {
-  if (!ready() || playFile("bleat")) return;
+  if (!ready() || playFile("sheep")) return;
   const t = ctx.currentTime + 0.05;
   const voice = filter("bandpass", 1100, 3);
   voice.connect(envelope(t, 0.14, 0.04, 0.5, 0.25));

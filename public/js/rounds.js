@@ -16,7 +16,9 @@ import { update, runTransaction } from "./firebase.js";
 import { SIZE, sizeFor, sessionRef, myRef, myId } from "./session.js";
 import { state, rememberPosition } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
-import { key, now, PICTURES, newBoard, spawnSquare, checkEnd, nextGuess, currentMemory, cluesOf, nightFor } from "./game.js";
+import {
+  key, now, PICTURES, newBoard, spawnSquare, middleSquares, checkEnd, nextGuess, currentMemory, cluesOf, nightFor,
+} from "./game.js";
 import { playBleat, playMunch } from "./sound.js";
 import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS, MISSED_MS } from "./replay.js";
 
@@ -75,13 +77,16 @@ export function zoneSquares(game, zone) {
 // Where the flash looks this round, and the picture to find. The zone holds
 // enough of that picture for the family to find it, plus one, when the garden
 // allows (docs/recommendations.md); otherwise as many as it can. Never the
-// same zone, nor the same picture, twice in a row.
+// same zone, nor the same picture, twice in a row, and never around the
+// middle, where everyone stands while it flashes.
 function pickZone(game, needed) {
   const size = game.size ?? SIZE;
+  const middle = middleSquares(size);
   const options = [];
   for (let y = 0; y + ZONE <= size; y++) {
     for (let x = 0; x + ZONE <= size; x++) {
       if (game.lastZone === key(x, y)) continue;
+      if (middle.some((m) => m.x >= x && m.x < x + ZONE && m.y >= y && m.y < y + ZONE)) continue;
       const counts = new Map();
       for (const k of zoneSquares(game, { x, y })) counts.set(game.board[k], (counts.get(game.board[k]) ?? 0) + 1);
       for (const [kind, count] of counts) {

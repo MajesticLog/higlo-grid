@@ -13,6 +13,7 @@ import { cardOpen } from "./card.js";
 import { hintHelp } from "./rules.js";
 import { sendHeart } from "./hearts.js";
 import "./messages.js";
+import "./music.js";
 
 document.getElementById("link").textContent = location.href;
 
