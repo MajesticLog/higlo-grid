@@ -1,66 +1,68 @@
-// How to play: a few cards, mostly pictures and few words, opened with the
-// ❓ button (which glows for newcomers). The numbers come
-// from the game's settings, so the rules stay true when they're tuned.
-import { FLASH_MS } from "./rounds.js";
-import { NIGHT_STEPS, PICTURES } from "./game.js";
+// How to play: four cards that show rather than tell (playtest 6: too much
+// text, too many cards). Each has a little scene on a 3x3 patch of the
+// garden, playing on a loop (style.css, "How to play"), and one line.
+// Opened with the ❓ button (which glows for newcomers).
+import { PICTURES } from "./game.js";
 import { CLUES } from "./lobby.js";
 
 const SEEN_KEY = "higlo:rules-seen";
 
+// A 3x3 patch of tall grass: `cell(i)` fills square i (0..8, row by row).
+const patch = (cell, extra = "") =>
+  `<div class="demo-grid">${[...Array(9).keys()].map((i) => `<div class="demo-cell">${cell(i)}</div>`).join("")}${extra}</div>`;
+const pic = (icon, className = "") => `<span class="demo-pic ${className}">${icon}</span>`;
+
+// The patch on the first two cards: snails in two corners (top right,
+// bottom left). Built when the rules open: game.js may still be loading
+// when this module runs.
+const snail = () => PICTURES[2];
+const patchPictures = () => {
+  const [flower, tulip, , caterpillar, mushroom, bird] = PICTURES;
+  return [flower, mushroom, snail(), bird, tulip, caterpillar, snail(), flower, mushroom];
+};
+
 const CARDS = [
   {
-    picture: PICTURES.join(""),
-    title: "The garden",
-    text: "Under the grass hide garden pictures. They stay in the same places all game.",
+    title: "Remember the golden patch",
+    still: 0.55, // with less motion: the pictures showing
+    // It glows gold, "Ready?", its pictures show, the grass grows back.
+    scene: () => patch((i) => pic(patchPictures()[i]), '<div class="demo-zone"></div><div class="demo-ready">Ready?</div>'),
+    text: () => "Watch the patch that glows gold, and remember its pictures together.",
   },
   {
-    picture: "✨ 👀 🌷",
-    title: "Remember them together",
-    text: "Each round, a patch of the garden glows gold. When \"Ready?\" fades, its squares show their "
-      + `pictures for ${FLASH_MS / 1000} seconds. Remember them together: you don't know yet which one `
-      + "you'll need! After each round, everyone goes back to the middle.",
+    title: "Find it together",
+    still: 0.8, // on the snails, ready
+    // The card asks for a snail; the sheep eats the grass where there's none;
+    // two players walk onto the snails and tap Ready; the snails show.
+    scene: () => `<div class="demo-target">${snail()}</div>`
+      + patch((i) => (patchPictures()[i] === snail() ? pic(snail(), "found") : '<span class="demo-short"></span>'),
+        '<span class="demo-sheep">🐑</span>'
+        + '<span class="demo-player a"><span class="demo-tick">✓</span></span>'
+        + '<span class="demo-player b"><span class="demo-tick">✓</span></span>'),
+    text: () => `Each go to a ${snail()} on a different square, and tap ✓. Stuck? Your 🐑 eats the grass where it isn't.`,
   },
   {
-    picture: "🐌 👆 ✓",
-    title: "Find the picture",
-    text: "Then a card shows the picture to find. Everyone goes to a different square where they "
-      + "remember one (in the patch, or from an earlier round), and taps ✓ Ready (or presses Enter).",
-  },
-  {
-    picture: "✅ 🌙 🐺",
     title: "A clue, or the night",
-    text: "If at least half of you find it, you earn a clue to someone's memory. If not, the patch "
-      + "shows again and the day moves on. "
-      + `After ${NIGHT_STEPS} misses (a few more for a big family), night falls, the wolf comes out and everyone runs off to bed!`,
+    still: 0.95, // the wolf
+    // Found: a clue card turns over. Missed: the day moves on, until the wolf.
+    scene: () => '<div class="demo-sky"><span class="demo-sun">☀️</span><span class="demo-moon">🌙</span>'
+      + '<span class="demo-wolf">🐺</span><span class="demo-mark yes">✅</span><span class="demo-mark no">❌</span>'
+      + `<span class="demo-clue">🔍 Clue 1 of ${CLUES}</span></div>`,
+    text: () => "Found it: a clue. Missed: the day moves on. At night, the 🐺 sends everyone to bed!",
   },
   {
-    picture: "💭 🗣️ ✅",
     title: "Guess the memory",
-    text: `With ${CLUES} clues, everyone guesses what the memory is: type it, or say it out loud. `
-      + "The person who wrote it says if you got it! Think you know sooner? Open 💡 and tap Ready to guess.",
-  },
-  {
-    picture: "🐑",
-    title: "Your sheep",
-    text: "Once per memory, tap 🐑 and place your sheep on a square. It grazes all around it, and shows "
-      + "where the picture isn't. Then choose your square as usual.",
-  },
-  {
-    picture: "🌍 🔍 💛",
-    title: "Playing on your own?",
-    text: "Before you start, pick a family memory to find: one someone left for the family. "
-      + "With no one to judge, you see the answer and say if you got it. It stays hidden for the others, "
-      + "and its author will see you found it, with your note.",
-  },
-  {
-    picture: "🧺",
-    title: "The memory chest",
-    text: "Every memory you find goes in the chest at the top. Read them again any time, or save them to keep.",
+    still: 0.85, // the clues, the guess, hurray
+    // The clues, one by one, then a guess, then hurray.
+    scene: () => '<div class="demo-guess">'
+      + ["🏖️ By the sea", "🍦 Ice cream", "☔ It rained"].map((c, i) => `<span class="demo-clue-line n${i + 1}">${c}</span>`).join("")
+      + '<span class="demo-think">💭 Our holiday in Brittany!</span><span class="demo-cheer">🎉</span></div>',
+    text: () => `With ${CLUES} clues, guess the memory: type it, or say it out loud! Think you know sooner? Tap 💡, then "Ready to guess!"`,
   },
 ];
 
 const box = document.getElementById("rules");
-const picture = document.getElementById("rules-picture");
+const scene = document.getElementById("rules-picture");
 const title = document.getElementById("rules-title");
 const text = document.getElementById("rules-text");
 const dots = document.getElementById("rules-dots");
@@ -70,9 +72,10 @@ let page = 0;
 
 function draw() {
   const card = CARDS[page];
-  picture.textContent = card.picture;
+  scene.innerHTML = card.scene(); // our own markup, above
+  scene.style.setProperty("--still", String(-card.still));
   title.textContent = card.title;
-  text.textContent = card.text;
+  text.textContent = card.text();
   dots.replaceChildren(...CARDS.map((_, i) => {
     const dot = document.createElement("span");
     dot.className = i === page ? "dot on" : "dot";

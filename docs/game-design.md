@@ -141,7 +141,7 @@ Players can choose any square they remember holding the picture, not only square
 
 ## 11. How to play
 
-- A few picture cards, opened with ❓ (never by themselves; for anyone who hasn't opened it yet on that device, the ❓ pulses and a bouncing arrow points at it): the garden and its pictures, the golden patch and the card, choosing and Ready, finding versus missing (clues and the day moving on), sheep, guessing, playing on your own, the memory chest. The credits for the music and sounds are at the bottom.
+- Four cards that show rather than tell, opened with ❓ (never by themselves; for anyone who hasn't opened it yet on that device, the ❓ pulses and a bouncing arrow points at it). Each has a little looping scene and one line: the golden patch ("Ready?", its pictures, the grass again); finding it together (the card, the sheep grazing, two players on the snails, ✓); a clue or the night (a clue card, then the sky darkening until the wolf); guessing the memory (three clues, a guess, 🎉; its line also says that 💡 then "Ready to guess!" guesses sooner). With less motion, each scene holds still on its telling moment. The credits for the music and sounds are at the bottom. (Before playtest 6: eight cards of text, too many and too long.)
 
 ## Principles this follows
 

@@ -1233,9 +1233,8 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 .rules-heading { margin: 0; color: #2f7d32; font-weight: 700; }
-#rules-picture { margin: 12px 0 0; font-size: 46px; line-height: 1.2; letter-spacing: 4px; }
 #rules-title { margin: 10px 0 0; font-size: 24px; }
-#rules-text { margin: 10px 0 0; font-size: 18px; line-height: 1.45; min-height: 5.8em; }
+#rules-text { margin: 10px 0 0; font-size: 18px; line-height: 1.45; min-height: 4.4em; }
 
 #rules-dots {
   display: flex;
@@ -1252,6 +1251,318 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 #rules-dots .dot.on { background: #2f7d32; }
+
+/* The scenes on the cards (rules.js): a 3x3 patch of the garden, or a strip
+   of sky, playing on a loop. Every part runs on the same cycle, with its
+   timing inside its keyframes, so less motion can hold them all still on
+   one telling moment (below). */
+#rules-picture {
+  --cycle: 8s;
+  --cell: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 210px;
+  margin: 12px 0 0;
+}
+#rules-picture * {
+  animation-duration: var(--cycle);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
+.demo-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, var(--cell));
+  grid-template-rows: repeat(3, var(--cell));
+  border: 3px solid #689f38;
+  border-radius: 6px;
+  background: #6b8e23 url("/img/grass-tall.webp") center / cover;
+}
+.demo-cell {
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(20, 45, 10, 0.5);
+}
+.demo-pic, .demo-short {
+  position: absolute;
+  inset: 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 30px;
+  line-height: 1;
+}
+.demo-pic { background: #fffdf5; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12); }
+.demo-short { background: #8bc34a url("/img/grass-short.svg") center / 100% 100%; }
+
+/* 1. The patch glows, "Ready?", its pictures show, then the grass again. */
+.demo-zone {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow: 0 0 0 4px #ffd54f, 0 0 16px 6px rgba(255, 213, 79, 0.7);
+  animation-name: demo-zone;
+}
+.demo-ready {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5), 0 0 3px #000;
+  animation-name: demo-ready;
+}
+.demo-pic:not(.found) { animation-name: demo-flash; }
+@keyframes demo-zone {
+  0%, 4% { opacity: 0; }
+  8% { opacity: 1; }
+  14% { opacity: 0.4; }
+  20% { opacity: 1; }
+  26% { opacity: 0.4; }
+  32%, 74% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+@keyframes demo-ready {
+  0%, 6% { opacity: 0; transform: scale(0.5); }
+  12% { opacity: 1; transform: scale(1.1); }
+  24% { opacity: 1; transform: scale(1); }
+  29%, 100% { opacity: 0; transform: scale(1.2); }
+}
+@keyframes demo-flash {
+  0%, 31% { opacity: 0; }
+  33%, 74% { opacity: 1; }
+  77%, 100% { opacity: 0; }
+}
+
+/* 2. The card asks for a snail; the sheep grazes; two players walk onto
+   the snails, tap Ready, and the snails show. */
+.demo-target {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: #fffdf5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  font-size: 30px;
+  line-height: 1;
+  animation-name: demo-pop;
+}
+.demo-short { animation-name: demo-graze; }
+.demo-sheep {
+  position: absolute;
+  left: calc(var(--cell) * 1.5 - 20px);
+  top: calc(var(--cell) * 1.5 - 22px);
+  font-size: 36px;
+  line-height: 1;
+  z-index: 2;
+  animation-name: demo-sheep;
+}
+.demo-player {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+.demo-player.a { background: #e53935; animation-name: demo-walk-a; }
+.demo-player.b { background: #1e88e5; animation-name: demo-walk-b; }
+.demo-tick {
+  position: absolute;
+  right: -12px;
+  top: -12px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  color: #2e7d32;
+  font-size: 13px;
+  font-weight: 900;
+  animation-name: demo-tick;
+}
+.demo-pic.found { animation-name: demo-found; }
+@keyframes demo-pop {
+  0%, 2% { opacity: 0; transform: scale(0.5); }
+  6%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; }
+}
+@keyframes demo-sheep {
+  0%, 10% { opacity: 0; transform: translateY(-30px); }
+  14% { opacity: 1; transform: none; }
+  18%, 26% { transform: rotate(-10deg); }
+  22%, 30% { transform: rotate(10deg); }
+  34% { opacity: 1; transform: none; }
+  38%, 100% { opacity: 0; transform: translateX(40px); }
+}
+@keyframes demo-graze {
+  0%, 22% { opacity: 0; }
+  30%, 92% { opacity: 1; }
+  97%, 100% { opacity: 0; }
+}
+/* From the middle to each snail: red to the top right, blue to the bottom left. */
+@keyframes demo-walk-a {
+  0%, 38% { transform: translate(calc(var(--cell) * 1.5 - 25px), calc(var(--cell) * 1.5 - 12px)); }
+  52%, 100% { transform: translate(calc(var(--cell) * 2.5 - 12px), calc(var(--cell) * 0.5 - 12px)); }
+}
+@keyframes demo-walk-b {
+  0%, 42% { transform: translate(calc(var(--cell) * 1.5 + 1px), calc(var(--cell) * 1.5 - 12px)); }
+  56%, 100% { transform: translate(calc(var(--cell) * 0.5 - 12px), calc(var(--cell) * 2.5 - 12px)); }
+}
+@keyframes demo-tick {
+  0%, 60% { opacity: 0; transform: scale(0.4); }
+  64%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; }
+}
+@keyframes demo-found {
+  0%, 70% { opacity: 0; box-shadow: none; }
+  74%, 94% { opacity: 1; box-shadow: inset 0 0 0 3px #43a047; }
+  100% { opacity: 0; }
+}
+
+/* 3. Found: a clue turns over. Missed: the sky darkens, until the wolf. */
+.demo-sky {
+  position: relative;
+  width: 240px;
+  height: 160px;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 3px solid #689f38;
+  animation-name: demo-sky;
+}
+.demo-sun, .demo-moon, .demo-wolf, .demo-mark, .demo-clue { position: absolute; line-height: 1; }
+.demo-sun { left: 18px; font-size: 34px; animation-name: demo-sun; }
+.demo-moon { right: 22px; top: 14px; font-size: 30px; animation-name: demo-moon; }
+.demo-wolf { left: 94px; bottom: 12px; font-size: 52px; animation-name: demo-wolf; }
+.demo-mark { right: 12px; bottom: 12px; font-size: 30px; }
+.demo-mark.yes { animation-name: demo-yes; }
+.demo-mark.no { animation-name: demo-no; }
+.demo-clue {
+  left: 50px;
+  top: 52px;
+  width: 140px;
+  box-sizing: border-box;
+  padding: 10px 0;
+  border-radius: 10px;
+  background: #fffdf5;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  font-size: 17px;
+  font-weight: 700;
+  animation-name: demo-clue;
+}
+@keyframes demo-sky {
+  0%, 40% { background-color: #f3e5ec; }
+  50% { background-color: #90caf9; }
+  62% { background-color: #ffb74d; }
+  74%, 100% { background-color: #1a237e; }
+}
+@keyframes demo-sun {
+  0%, 40% { top: 10px; opacity: 1; }
+  62% { top: 70px; opacity: 1; }
+  70%, 100% { top: 110px; opacity: 0; }
+}
+@keyframes demo-moon {
+  0%, 66% { opacity: 0; }
+  74%, 100% { opacity: 1; }
+}
+@keyframes demo-wolf {
+  0%, 80% { opacity: 0; transform: translateX(140px); }
+  88%, 100% { opacity: 1; transform: none; }
+}
+@keyframes demo-yes {
+  0%, 3% { opacity: 0; }
+  6%, 34% { opacity: 1; }
+  38%, 100% { opacity: 0; }
+}
+@keyframes demo-no {
+  0%, 40% { opacity: 0; }
+  43%, 78% { opacity: 1; }
+  82%, 100% { opacity: 0; }
+}
+@keyframes demo-clue {
+  0%, 6% { opacity: 0; transform: rotateY(90deg); }
+  12%, 32% { opacity: 1; transform: none; }
+  37%, 100% { opacity: 0; transform: none; }
+}
+
+/* 4. The clues, one by one, then a guess, then hurray. */
+.demo-guess {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 240px;
+}
+.demo-clue-line {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: #fffdf5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+}
+.demo-clue-line.n1 { animation-name: demo-line-1; }
+.demo-clue-line.n2 { animation-name: demo-line-2; }
+.demo-clue-line.n3 { animation-name: demo-line-3; }
+.demo-think {
+  padding: 8px 14px;
+  border-radius: 18px;
+  background: #e3f2fd;
+  font-size: 16px;
+  font-weight: 700;
+  animation-name: demo-think;
+}
+.demo-cheer { font-size: 30px; line-height: 1; animation-name: demo-cheer; }
+@keyframes demo-line-1 {
+  0%, 4% { opacity: 0; transform: translateX(-30px); }
+  10%, 94% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-line-2 {
+  0%, 16% { opacity: 0; transform: translateX(-30px); }
+  22%, 94% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-line-3 {
+  0%, 28% { opacity: 0; transform: translateX(-30px); }
+  34%, 94% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-think {
+  0%, 46% { opacity: 0; transform: scale(0.6); }
+  54%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; }
+}
+@keyframes demo-cheer {
+  0%, 68% { opacity: 0; transform: scale(0.4); }
+  74% { opacity: 1; transform: scale(1.3); }
+  80%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; }
+}
+
+/* Less motion: each scene holds still on its telling moment. */
+@media (prefers-reduced-motion: reduce) {
+  #rules-picture * {
+    animation-play-state: paused !important;
+    animation-delay: calc(var(--cycle) * var(--still, -0.6)) !important;
+  }
+}
 
 /* Anchors the ↻ on my sheep's square. */
 .pick.mine { position: relative; }
