@@ -5,6 +5,7 @@ import { state } from "./state.js";
 import { onValue } from "./firebase.js";
 import { sessionRef } from "./session.js";
 import { noteBox, notesOf, noteLine } from "./notes.js";
+import { foundAlone, foundItem } from "./finds.js";
 
 const button = document.getElementById("chest");
 const count = document.getElementById("chest-count");
@@ -56,8 +57,20 @@ function fill() {
   // Someone typing a note: leave the chest as it is (notes.js updates the lists).
   if (document.activeElement?.closest?.("#chest-panel .notes-form")) return;
   list.replaceChildren();
+  // Found alone, still hidden from the rest of the family: only for their
+  // author and their finders (finds.js).
+  const alone = foundAlone();
+  if (alone.length > 0) {
+    const section = document.createElement("section");
+    const heading = document.createElement("h3");
+    heading.textContent = "🔍 Found by the family, still hidden from the others";
+    const items = document.createElement("ul");
+    items.append(...alone.map(foundItem));
+    section.append(heading, items);
+    list.append(section);
+  }
   const games = byGame();
-  if (games.length === 0) {
+  if (games.length === 0 && alone.length === 0) {
     const empty = document.createElement("p");
     empty.className = "chest-empty";
     empty.textContent = "The chest is empty for now. Memories you find in the field will be kept here.";

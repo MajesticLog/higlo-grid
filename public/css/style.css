@@ -1044,7 +1044,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   line-height: 24px;
 }
 
-#chest-panel {
+#chest-panel, #finds {
   position: fixed;
   inset: 0;
   z-index: 22; /* above the memory card, under the end screen */
@@ -1055,7 +1055,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   overflow-y: auto;
 }
 
-#chest-panel[hidden] { display: none; }
+#chest-panel[hidden], #finds[hidden] { display: none; }
 
 .chest-body {
   box-sizing: border-box;
@@ -1075,10 +1075,11 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 .chest-intro, #chest-hidden { margin: 8px 0 0; color: #666; }
 .chest-empty { margin: 24px 0; font-size: 18px; }
 
-#chest-list section { text-align: left; }
+#chest-list section, #finds-list { text-align: left; }
+#finds-title { margin: 0; font-size: 26px; }
 #chest-list h3 { margin: 24px 0 8px; font-size: 16px; color: #555; }
 
-#chest-list ul {
+#chest-list ul, #finds-list ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1086,7 +1087,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   gap: 10px;
 }
 
-#chest-list li {
+#chest-list li, #finds-list li {
   --c: #999;
   padding: 10px 14px;
   border-radius: 12px;
@@ -1095,6 +1096,9 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   display: grid;
   gap: 4px;
 }
+
+/* Who found a family memory alone (finds.js). */
+.found-by { color: #2e7d32; font-size: 14px; font-weight: 600; }
 
 /* --- Guessing a memory (guess.js): above the clue card, under the chest --- */
 #guess {

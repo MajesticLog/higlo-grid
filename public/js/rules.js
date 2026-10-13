@@ -14,23 +14,24 @@ const CARDS = [
     text: "Under the grass hide garden pictures. They stay in the same places all game.",
   },
   {
-    picture: "👀 🌷 🐌",
+    picture: "✨ 👀 🌷",
     title: "Remember them together",
-    text: `Each round, every square shows its picture for ${FLASH_MS / 1000} seconds. `
-      + "Remember them together: you don't know yet which one you'll need! "
-      + "After each round, everyone goes back to the middle.",
+    text: "Each round, a patch of the garden glows gold. When \"Ready?\" fades, its squares show their "
+      + `pictures for ${FLASH_MS / 1000} seconds. Remember them together: you don't know yet which one `
+      + "you'll need! After each round, everyone goes back to the middle.",
   },
   {
     picture: "🐌 👆 ✓",
     title: "Find the picture",
     text: "Then a card shows the picture to find. Everyone goes to a different square where they "
-      + "remember one, and taps ✓ Ready (or presses Enter).",
+      + "remember one (in the patch, or from an earlier round), and taps ✓ Ready (or presses Enter).",
   },
   {
     picture: "✅ 🌙 🐺",
     title: "A clue, or the night",
-    text: "If at least half of you find it, you earn a clue to someone's memory. If not, the night "
-      + `falls a little. After ${NIGHT_STEPS} misses (a few more for a big family), the wolf comes out and everyone runs off to bed!`,
+    text: "If at least half of you find it, you earn a clue to someone's memory. If not, the patch "
+      + "shows again and the day moves on. "
+      + `After ${NIGHT_STEPS} misses (a few more for a big family), night falls, the wolf comes out and everyone runs off to bed!`,
   },
   {
     picture: "💭 🗣️ ✅",
@@ -43,6 +44,13 @@ const CARDS = [
     title: "Your sheep",
     text: "Once per game, tap 🐑 and place your sheep on a square. It grazes all around it, and shows "
       + "where the picture isn't. Then choose your square as usual.",
+  },
+  {
+    picture: "🌍 🔍 💛",
+    title: "Playing on your own?",
+    text: "Before you start, pick a family memory to find: one someone left for the family. "
+      + "With no one to judge, you see the answer and say if you got it. It stays hidden for the others, "
+      + "and its author will see you found it, with your note.",
   },
   {
     picture: "🧺",

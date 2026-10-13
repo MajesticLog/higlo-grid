@@ -14,6 +14,7 @@ import { hintHelp } from "./rules.js";
 import { sendHeart } from "./hearts.js";
 import "./messages.js";
 import "./music.js";
+import "./finds.js";
 
 document.getElementById("link").textContent = location.href;
 
