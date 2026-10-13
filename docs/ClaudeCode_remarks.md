@@ -146,3 +146,7 @@ I went through the game against your research documents and the brief, and ran a
 ## My notes on working with Claude Code
 
 - I didn't realise I could (should?) use `/clear` between tasks. All the work from 10 to 12 October ran in one long conversation, which had to be summarised whenever it got too long.
+
+## Notes for the write-up
+
+- **Zones and bigger families (13 October).** The flash now shows a 3 × 3 zone that holds the picture to find: 2 of it for 2 players, 3 for 3 or 4 players. A round is found when half the players (rounded up) are on the picture, so 3 is enough to win, but with 4 players one person can never stand on the right picture, and only 3 out of 4 taking part isn't much fun. Since the brief says the game will be tried from 2 or 3 devices, it's kept like this for now. For bigger families, the fix would be to let players share a square, or to make the middle square a "safe" square where anyone unsure can stay.
