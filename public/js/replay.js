@@ -10,6 +10,7 @@
 // where an action is {kind: "walk", player, from: {x, y}, path: ["x_y", ...]}
 // (the square they chose last).
 import { state } from "./state.js";
+import { playTwinkle, playMiss } from "./sound.js";
 
 export const COUNT_MS = 650; // each of 3, 2, 1
 export const STEP_MS = 220; // a circle walking one square
@@ -56,6 +57,14 @@ export function updateReplay(arriving) {
     ...[...missed.values()].map((at) => at + MISSED_MS - MISSED_STAGGER_MS * (missed.size - 1)),
   );
   current = { tag: replay.tag, start, end, shown, missed, walks, replay, fresh: !arriving };
+  // Once everyone has walked to their square: a twinkle if enough of us found
+  // it, a soft "aww" if not, so the result is heard as well as seen.
+  if (!arriving) {
+    const tag = replay.tag;
+    setTimeout(() => {
+      if (current?.tag === tag) (replay.success ? playTwinkle : playMiss)();
+    }, t - performance.now());
+  }
   if (replayActive() && !ticker) {
     ticker = setInterval(() => {
       if (!replayActive()) {

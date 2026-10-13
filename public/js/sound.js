@@ -11,7 +11,7 @@ let ctx = null;
 const SOUNDS = {
   fanfare: { file: "/sfx/fanfare.wav", volume: 1 }, // every memory found
   howl: { file: "/sfx/howl.wav", volume: 1 }, // full night: the wolf
-  twinkle: { file: "/sfx/twinkle.wav", volume: 1 }, // a memory guessed
+  twinkle: { file: "/sfx/twinkle.wav", volume: 1 }, // a memory guessed, a round found
   theremin: { file: "/sfx/theremin.wav", volume: 1 }, // UFO
   sheep: { file: "/sfx/sheep.wav", volume: 1 }, // the sheep's "bêêê"
   rooster: { file: "/sfx/rooster.wav", volume: 0.5 }, // the first round of a game (music.js)
@@ -202,6 +202,27 @@ export function playTwinkle() {
       o.frequency.value = freq * multiple;
       o.connect(partial).connect(gain);
     }
+  });
+}
+
+// A round missed: a soft, kind "aww", two low notes sliding down. Gentle on
+// purpose (no buzzer: nobody failed, the day just moves on).
+export function playMiss() {
+  if (!ready()) return;
+  const start = ctx.currentTime + 0.05;
+  const soft = filter("lowpass", 900, 0.7);
+  soft.connect(envelope(start, 0.16, 0.03, 0.75, 0.35));
+  [[330, 311, 0, 0.32], [294, 247, 0.34, 0.75]].forEach(([from, to, at, length]) => {
+    const t = start + at;
+    const o = osc("triangle", t, length);
+    o.frequency.setValueAtTime(from, t);
+    o.frequency.linearRampToValueAtTime(to, t + length);
+    const note = ctx.createGain();
+    note.gain.setValueAtTime(0, t);
+    note.gain.linearRampToValueAtTime(1, t + 0.03);
+    note.gain.setValueAtTime(1, t + length - 0.08);
+    note.gain.linearRampToValueAtTime(0, t + length);
+    o.connect(note).connect(soft);
   });
 }
 

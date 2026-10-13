@@ -146,6 +146,7 @@
           <button id="rules-back" type="button">← Back</button>
           <button id="rules-next" class="primary" type="button">Next ➜</button>
         </div>
+        <button id="rules-tutorial" class="link-button" type="button">▶ Play the tutorial (about a minute)</button>
         <p class="credits">Music: "Morning" by Kevin MacLeod (incompetech.com), CC BY 4.0.
           Sounds from freesound.org by BenjaminNelan, n_audioman, The_Sound_Side and iainmccurdy, CC BY.</p>
       </div>
@@ -215,6 +216,42 @@
         <div id="finds-list"></div>
         <div class="end-buttons">
           <button id="finds-close" class="primary" type="button">💛 Lovely!</button>
+        </div>
+      </div>
+    </div>
+    <div id="tutorial" role="dialog" aria-modal="true" aria-labelledby="tut-title" hidden>
+      <div id="tut-offer" class="tut-card">
+        <h2 id="tut-title">Welcome to the garden! 🌱</h2>
+        <p>First time here? Learn by playing, in about a minute.</p>
+        <div class="end-buttons">
+          <button id="tut-start" class="primary" type="button">▶ Play the tutorial</button>
+          <button id="tut-join" type="button">Join the game</button>
+        </div>
+      </div>
+      <div id="tut-play" hidden>
+        <div class="tut-top">
+          <span class="tut-label">Tutorial</span>
+          <button id="tut-skip" type="button">Skip ✕</button>
+        </div>
+        <div id="tut-bar" aria-live="polite">
+          <p id="tut-say"></p>
+          <p id="tut-detail"></p>
+          <div class="tut-actions">
+            <span id="tut-target" aria-label="Picture to find" hidden></span>
+            <button id="tut-sheep" type="button" aria-label="Send your sheep" hidden>🐑</button>
+            <button id="tut-ready" type="button" hidden>✓ Ready</button>
+            <button id="tut-done" type="button" hidden>Join the game 🌱</button>
+            <div id="tut-tools" hidden>
+              <button id="tut-help" class="corner" type="button" aria-label="How to play">❓</button>
+              <button id="tut-bulb" class="corner" type="button" aria-label="Clues found">💡</button>
+              <button id="tut-chest" class="corner" type="button" aria-label="Memory chest"><img src="/img/chest.svg" alt=""></button>
+            </div>
+          </div>
+        </div>
+        <div class="tut-board">
+          <div id="tut-grid" aria-label="Practice garden"></div>
+          <div id="tut-big" aria-hidden="true" hidden></div>
+          <div id="tut-toasts" aria-live="polite"></div>
         </div>
       </div>
     </div>

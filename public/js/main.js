@@ -11,6 +11,7 @@ import { gameChanged, maybeStartAgain } from "./end.js";
 import { renderGuess, maybeAdvance, readingResult } from "./guess.js";
 import { cardOpen } from "./card.js";
 import { hintHelp } from "./rules.js";
+import { offerTutorial } from "./tutorial.js";
 import { sendHeart } from "./hearts.js";
 import "./messages.js";
 import "./music.js";
@@ -20,6 +21,7 @@ document.getElementById("link").textContent = location.href;
 
 // The lobby first: pick an animal and a colour, hide a memory.
 Object.assign(state.me, await runLobby());
+await offerTutorial(); // the first time on this device: "Play the tutorial" or "Join the game"
 document.getElementById("field").hidden = false;
 hintHelp(); // the ❓ glows for anyone who hasn't opened the rules yet
 // Back on my square after a refresh in the same game; otherwise the start row.

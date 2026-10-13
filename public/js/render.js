@@ -167,12 +167,21 @@ function drawPicks() {
   if (!choosing()) return;
   const picks = state.game.picks ?? {};
   for (const [id, p] of Object.entries(picks)) {
+    // Mine, strong, with "You"; the others' in their colour, lighter, so
+    // everyone sees who's going where (playtest 7). The result never says
+    // who was wrong.
+    const mine = id === myId;
+    const who = mine ? state.me : state.players.find((player) => player.id === id);
     const el = document.createElement("div");
-    el.className = id === myId ? `pick mine${p.ready ? " ready" : ""}` : "pick";
+    el.className = `pick ${mine ? "mine" : "other"}${p.ready ? " ready" : ""}`;
     place(el, p.x, p.y);
-    if (id === myId) {
-      el.style.setProperty("--c", state.me.color);
-      el.append(animalSpan(state.me.animal));
+    if (who?.color) el.style.setProperty("--c", who.color);
+    el.append(animalSpan(who?.animal));
+    if (mine) {
+      const you = document.createElement("span");
+      you.className = "you";
+      you.textContent = "You";
+      el.append(you);
     }
     grid.append(el);
   }
@@ -564,7 +573,7 @@ function renderStatus() {
     if (!last) return say("🌱 Get ready!", cluesLine(game));
     if (someoneReading()) return say("⏳ Waiting for everyone to finish reading…", "The next round starts once every window is closed");
     return last.success
-      ? say(`✅ Found! ${last.found} of ${last.needed} needed`, cluesLine(game))
+      ? say(`✅ Found together! ${last.found} of ${last.needed} needed`, cluesLine(game))
       : say("🌙 Not this time… the night falls a little", cluesLine(game));
   }
   // Choosing: the card shows the picture to find.
@@ -575,10 +584,15 @@ function renderStatus() {
   const count = total > 1 ? `${readyCount} of ${total} ready` : "";
   const mine = picks[myId];
   const withCount = (text) => [text, count].filter(Boolean).join(" · ");
-  if (mine?.ready) say("✓ Ready!", withCount("Waiting for the others"));
+  // A team game: say how many of us need to find one (playtest 7).
+  const needed = Math.ceil(total / 2);
+  const find = total > 1 ? `Find a ${targetPicture()} together` : `Find a ${targetPicture()}`;
+  const team = total > 1 ? `${needed} of you ${needed === 1 ? "needs" : "need"} to find one` : "";
+  if (told()) say(mine?.ready ? "✓ Ready!" : find, told());
+  else if (mine?.ready) say("✓ Ready!", withCount("Waiting for the others"));
   else if (inSheepMode()) say("🐑 Where should your sheep graze?", "Around it, it shows where the picture isn't");
-  else if (mine) say(`Find the ${targetPicture()}`, withCount("Tap ✓ Ready, or pick another square"));
-  else say(`Find the ${targetPicture()}`, withCount("Pick a square where you remember one"));
+  else if (mine) say(find, withCount(total > 1 ? "Tap ✓ Ready · one square each" : "Tap ✓ Ready, or pick another square"));
+  else say(find, [team, count].filter(Boolean).join(" · ") || "Pick a square where you remember one");
   readyButton.hidden = Boolean(mine?.ready);
   // One sheep per memory: shown until it's been used.
   sheepButton.hidden = Boolean(mine?.ready) || sheepLeft() <= 0;
@@ -616,6 +630,17 @@ export function renderTimer() {
   if (off) return;
   const left = Math.max(0, deadline - now());
   timerFill.style.width = `${(left / READY_WAIT_MS) * 100}%`;
+}
+
+// A message in the bar's second line for a moment (a square already taken).
+const TELL_MS = 2500;
+let telling = null; // {text, until}
+const told = () => (telling && performance.now() < telling.until ? telling.text : null);
+export function tellStatus(text) {
+  telling = { text, until: performance.now() + TELL_MS };
+  setTimeout(render, TELL_MS + 50);
+  render();
+  nudgeStatus();
 }
 
 // A little shake when something can't be done (a square already taken).

@@ -110,6 +110,19 @@
           }
         },
 
+        // Someone in the tutorial (tutorial.js), by tab: "getting ready to join".
+        "arriving": {
+          "$tab": {
+            ".write": "$sid.matches(/^[a-z0-9]{4,20}$/)",
+            ".validate": "newData.hasChildren(['at'])",
+            "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
+            "color": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "at": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
         // Hearts and message bubbles: short-lived, removed by their sender.
         "hearts": {
           "$hid": {

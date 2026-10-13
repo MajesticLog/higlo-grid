@@ -15,7 +15,7 @@
 import { update, runTransaction } from "./firebase.js";
 import { SIZE, sizeFor, sessionRef, myRef, myId } from "./session.js";
 import { state, rememberPosition } from "./state.js";
-import { render, renderTimer, nudgeStatus } from "./render.js";
+import { render, renderTimer, nudgeStatus, tellStatus } from "./render.js";
 import {
   key, now, PICTURES, newBoard, spawnSquare, middleSquares, checkEnd, nextGuess, currentMemory, cluesOf, nightFor,
 } from "./game.js";
@@ -56,6 +56,7 @@ export function roundPhase() {
   return "choose";
 }
 export const choosing = () => state.joined && roundPhase() === "choose";
+
 export const targetPicture = () => PICTURES[state.game?.flash?.target] ?? "";
 
 // When a round's flash starts if it's decided now: the zone glows and
@@ -308,7 +309,12 @@ export function pickSquare(x, y) {
   if (inSheepMode()) return placeSheep(x, y);
   const k = key(x, y);
   const taken = (game) => Object.entries(game.picks ?? {}).some(([id, p]) => id !== myId && key(p.x, p.y) === k);
-  if (taken(state.game)) return nudgeStatus();
+  if (taken(state.game)) {
+    const [id] = Object.entries(state.game.picks).find(([other, p]) => other !== myId && key(p.x, p.y) === k);
+    const p = state.players.find((player) => player.id === id);
+    const who = p ? `${p.animal ?? ""} ${p.name ?? ""}`.trim() : "Someone";
+    return tellStatus(`${who} is on that square: one each!`);
+  }
   changeRound((game) => {
     if (taken(game)) return false;
     game.picks[myId] = { x, y, ready: false };

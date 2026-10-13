@@ -4,6 +4,7 @@
 // Opened with the ❓ button (which glows for newcomers).
 import { PICTURES } from "./game.js";
 import { CLUES } from "./lobby.js";
+import { playTutorial } from "./tutorial.js";
 
 const SEEN_KEY = "higlo:rules-seen";
 
@@ -123,6 +124,11 @@ backButton.addEventListener("click", () => {
   draw();
 });
 document.getElementById("rules-close").addEventListener("click", () => { box.hidden = true; });
+// The practice garden (tutorial.js), any time.
+document.getElementById("rules-tutorial").addEventListener("click", () => {
+  box.hidden = true;
+  playTutorial();
+});
 helpButton.addEventListener("click", () => {
   rulesSeen();
   openRules();
