@@ -17,12 +17,12 @@ End of 11 October 2026. Deadline: Wednesday 14 October, 12:00.
 - [x] Revisit how someone joining or leaving is signalled, to make it more noticeable. Done 13 October: a goodbye sound, bigger tinted messages, a wave where they stood.
 - [ ] Once the game feels balanced and fun, polish: SVGs, music, sound effects. Make interactions satisfying and rewarding.
 
-## Family memories, found alone (planned 13 October)
+## Family memories, found alone (built 13 October)
 
 Memories left for the family can be found by someone playing on their own, at any time (asynchronous play across homes and time zones). To keep in mind:
 
 - [ ] **The author is recognised by their device and name.** On another device (or after clearing the browser), an author could be offered their own memory to find. Filtering by name as well covers most cases; a real fix would need some kind of account, which the brief rules out.
-- [ ] **New fields need the database rules.** Memories reject any field the rules don't list, so the new ones (who found a memory alone, whether it's open to the family) must be added to `database.rules.json` before the rules are deployed.
+- [x] **New fields need the database rules.** Memories reject any field the rules don't list, so the new ones (who found a memory alone, whether it's open to the family) must be added to `database.rules.json` before the rules are deployed. Done: `open` and `foundBy` are in the rules (still to deploy).
 - [ ] **Time.** The deadline is Wednesday 14 October, 12:00. The rules deploy, the write-up, the session exports and the email come first; this feature only if there's time, otherwise it goes in the write-up as the next step.
 
 ## Sound design

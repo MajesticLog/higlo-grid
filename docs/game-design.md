@@ -1,6 +1,6 @@
 # Game design: memory garden (v4)
 
-12 October 2026, after playtest 4; updated after playtest 5 the same evening. This replaces the "field" design (v3, tag `v3-guesstheanswer` and the commits after it): the lobby, memories, clues, guessing, night and the wolf stay; how clues are earned changes completely. Numbers are placeholding values, to be tweaked after playtests.
+12 October 2026, after playtest 4; updated after playtest 5 the same evening, and on 13 October (zones, dawn to night, music, family memories found alone). This replaces the "field" design (v3, tag `v3-guesstheanswer` and the commits after it): the lobby, memories, clues, guessing, night and the wolf stay; how clues are earned changes completely. Numbers are placeholding values, to be tweaked after playtests.
 
 ## Why this design
 
@@ -41,7 +41,7 @@ Playtest 5 (the memory garden) with Mathilde:
 
 ## A session in one paragraph
 
-Everyone opens the family link, lands in a lobby where they type their name and pick an animal and a colour, then pick a theme and write a short memory with three clues to it (or keep one still waiting to be guessed). Then they all pop up together in the middle of a 7 × 7 garden. Under the grass of the other 48 squares hide garden pictures: sakura flowers, tulips, snails, caterpillars, mushrooms and birds, eight of each, in places that stay the same all game. Each round, the whole garden shows its pictures for a few seconds, then a card shows which picture to find. The family talks it over ("the snails were bottom left!"), everyone walks to a square they think hides it, taps Ready, and after "3, 2, 1" the chosen squares show their pictures. If enough players found it, a clue to one family member's memory appears; if not, night falls a little. Everyone walks back to the middle for the next round. With three clues, everyone guesses the memory, the author says if they got it, and anyone can leave a little note about it. If every memory is found before full night, fireflies come out: "What a team!"; if the night falls, the wolf comes and everyone runs off to bed. The memories wait in the memory chest.
+Everyone opens the family link, lands in a lobby where they type their name and pick an animal and a colour, then pick a theme and write a short memory with three clues to it (or keep one still waiting to be guessed). Then they all pop up together in the middle of a 7 × 7 garden. Under the grass of the other 48 squares hide garden pictures: sakura flowers, tulips, snails, caterpillars, mushrooms and birds, eight of each, in places that stay the same all game. Each round, a patch of the garden glows gold, "Ready?" pops up, and the patch shows its pictures for a few seconds; then a card shows which picture to find. The family talks it over ("the snails were bottom left!"), everyone walks to a square they think hides it, taps Ready, and after "3, 2, 1" the chosen squares show their pictures. If enough players found it, a clue to one family member's memory appears; if not, the patch shows again and the day moves on towards night. Everyone walks back to the middle for the next round. With three clues, everyone guesses the memory, the author says if they got it, and anyone can leave a little note about it. If every memory is found before full night, fireflies come out: "What a team!"; if the night falls, the wolf comes and everyone runs off to bed. The memories wait in the memory chest.
 
 ## 1. Arrival: the lobby
 
@@ -50,6 +50,8 @@ Unchanged from v3:
 - Each player types their name and selects their animal and colour (each one unique, reserved live).
 - They pick one of eight themes (places from our youth, food, holidays, toys and games, pets and animals, songs and music, funny moments, a secret about me) and write the memory in a few words (80 characters) and **three clues** (60 characters each). Each theme shows an example.
 - A player with a memory still waiting to be guessed can **keep it** for this game.
+- Under the clues, "🌍 The family can find it even when I'm not here" (ticked by default) leaves the memory **open**: someone playing without its author can find it (section 6).
+- **Find a family memory:** the lobby lists open memories by others, still waiting and not found by this player yet, showing only who wrote each one and its theme ("🐶 Mathilde · 🍲 Food"). One can be brought into the game, with or without writing a memory of one's own.
 - Players can skip writing (a young child, a reluctant player). "← Back" returns to name, animal and colour.
 - Someone joining mid-game brings their memory into the game in progress.
 - "How to play" never opens by itself: the ❓ above the field pulses, with a bouncing arrow pointing at it, until a player opens it once on that device.
@@ -67,23 +69,25 @@ Unchanged from v3:
 ## 3. Before the first round
 
 - The bar asks "Ready to play?" and suggests reading the rules (❓). Players can walk around freely while they wait: tap a square and their circle walks there; nothing is turned over.
-- The first round starts once everyone in the garden has tapped "Ready to play", or a minute after the first one did (so nobody who wandered off holds everyone up). Players joining later arrive in the game in progress.
+- The first round starts once everyone in the garden has tapped "Ready to play", or a minute after the first one did (so nobody who wandered off holds everyone up). A rooster crows and the morning music starts. Players joining later arrive in the game in progress.
 
 ## 4. A typical round
 
-1. **Flash.** "3, 2, 1", then **every square** shows its picture for **5 seconds**, and the grass covers them all again. Players don't know yet which picture will be asked. The board never changes, so the family learns it a little more every round: hard at first, easier as the game goes on. (Before: 6 squares for 4 seconds, partly repeated; it made the pictures feel as if they moved.) The flash waits while anyone has a window open: the rules or the chest for up to 30 seconds, a clue card or a guess's result until it's closed.
+1. **Flash.** A **3 × 3 patch** of the garden glows with a pulsing gold outline and a big **"Ready?"** pops up; once it has faded, the patch's squares show their pictures for **5 seconds**, then the grass covers them again. Players don't know yet which picture will be asked. The patch holds enough of that picture for the family to find it, plus one, when the garden allows (2 for 2 players, 3 for 3 or 4); it never includes the middle square where everyone stands, and it's never the same patch, nor the same picture, twice in a row. The board never changes, so the family learns it a little more every round. (Before: the whole garden at once, which was overwhelming; and earlier, 6 squares for 4 seconds, which made the pictures feel as if they moved.) The flash waits while anyone has a window open: the rules or the chest for up to 30 seconds, a clue card or a guess's result until it's closed.
 2. **Pause.** About a second, with a message on screen ("Who remembers what?"), so nobody feels stuck. Nobody can move until every square is covered again.
 3. **The card.** A card at the top shows the picture to find this round. It's never the same as the round before.
 4. **Choosing.** Everyone talks it over and walks to a square they think hides it, then taps Ready (or presses Enter). Players can cross paths and share a square while walking, but no two players can choose the same square. The round ends when everyone is ready, or 20 s after the first Ready; anyone not ready keeps the square they're on.
 5. **Reveal.** "3, 2, 1", then each chosen square shows its picture, popping up above the player like a heart, then the grass covers it again. (Pictures turning over like cards were tried and removed.)
 6. **Result.**
     - **Found:** at least half the players, rounded up, found the picture on different squares (1 of 1 or 2, 2 of 3 or 4, 3 of 5 or 6). A clue to the current memory appears for everyone.
-    - **Missed:** every square with the picture that nobody chose shows it in a gold ring ("Here's where they were"), then night falls one step. After **5 misses**, the wolf comes.
+    - **Missed:** the whole patch shows its pictures again ("Here's the patch again"), to help the family remember it, then the day moves on one step. After **players + 3 misses (at least 5)**, the wolf comes.
 7. **Back to the middle.** Everyone walks back to the centre square, and the next round starts from there.
 
 **One thing at a time.** After a round, each screen shows things in order, and nothing opens on top of something else: "3, 2, 1", the players walking and their squares' pictures, the result in the bar ("✅ Found!" or "🌙 the night falls a little…", with the missed squares), then the clue card, then the guess if all the clues are in, then its result with the notes, then the end screen if the game is over. Wherever players can do something (close a card, guess, judge, write notes), the game waits for everyone to finish, with no timer.
 
 Everything stays collective: the game never shows who picked a wrong square.
+
+Players can choose any square they remember holding the picture, not only squares in the patch: remembering earlier rounds pays off, but the patch is a hint rather than a rule. Left as it is for now.
 
 ## 5. Sheep
 
@@ -102,11 +106,15 @@ Everything stays collective: the game never shows who picked a wrong square.
 - **A note to keep.** Once the guess is judged (or the memory revealed), everyone, the author too, can leave a short note (80 characters), such as "I'd forgotten the red bicycle!". Each person can leave as many as they like. The next round waits until everyone has closed the result window, however long that takes, so nobody is cut off mid-note. Notes appear for everyone, live, and are kept with the memory: shown on the end screen and in the memory chest, where "📝 Add a note" lets the family keep adding to it later, and saved in the chest's page.
 - **Nobody to guess.** When the only people in the garden are the memory's author (playing alone), nobody can guess it. The author chooses: **📖 Reveal it** (it goes in the chest, and notes can be added), or **🌱 Keep it for later** (it stays secret, counts as done for this game, and can be brought to the next game from the lobby). If someone joins in the meantime, they guess it as usual.
 - After a guess (right, or revealed when nobody got it), the next memory begins.
+- **Found without its author.** An open memory guessed while its author isn't in the garden isn't used up. Whoever is there sees the answer and says if they got it (the honour system; alone: "✅ Yes, I got it!" or "❌ Not this time"). Each of them is recorded on the memory, which stays hidden for the rest of the family until it's guessed with its author there. Their notes stay with it, out of the chest, so they spoil nothing.
+- **👀** next to an answer: that player has found this memory before. They still guess with everyone: it's not a competition, and answers only show once everyone has answered.
+- **Coming back:** the author sees "🎉 Zoé found your memory!", with whether they guessed it and their notes, and can reply with a note. The chest keeps these memories in a section only the author and the finders see.
 
 ## 7. Night and the wolf
 
-- The sky starts sunny. Each missed round makes it darker by one step, through dusk to night, with stars and the moon.
-- At full night (5 misses), the wolf appears and everyone runs off. "The wolf is out, let's go to bed!"
+- The day starts at dawn (a pale sky, pink towards the bottom) with the sun high in the corner. Each missed round moves the day along: morning, noon, afternoon, dusk, evening, then night, with stars and the moon. The squares only darken from dusk.
+- The steps are spread over the misses allowed: **players + 3, at least 5** (5 for 1 or 2 players, 6 for 3, 7 for 4). It grows when someone joins, and never shrinks when someone leaves, so the wolf never jumps closer.
+- At full night, the wolf appears and everyone runs off. "The wolf is out, let's go to bed!"
 - Losing doesn't punish anyone: memories not guessed wait in the chest for next time.
 
 ## 8. End of game
@@ -126,13 +134,14 @@ Everything stays collective: the game never shows who picked a wrong square.
 
 - 💬 A short message (40 characters) pops up in a bubble above its sender for everyone.
 - ❤️ Tapping another player sends them a heart. Players who meet on a square get one each.
-- 👋 "🐶 Mathilde has joined the game!" (with a doorbell ding) / "… has left the game" at the top; a refresh says nothing.
+- 👋 "🐶 Mathilde has joined the game!" (with a doorbell ding) / "👋 … has left the game" (with a soft "bye-bye", and their circle waving where it stood) at the top, tinted with the player's colour; a refresh says nothing.
 - ⏸️ Anyone can pause if they need to step away: everyone sees who paused, anyone can resume, and every clock carries on from where it stopped.
-- Sky events every 1 to 2 minutes, for whimsy only, with soft sounds.
+- A UFO, for whimsy only: once the sky is past dusk, one chance in four, at most once per game. (Several sky events were distracting.)
+- **Music and ambience**, in two layers: "Morning" (Kevin MacLeod) from the rooster until nightfall, with a summer's day from noon to dusk and crickets from dusk on top. A 🎵 panel has a volume slider for each, on each device: a test aid, to see whether they add anything under a family call. Sounds keep their own volume.
 
 ## 11. How to play
 
-- A few picture cards, opened with ❓ (never by themselves; for anyone who hasn't opened it yet on that device, the ❓ pulses and a bouncing arrow points at it): the garden and its pictures, the flash and the card, choosing and Ready, finding versus missing (clues and the night), sheep, guessing, the memory chest.
+- A few picture cards, opened with ❓ (never by themselves; for anyone who hasn't opened it yet on that device, the ❓ pulses and a bouncing arrow points at it): the garden and its pictures, the golden patch and the card, choosing and Ready, finding versus missing (clues and the day moving on), sheep, guessing, playing on your own, the memory chest. The credits for the music and sounds are at the bottom.
 
 ## Principles this follows
 
@@ -142,22 +151,22 @@ See docs/best_practices.md and docs/benchmark.md.
 - The group remembers together: the youngest and the oldest are helped by everyone else ("no, I remember, it's over there!"), and a child with a good memory can be the expert.
 - No reflex race between homes: everyone sees the same flash, and choices are locked before the reveal.
 - The 5-second flash is the one timed moment; nothing else rushes anyone. The timer only stops a round waiting for someone who has stepped away.
-- Losing is gentle and gives a reason to come back.
+- Losing is gentle and gives a reason to come back. So do family memories left open: anyone can drop in alone, at any time, and the author sees it next time.
 - Pictures, not words, on the board. Voice stays on the family's own call; guesses can be spoken.
 
 ## Current values
 
 Grid: 7*7 for everyone (for now), everyone starting on the centre square and back to it after each round
 Pictures: 6 kinds, 8 of each (48 squares)
-Flash: "3, 2, 1", then every square, 5 seconds, then about 1 second before the card
-Missed round: every square with the picture that nobody chose shows for 3 seconds
+Flash: a 3*3 patch (not the middle) glowing gold, "Ready?" (1.6 s), then its pictures for 5 seconds, then about 1 second before the card
+Missed round: the whole patch shows again for 4 seconds
 Found: half the players rounded up, on different squares
-Misses before the wolf: 5
+Misses before the wolf: players + 3, at least 5
 Sheep: 1 per player per game, grazing 3*3
 Clues: 3 per memory, one memory at a time
 Timer: 20 s from the first player ready
 
-Simulated (thousands of games, families of different memories): with the flash first and the card after, a family of 3 or 4 with an average memory wins about 9 times in 10, a forgetful one about 4 in 10, a sharp one nearly always; games last about 10 to 14 rounds. Families of 1 or 2 nearly always win, in 3 to 7 rounds: gentle and short. Showing the card first made every family win: the flash alone said where to go.
+Simulated before the zones (see docs/recommendations.md for the flash options; these figures are for the earlier flashes): with the flash first and the card after, a family of 3 or 4 with an average memory wins about 9 times in 10, a forgetful one about 4 in 10, a sharp one nearly always; games last about 10 to 14 rounds. Families of 1 or 2 nearly always win, in 3 to 7 rounds: gentle and short. Showing the card first made every family win: the flash alone said where to go.
 
 The adaptive grid (playtest 5) can't be settled by simulation: the model assumes each square is as easy to remember on any grid, and then a smaller grid comes out slightly harder (each picture has fewer copies for old memories to land on), and repeats cost a few percent. What a smaller grid changes is how well people remember each square, which only playtests can tell. Mathilde found the 7 × 7 really hard, closer to the model's "forgetful" family or below. In play, 5 × 5 and then 6 × 6 felt too easy, so the garden went back to 7 × 7, with the whole board shown in each flash instead: these numbers are for playtests to settle.
 
@@ -174,3 +183,6 @@ The adaptive grid (playtest 5) can't be settled by simulation: the model assumes
 - **Movement limited to 3 squares, with glowing reachable squares** (playtest 3): too slow and visually heavy.
 - **Showing the picture to find before the flash**: simulated, every family won, because the flash itself told them where to go.
 - **A sound on/off button**: removed, phones and browsers already let people mute a page.
+- **The whole garden in each flash** (playtest 5, then 13 October): overwhelming unless the garden is tiny, which leaves no reason to move. Replaced by a 3 × 3 patch.
+- **Several sky events** (balloon, birds, rain, owl, shooting star): distracting. Only the UFO is left, rarely.
+- **Leaving out of the guess anyone who already knows a memory**: not as fun; a 👀 by their answer is enough, since it's not a competition.
