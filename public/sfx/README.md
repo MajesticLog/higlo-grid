@@ -19,6 +19,7 @@ making the sound itself.
 | `howl.wav` | Full night: the wolf comes out |
 | `twinkle.wav` | A memory is guessed |
 | `ding.wav` | Someone joins the garden |
+| `goodbye.wav` | Someone leaves the garden |
 | `bleat.wav` | Choosing to send your sheep |
 | `munch.wav` | The sheep grazing |
 | `theremin.wav` | A UFO wobbles across (sometimes, once past dusk) |

@@ -1,13 +1,15 @@
-// Arrivals and departures: a short message at the top ("🐶 Mathilde has
-// joined the game!"), a doorbell "ding-dong" and a sparkle on the newcomer, so everyone knows
+// Arrivals and departures: a message at the top in the player's colour
+// ("🐶 Mathilde has joined the game!"), with a doorbell "ding-dong" and a
+// sparkle on the newcomer; or "👋 … has left the game", with a soft
+// "bye-bye" and their circle waving goodbye where it stood. So everyone knows
 // who comes and who goes. A refresh (leaving and coming straight back from
 // the same tab) says nothing.
 import { myId } from "./session.js";
 import { state } from "./state.js";
-import { showFloat } from "./render.js";
-import { playDing } from "./sound.js";
+import { showFloat, showGoodbye } from "./render.js";
+import { playDing, playGoodbye } from "./sound.js";
 
-const TOAST_MS = 4000; // must match the toast animation in style.css
+const TOAST_MS = 6000; // must match the toast animation in style.css
 const LEAVE_WAIT_MS = 4000; // a refresh comes back within this: no message
 
 const toasts = document.getElementById("toasts");
@@ -16,9 +18,9 @@ const leaving = new Map(); // tab -> timer for a "has left" waiting to be said
 
 const who = (p) => `${p.animal ?? ""} ${p.name ?? ""}`.trim() || "Someone";
 
-function toast(text, color) {
+function toast(text, color, kind) {
   const el = document.createElement("div");
-  el.className = "toast";
+  el.className = `toast ${kind}`;
   el.style.setProperty("--c", color ?? "#999");
   el.textContent = text;
   toasts.append(el);
@@ -40,7 +42,7 @@ export function playersChanged(players) {
       leaving.delete(p.tab);
       continue;
     }
-    toast(`${who(p)} has joined the game!`, p.color);
+    toast(`${who(p)} has joined the game!`, p.color, "join");
     playDing();
     setTimeout(() => showFloat(p.id, "✨"), 0);
   }
@@ -51,7 +53,9 @@ export function playersChanged(players) {
     const key = p.tab ?? p.id;
     leaving.set(key, setTimeout(() => {
       leaving.delete(key);
-      toast(`${who(p)} has left the game`, p.color);
+      toast(`👋 ${who(p)} has left the game`, p.color, "leave");
+      playGoodbye();
+      showGoodbye(key, p);
     }, LEAVE_WAIT_MS));
   }
   known = players;

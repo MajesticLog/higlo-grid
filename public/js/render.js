@@ -16,6 +16,7 @@ import { playBleat } from "./sound.js";
 import { renderPause } from "./pause.js";
 
 const FLOAT_MS = 1400; // must match the float animation in style.css
+const GOODBYE_MS = 3000; // must match the goodbye animation in style.css
 const POP_MS = 2000; // must match the pop-up animation in style.css
 
 const grid = document.getElementById("grid");
@@ -37,6 +38,7 @@ export function render() {
   drawTiles();
   drawPicks();
   drawPlayers();
+  drawGoodbyes();
   drawPops();
   drawSheep();
   drawWolf();
@@ -387,6 +389,40 @@ function floatElement({ icon, startedAt }) {
   // where it was instead of restarting it.
   el.style.animationDelay = `${startedAt - performance.now()}ms`;
   return el;
+}
+
+// Someone who has left (announce.js): a pale copy of their circle waves 👋
+// where they last stood, then fades away.
+const goodbyes = new Map(); // key -> {x, y, color, animal, startedAt}
+
+export function showGoodbye(key, p) {
+  const startedAt = performance.now();
+  goodbyes.set(key, { x: p.x, y: p.y, color: p.color, animal: p.animal, startedAt });
+  render();
+  setTimeout(() => {
+    if (goodbyes.get(key)?.startedAt !== startedAt) return;
+    goodbyes.delete(key);
+    render();
+  }, GOODBYE_MS);
+}
+
+function drawGoodbyes() {
+  for (const { x, y, color, animal, startedAt } of goodbyes.values()) {
+    const square = document.createElement("div");
+    square.className = "square goodbye";
+    place(square, x, y);
+    square.style.animationDelay = `${startedAt - performance.now()}ms`; // through redraws
+    const el = document.createElement("div");
+    el.className = "circle";
+    el.style.background = color;
+    el.append(animalSpan(animal));
+    const wave = document.createElement("span");
+    wave.className = "wave";
+    wave.textContent = "👋";
+    el.append(wave);
+    square.append(el);
+    grid.append(square);
+  }
 }
 
 // --- The bar above the grid: what to do, the card, Ready, the sheep ---

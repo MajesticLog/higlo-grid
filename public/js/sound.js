@@ -16,6 +16,7 @@ const SOUNDS = {
   bleat: { file: "/sfx/bleat.wav", volume: 1 }, // sheep
   munch: { file: "/sfx/munch.wav", volume: 1 }, // sheep grazing
   ding: { file: "/sfx/ding.wav", volume: 1 }, // someone joined
+  goodbye: { file: "/sfx/goodbye.wav", volume: 1 }, // someone left
 };
 const buffers = {}; // name -> decoded sound, once loaded
 
@@ -261,6 +262,27 @@ export function playDing() {
       const o = osc("sine", t, 0.95);
       o.frequency.value = freq * multiple;
       o.connect(partial).connect(gain);
+    }
+  });
+}
+
+// Someone left: a soft wooden "bye-bye", two notes falling, lower and shorter
+// than the doorbell so the two are easy to tell apart.
+export function playGoodbye() {
+  if (!ready() || playFile("goodbye")) return;
+  const start = ctx.currentTime + 0.02;
+  [[659, 0], [523, 0.22]].forEach(([freq, at]) => {
+    const t = start + at;
+    // Like a marimba: a soft note, plus a quieter partial that dies away first.
+    for (const [type, multiple, level, length] of [["triangle", 1, 0.12, 0.6], ["sine", 4, 0.02, 0.15]]) {
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(level, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + length);
+      gain.connect(ctx.destination);
+      const o = osc(type, t, length + 0.05);
+      o.frequency.value = freq * multiple;
+      o.connect(gain);
     }
   });
 }
