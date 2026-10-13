@@ -9,7 +9,7 @@ import { state, rememberPosition } from "./state.js";
 import { render } from "./render.js";
 import { applyMyMove, maybeResolve, maybeStartRound } from "./rounds.js";
 import { gameChanged } from "./end.js";
-import { eventChanged, firstEventAt } from "./events.js";
+import { eventChanged } from "./events.js";
 import { renderChest } from "./chest.js";
 import { renderGuess, maybeAdvance } from "./guess.js";
 import { CLUES, myMemoryId, backToLobby } from "./lobby.js";
@@ -72,7 +72,6 @@ function newGame() {
     version: VERSION, // a game from an earlier design gets replaced
     status: "playing",
     updatedAt: now(),
-    nextEventAt: firstEventAt(now()), // something crossing the sky (events.js)
     night: 0, // missed rounds
     round: 0,
     // board ("x_y" -> picture, index in PICTURES) and size: set when the

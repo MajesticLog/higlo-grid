@@ -17,15 +17,11 @@ making the sound itself.
 |---|---|
 | `fanfare.wav` | Every memory found: fireflies and "What a team!" |
 | `howl.wav` | Full night: the wolf comes out |
-| `twinkle.wav` | A shooting star crosses the sky; a memory is guessed |
+| `twinkle.wav` | A memory is guessed |
 | `ding.wav` | Someone joins the garden |
 | `bleat.wav` | Choosing to send your sheep |
 | `munch.wav` | The sheep grazing |
-| `swoosh.wav` | A hot-air balloon crosses the sky |
-| `caws.wav` | A flock of birds crosses the sky |
-| `rain.wav` | A rain cloud passes over the field |
-| `hoot.wav` | An owl glides by (night) |
-| `theremin.wav` | A UFO wobbles across (night) |
+| `theremin.wav` | A UFO wobbles across (sometimes, once past dusk) |
 
 ## Credits
 

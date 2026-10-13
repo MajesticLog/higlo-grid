@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80">
-  <!-- Hot-air balloon (sky event, day). Drawn for Higlo grid. -->
-  <path d="M30 3C13 3 4 16 4 29c0 15 15 25 20 31h12c5-6 20-16 20-31C56 16 47 3 30 3z" fill="#e4572e"/>
-  <path d="M30 3c-7 0-11 13-11 26 0 15 5 25 7 31h8c2-6 7-16 7-31 0-13-4-26-11-26z" fill="#f4c430"/>
-  <path d="M25 60l1 8M35 60l-1 8" stroke="#6d4c41" stroke-width="1.5"/>
-  <rect x="24" y="67" width="12" height="9" rx="2" fill="#a1887f"/>
-</svg>

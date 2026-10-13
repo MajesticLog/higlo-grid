@@ -11,11 +11,7 @@ let ctx = null;
 const SOUNDS = {
   fanfare: { file: "/sfx/fanfare.wav", volume: 1 }, // every memory found
   howl: { file: "/sfx/howl.wav", volume: 1 }, // full night: the wolf
-  swoosh: { file: "/sfx/swoosh.wav", volume: 1 }, // hot-air balloon
-  caws: { file: "/sfx/caws.wav", volume: 1 }, // birds
-  rain: { file: "/sfx/rain.wav", volume: 1 }, // rain shower
-  hoot: { file: "/sfx/hoot.wav", volume: 1 }, // owl
-  twinkle: { file: "/sfx/twinkle.wav", volume: 1 }, // shooting star; a memory guessed
+  twinkle: { file: "/sfx/twinkle.wav", volume: 1 }, // a memory guessed
   theremin: { file: "/sfx/theremin.wav", volume: 1 }, // UFO
   bleat: { file: "/sfx/bleat.wav", volume: 1 }, // sheep
   munch: { file: "/sfx/munch.wav", volume: 1 }, // sheep grazing
@@ -141,7 +137,7 @@ function envelope(t, peak, attack, hold, release) {
   return gain;
 }
 
-// White noise, made once: the raw material for wind, rain and swooshes.
+// White noise, made once: the raw material for the munching.
 let noise = null;
 function noiseSource(t, length) {
   if (!noise) {
@@ -173,69 +169,7 @@ function osc(type, t, length) {
   return o;
 }
 
-// Hot-air balloon: a light swoosh, like a gust past the basket.
-export function playSwoosh() {
-  if (!ready() || playFile("swoosh")) return;
-  const t = ctx.currentTime + 0.05;
-  const band = filter("bandpass", 300, 1.5);
-  band.frequency.setValueAtTime(300, t);
-  band.frequency.exponentialRampToValueAtTime(1400, t + 0.7);
-  band.frequency.exponentialRampToValueAtTime(450, t + 1.6);
-  noiseSource(t, 1.7).connect(band).connect(envelope(t, 0.14, 0.5, 0.3, 0.8));
-}
-
-// Birds: three crow-like caws, raspy and falling.
-export function playCaws() {
-  if (!ready() || playFile("caws")) return;
-  const start = ctx.currentTime + 0.05;
-  [0, 0.42, 0.95].forEach((at, i) => {
-    const t = start + at;
-    const nasal = filter("bandpass", 1300, 2);
-    nasal.connect(envelope(t, 0.09, 0.02, 0.12, 0.1));
-    for (const [type, detune] of [["sawtooth", 0], ["square", 12]]) {
-      const o = osc(type, t, 0.26);
-      o.detune.value = detune;
-      o.frequency.setValueAtTime(640 - i * 30, t);
-      o.frequency.exponentialRampToValueAtTime(420 - i * 20, t + 0.22);
-      o.connect(nasal);
-    }
-  });
-}
-
-// Shower: gentle drops pattering on leaves (little "plinks" at random
-// pitches), over a very soft, low hush. No hiss.
-export function playRainAndWind() {
-  if (!ready() || playFile("rain")) return;
-  const start = ctx.currentTime + 0.05;
-  noiseSource(start, 4).connect(filter("lowpass", 500)).connect(envelope(start + 0.5, 0.025, 1, 1.5, 1));
-  for (let i = 0; i < 45; i++) {
-    // More drops in the middle of the shower, fewer at the start and end.
-    const at = 0.8 + 2.6 * ((Math.random() + Math.random()) / 2);
-    const t = start + at;
-    const drop = osc("sine", t, 0.12);
-    drop.frequency.setValueAtTime(1200 + Math.random() * 1800, t);
-    drop.frequency.exponentialRampToValueAtTime(700 + Math.random() * 400, t + 0.08);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.025 + Math.random() * 0.025, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-    drop.connect(gain).connect(ctx.destination);
-  }
-}
-
-// Owl: "hoo... hoo-hoo".
-export function playHoot() {
-  if (!ready() || playFile("hoot")) return;
-  const start = ctx.currentTime + 0.05;
-  for (const [at, length] of [[0, 0.45], [0.75, 0.22], [1.05, 0.5]]) {
-    const t = start + at;
-    const o = osc("sine", t, length + 0.1);
-    o.frequency.setValueAtTime(410, t);
-    o.frequency.linearRampToValueAtTime(370, t + length);
-    o.connect(envelope(t, 0.14, 0.05, length - 0.15, 0.15));
-  }
-}
-
-// Shooting star: a twinkling run of little bells, like a carillon.
+// A memory guessed: a twinkling run of little bells, like a carillon.
 export function playTwinkle() {
   if (!ready() || playFile("twinkle")) return;
   const start = ctx.currentTime + 0.05;

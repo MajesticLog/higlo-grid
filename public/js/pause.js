@@ -33,7 +33,7 @@ function resume() {
     if (game.flash) game.flash.at += away;
     if (game.deadline) game.deadline += away;
     if (game.nextRoundAt) game.nextRoundAt += away;
-    if (game.nextEventAt) game.nextEventAt += away;
+    if (game.ufoAt) game.ufoAt += away; // the UFO (events.js)
     if (game.firstReadyAt) game.firstReadyAt += away;
     game.paused = null;
     game.updatedAt = now();

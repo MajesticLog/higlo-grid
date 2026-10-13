@@ -8,8 +8,7 @@ or WebP if the path is updated too.
 |---|---|---|
 | `grass-tall.webp` | Tall, unkept grass covering the field (seamless, stretched over the whole grid) | `css/style.css` (`#grid`) |
 | `grass-short.svg` | Short grass: a square a sheep has grazed, and the base under shown pictures (stretched to fit) | `css/style.css` (`.tile`) |
-| `balloon.svg` | Hot-air balloon (sky event, day) | `js/events.js` |
-| `ufo.svg` | Flying saucer with blinking lights (sky event, night) | `js/events.js` |
+| `ufo.svg` | Flying saucer with blinking lights (the sky event, once past dusk) | `js/events.js` |
 | `chest.svg` | The memory chest button | `index.html` (`#chest`) |
 
 Everything else on screen is emoji (players' animals, the garden pictures 🌸 🌷
