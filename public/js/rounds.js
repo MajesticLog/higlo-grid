@@ -35,7 +35,10 @@ const gameRef = sessionRef("game");
 
 export const inReach = (x, y) => x >= 0 && y >= 0 && x < SIZE && y < SIZE;
 export const myPick = () => state.game?.picks?.[myId];
-export const sheepLeft = () => (state.game?.sheepUsed?.[myId] ? 0 : 1); // one per player, per memory
+// One sheep per player for each memory: sheepUsed[playerId] is the memory it was
+// used for, so it's back as soon as the game plays for another one, however it
+// got there (playtest 7: it didn't come back). From before: true.
+export const sheepLeft = () => (state.game?.sheepUsed?.[myId] === currentMemory(state.game) ? 0 : 1);
 
 // Where the round is, on this device's clock (server time).
 export function roundPhase() {
@@ -220,7 +223,7 @@ function maybeStartGame() {
 
 // --- Between two memories: "Ready for the next memory?" ---
 // Like "Ready to play": the next round starts once everyone here is ready,
-// or a minute after the first one is. Everyone gets their sheep back.
+// or a minute after the first one is. (Everyone's sheep is back: sheepLeft.)
 function readyForNext() {
   const seen = state.game?.id;
   runTransaction(gameRef, (game) => {
@@ -242,7 +245,6 @@ function maybeEndBetween() {
   runTransaction(gameRef, (g) => {
     if (!g || g.id !== game.id || !g.between || !due(g)) return;
     g.between = null;
-    g.sheepUsed = null; // a sheep each for the new memory
     g.nextRoundAt = now() + 1000;
     g.updatedAt = now();
     return g;
@@ -269,8 +271,9 @@ function placeSheep(x, y) {
   sheepRound = null;
   changeRound((game) => {
     game.sheepUsed ??= {};
-    if (game.sheepUsed[myId]) return false;
-    game.sheepUsed[myId] = true;
+    const memory = currentMemory(game);
+    if (game.sheepUsed[myId] === memory) return false;
+    game.sheepUsed[myId] = memory;
     game.grazing ??= {};
     game.grazing[myId] = key(x, y);
   });
