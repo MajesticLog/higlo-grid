@@ -1,10 +1,11 @@
 // Drawing: everything on screen comes from `state`.
 import { myId } from "./session.js";
 import { state } from "./state.js";
-import { now, NIGHT_STEPS, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
+import { now, nightSteps, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
 import { SIZE } from "./session.js";
 import {
-  READY_WAIT_MS, someoneReading, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashCountdown,
+  READY_WAIT_MS, someoneReading, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashReady,
+  zoneSquares, ZONE,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
 import {
@@ -36,6 +37,7 @@ export function render() {
   }
   grid.replaceChildren();
   drawTiles();
+  drawZone();
   drawPicks();
   drawPlayers();
   drawGoodbyes();
@@ -43,13 +45,19 @@ export function render() {
   drawSheep();
   drawWolf();
   fireflies.hidden = state.game?.status !== "won" || replayActive();
-  const count = countdown() ?? flashCountdown(); // before a replay, or before a flash
-  countdownEl.hidden = count === null;
-  if (count !== null && countdownEl.textContent !== String(count)) {
-    countdownEl.textContent = count; // a new number: restart its pop
+  // 3, 2, 1 before a replay, or "Ready?" before a flash.
+  const count = countdown();
+  const ready = count === null ? flashReady() : null; // how long "Ready?" has been up
+  const text = count ?? (ready !== null ? "Ready?" : null);
+  countdownEl.hidden = text === null;
+  countdownEl.classList.toggle("ready", ready !== null);
+  if (text !== null && countdownEl.textContent !== String(text)) {
+    countdownEl.textContent = text; // a new number: restart its pop
     countdownEl.style.animation = "none";
     void countdownEl.offsetWidth;
     countdownEl.style.animation = "";
+    // Arriving mid-"Ready?": pick up where it is, so it's gone before the flash.
+    countdownEl.style.animationDelay = ready !== null ? `-${Math.round(ready)}ms` : "";
   }
   renderSky();
   renderStatus();
@@ -72,9 +80,9 @@ function cardForResult() {
 }
 
 // The garden. Squares are tall grass (the grid's own background) except:
-// the flash (every picture for a few seconds), a chosen square showing its
-// picture during the replay, after a miss the squares that had the picture,
-// and squares a sheep has grazed (short grass, until the end of the choosing).
+// the flash (the zone's pictures for a few seconds), a chosen square showing
+// its picture during the replay, after a miss the zone's pictures again, and
+// squares a sheep has grazed (short grass, until the end of the choosing).
 let pops = []; // pictures to pop above the players: [{k, icon, age}]
 
 function drawTiles() {
@@ -82,9 +90,9 @@ function drawTiles() {
   pops = [];
   if (!game?.board) return;
   const phase = roundPhase();
-  // The flash.
+  // The flash: the zone's pictures.
   if (phase === "flash") {
-    for (const k of Object.keys(game.board)) card(k, "", PICTURES[game.board[k]]);
+    for (const k of zoneSquares(game, game.flash?.zone)) card(k, "", PICTURES[game.board[k]]);
   }
   // Squares a sheep has grazed this round: not the picture, so short grass.
   if (phase === "choose") {
@@ -101,7 +109,7 @@ function drawTiles() {
       if (age < POP_MS) pops.push({ k, icon: PICTURES[game.board[k]], age });
     }
     for (const k of game.replay?.missed ?? []) {
-      if (missedShown(k)) card(k, "missed", PICTURES[game.board[k]]);
+      if (missedShown(k)) card(k, "again", PICTURES[game.board[k]]);
     }
   }
   if (!peek) return;
@@ -120,6 +128,28 @@ function card(k, className, icon) {
   el.className = `card ${className}`;
   place(el, ...squareOf(k));
   el.append(iconSpan(icon));
+  grid.append(el);
+}
+
+// The zone the flash shows, outlined in gold: pulsing while "Ready?" is up,
+// glowing steadily during the flash, fading as the grass comes back. After a
+// miss, it glows again while the zone's pictures show once more.
+function drawZone() {
+  const game = state.game;
+  const phase = roundPhase();
+  let zone = null;
+  let look = "";
+  if (replayActive()) {
+    if (showingMissed()) [zone, look] = [game.replay?.zone, "steady"];
+  } else if (["countdown", "flash", "pause"].includes(phase)) {
+    zone = game.flash?.zone;
+    look = { countdown: "pulse", flash: "steady", pause: "fading" }[phase];
+  }
+  if (!zone) return;
+  const el = document.createElement("div");
+  el.className = `zone ${look}`;
+  el.style.gridColumn = `${zone.x + 1} / span ${ZONE}`;
+  el.style.gridRow = `${zone.y + 1} / span ${ZONE}`;
   grid.append(el);
 }
 
@@ -238,12 +268,13 @@ const SKY = [
 ];
 
 function renderSky() {
-  const night = nightShown(Math.min(state.game?.night ?? 0, NIGHT_STEPS)); // a miss darkens it once it has played
-  const step = Math.round((night / NIGHT_STEPS) * 6); // the sky has 6 steps (style.css), whatever NIGHT_STEPS is
+  const steps = nightSteps(state.game); // misses before the wolf, this game
+  const night = nightShown(Math.min(state.game?.night ?? 0, steps)); // a miss darkens it once it has played
+  const step = Math.round((night / steps) * 6); // the sky has 6 steps (style.css), whatever the misses
   document.body.dataset.night = step;
-  document.body.style.setProperty("--night", (night / NIGHT_STEPS).toFixed(3));
+  document.body.style.setProperty("--night", (night / steps).toFixed(3));
   for (const star of stars) star.hidden = step < Number(star.dataset.from);
-  const [icon, top, along] = SKY[Math.round((night / NIGHT_STEPS) * 6)];
+  const [icon, top, along] = SKY[step];
   skyIcon.textContent = stripIcon.textContent = icon;
   skyIcon.style.top = `${top}%`;
   stripIcon.style.left = `${along}%`;
@@ -467,7 +498,7 @@ function renderStatus() {
   // During a replay, nothing else yet: not the wolf, not the end, not guessing.
   if (replayActive()) {
     showTarget(PICTURES[game.replay?.target] ?? "");
-    if (showingMissed()) return say("🔎 Here's where they were", "The night falls a little");
+    if (showingMissed()) return say("🔎 Here's the patch again", "The night falls a little");
     return say("👀 Watch what happens…", "Each player shows the square they chose");
   }
   if (game?.status === "lost") {
@@ -496,8 +527,8 @@ function renderStatus() {
   }
   readyButton.textContent = "✓ Ready";
   if (phase === "guess") return say("🔍 Time to guess a memory!", "All its clues are found.");
-  if (phase === "countdown") return say("👀 Get ready to remember!", cluesLine(game));
-  if (phase === "flash") return say("👀 Remember the pictures!", cluesLine(game) || "Which one will you need to find?");
+  if (phase === "countdown") return say("👀 Look at the golden patch!", cluesLine(game));
+  if (phase === "flash") return say("👀 Remember the pictures in the patch!", cluesLine(game) || "Which one will you need to find?");
   if (phase === "pause") return say("🤔 Who remembers what?", "The picture to find is coming…");
   if (phase === "result") {
     const last = game.replay;

@@ -2,7 +2,7 @@
 // back in order so everyone can follow what happened: "3, 2, 1", then each
 // player walks to their square, one after another, and the picture under it
 // shows (popping above them) for a moment before the grass covers it again.
-// After a miss, the squares they should have found turn over too. The clue
+// After a miss, the flash's zone shows its pictures again. The clue
 // card or the night comes after. Someone who arrives mid-replay just
 // sees the result.
 //
@@ -15,8 +15,8 @@ export const COUNT_MS = 650; // each of 3, 2, 1
 export const STEP_MS = 220; // a circle walking one square
 export const PAUSE_MS = 350; // between one player's walk and the next
 export const SHOW_MS = 2200; // how long a chosen square shows its picture
-export const MISSED_MS = 3000; // after a miss: how long the missed squares show
-const MISSED_STAGGER_MS = 150; // the missed squares turn one after another
+export const MISSED_MS = 4000; // after a miss: how long the zone shows its pictures again
+const MISSED_STAGGER_MS = 150; // its squares turn one after another
 
 let current = null; // the replay being played: its timeline
 let ticker = null;
@@ -47,7 +47,7 @@ export function updateReplay(arriving) {
     if (!shown.has(landing)) shown.set(landing, landed);
     t = landed + PAUSE_MS;
   }
-  // After a miss, once everyone has walked: where the picture was.
+  // After a miss, once everyone has walked: the zone again.
   const missed = new Map(); // "x_y" -> when it turns over
   (replay.missed ?? []).forEach((k, i) => missed.set(k, t + i * MISSED_STAGGER_MS));
   const end = Math.max(

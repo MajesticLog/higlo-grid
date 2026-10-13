@@ -1,12 +1,14 @@
 // Rounds (docs/game-design.md, v4):
-// 1. Flash: every square shows its picture for 5 s, timed in server time so
-//    every device sees the same flash; then the grass covers them all.
+// 1. Flash: a 3 x 3 zone of the garden glows gold while "Ready?" pops up and
+//    fades; then its squares show their pictures for 5 s, timed in server time
+//    so every device sees the same flash; then the grass covers them again.
 // 2. Pause: about a second; nobody can move until the grass is back.
 // 3. The card: which picture to find. Everyone picks a different square
 //    (sheep can help), then Ready. The round ends when everyone is ready, or
 //    20 s after the first Ready.
 // 4. Result: half the players (rounded up) on right, different squares earn
-//    the next clue to the current memory; otherwise the night falls a step.
+//    the next clue to the current memory; otherwise the night falls a step,
+//    and the zone shows its pictures again.
 //    The replay (replay.js) shows each player walking and their square's
 //    picture, then the grass covers it again, and everyone walks back to the
 //    middle of the garden for the next round.
@@ -14,12 +16,15 @@ import { update, runTransaction } from "./firebase.js";
 import { SIZE, sizeFor, sessionRef, myRef, myId } from "./session.js";
 import { state, rememberPosition } from "./state.js";
 import { render, renderTimer, nudgeStatus } from "./render.js";
-import { key, now, PICTURES, newBoard, spawnSquare, checkEnd, nextGuess, currentMemory, cluesOf } from "./game.js";
+import { key, now, PICTURES, newBoard, spawnSquare, checkEnd, nextGuess, currentMemory, cluesOf, nightFor } from "./game.js";
 import { playBleat, playMunch } from "./sound.js";
 import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS, MISSED_MS } from "./replay.js";
 
 const BUSY_WAIT_MS = 30000; // the next flash waits for open windows, but not forever
-export const FLASH_MS = 5000; // the whole garden shows its pictures
+export const ZONE = 3; // the flash shows a ZONE x ZONE area of the garden
+export const READY_MS = 1600; // the zone glows and "Ready?" pops up, then fades out
+const READY_GAP_MS = 250; // after "Ready?" has gone, before the flash: nothing in the way
+export const FLASH_MS = 5000; // the zone shows its pictures
 export const PAUSE_MS = 1200; // after the flash, before the card: nobody moves yet
 const FLASH_LEAD_MS = 800; // a round's flash starts a little after it's decided, so every device has it
 const RESULT_MS = 3500; // after the replay, before the next flash: the result and the clue card
@@ -39,7 +44,7 @@ export function roundPhase() {
   if (game.guess) return "guess";
   if (game.phase !== "flash" || !game.flash) return "result";
   const t = now() - game.flash.at;
-  if (t < 0) return "countdown"; // 3, 2, 1, then the flash
+  if (t < 0) return "countdown"; // the zone glows, "Ready?", then the flash
   if (t < FLASH_MS) return "flash";
   if (t < FLASH_MS + PAUSE_MS) return "pause";
   return "choose";
@@ -47,12 +52,48 @@ export function roundPhase() {
 export const choosing = () => state.joined && roundPhase() === "choose";
 export const targetPicture = () => PICTURES[state.game?.flash?.target] ?? "";
 
-// 3, 2, 1 before a flash (server time), or null.
-export function flashCountdown() {
+// "Ready?" before a flash: how long it has been showing (server time), or
+// null. It's gone READY_GAP_MS before the flash, so it never hides a picture.
+export function flashReady() {
   const game = state.game;
   if (game?.phase !== "flash" || !game.flash) return null;
-  const left = Math.ceil((game.flash.at - now()) / COUNT_MS);
-  return left >= 1 && left <= 3 ? left : null;
+  const shown = now() - (game.flash.at - READY_GAP_MS - READY_MS);
+  return shown >= 0 && shown < READY_MS ? shown : null;
+}
+
+// The squares of a zone {x, y} that hide a picture (the middle one doesn't).
+// A round from before zones: the whole garden.
+export function zoneSquares(game, zone) {
+  const all = Object.keys(game?.board ?? {});
+  if (!zone) return all;
+  return all.filter((k) => {
+    const [x, y] = k.split("_").map(Number);
+    return x >= zone.x && x < zone.x + ZONE && y >= zone.y && y < zone.y + ZONE;
+  });
+}
+
+// Where the flash looks this round, and the picture to find. The zone holds
+// enough of that picture for the family to find it, plus one, when the garden
+// allows (docs/recommendations.md); otherwise as many as it can. Never the
+// same zone, nor the same picture, twice in a row.
+function pickZone(game, needed) {
+  const size = game.size ?? SIZE;
+  const options = [];
+  for (let y = 0; y + ZONE <= size; y++) {
+    for (let x = 0; x + ZONE <= size; x++) {
+      if (game.lastZone === key(x, y)) continue;
+      const counts = new Map();
+      for (const k of zoneSquares(game, { x, y })) counts.set(game.board[k], (counts.get(game.board[k]) ?? 0) + 1);
+      for (const [kind, count] of counts) {
+        if (kind !== game.lastTarget) options.push({ zone: { x, y }, target: kind, count });
+      }
+    }
+  }
+  for (const want of [needed + 1, needed, 1]) {
+    const fit = options.filter((o) => o.count >= want);
+    if (fit.length) return fit[Math.floor(Math.random() * fit.length)];
+  }
+  return null;
 }
 
 // Someone has a window open (rules, the chest...): the next flash waits for
@@ -91,13 +132,15 @@ export function maybeStartRound() {
   runTransaction(gameRef, (g) => {
     if (!g || g.id !== seen || g.status !== "playing" || g.guess || g.paused || g.phase === "flash") return;
     if (now() < (g.nextRoundAt ?? 0) || !currentMemory(g) || someoneBusy()) return;
-    // The kind to find: never the same twice in a row.
-    const kinds = PICTURES.map((_, i) => i).filter((i) => i !== g.lastTarget);
-    const target = kinds[Math.floor(Math.random() * kinds.length)];
+    const pick = pickZone(g, Math.ceil(state.players.length / 2));
+    if (!pick) return;
+    // Someone joined: more misses before the wolf. Never fewer (someone left).
+    g.nightSteps = Math.max(g.nightSteps ?? 0, nightFor(state.players.length));
     g.round = (g.round ?? 0) + 1;
     g.phase = "flash";
-    // 3, 2, 1 first, so everyone is looking when it flashes.
-    g.flash = { at: now() + FLASH_LEAD_MS + 3 * COUNT_MS, target }; // every square shows
+    // The zone glows and "Ready?" shows first, so everyone is looking when it flashes.
+    g.flash = { at: now() + FLASH_LEAD_MS + READY_MS + READY_GAP_MS, target: pick.target, zone: pick.zone };
+    g.lastZone = key(pick.zone.x, pick.zone.y);
     g.moves = null; // last round's moves are done
     g.picks = null;
     g.grazing = null;
@@ -146,6 +189,7 @@ function maybeStartGame() {
     g.started = true;
     g.size = sizeFor(state.players.length);
     g.board = newBoard(g.size);
+    g.nightSteps = nightFor(state.players.length);
     g.nextRoundAt = now() + 1000;
     g.updatedAt = now();
     return g;
@@ -296,9 +340,10 @@ export function maybeResolve() {
       target,
       memory: success ? memory : null,
       clue: success && memory ? cluesOf(game, memory) - 1 : null, // which clue was just earned (0, 1, 2)
-      // A miss: every square with the picture that nobody chose, shown at the
-      // end of the replay.
-      missed: success ? null : Object.keys(game.board).filter((k) => game.board[k] === target && !chosen.has(k)),
+      zone: game.flash.zone ?? null,
+      // A miss: the whole zone shows its pictures again at the end of the
+      // replay, to help the family remember it.
+      missed: success ? null : zoneSquares(game, game.flash.zone),
     };
     game.lastTarget = target;
     game.phase = "result";

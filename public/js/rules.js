@@ -30,7 +30,7 @@ const CARDS = [
     picture: "✅ 🌙 🐺",
     title: "A clue, or the night",
     text: "If at least half of you find it, you earn a clue to someone's memory. If not, the night "
-      + `falls a little. After ${NIGHT_STEPS} misses, the wolf comes out and everyone runs off to bed!`,
+      + `falls a little. After ${NIGHT_STEPS} misses (a few more for a big family), the wolf comes out and everyone runs off to bed!`,
   },
   {
     picture: "💭 🗣️ ✅",

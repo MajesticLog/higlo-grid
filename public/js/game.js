@@ -17,7 +17,14 @@ import { refreshNotes } from "./notes.js";
 
 // Starting values from docs/game-design.md, to tune after playtests.
 export const PICTURES = ["🌸", "🌷", "🐌", "🐛", "🍄", "🐦"]; // sakura, tulip, snail, caterpillar, mushroom, bird
-export const NIGHT_STEPS = 5; // missed rounds before the wolf comes
+export const NIGHT_STEPS = 5; // missed rounds before the wolf comes, at the least
+const NIGHT_EXTRA = 3; // ... or players + this, whichever is more (docs/recommendations.md)
+// Misses before the wolf for this many players: a bigger family needs more
+// clues, so it gets more misses.
+export const nightFor = (players) => Math.max(NIGHT_STEPS, players + NIGHT_EXTRA);
+// This game's misses before the wolf (rounds.js sets it: it grows when someone
+// joins, and never shrinks when someone leaves, so the wolf never jumps closer).
+export const nightSteps = (game) => game?.nightSteps ?? NIGHT_STEPS;
 const FIRST_ROUND_MS = 4000; // a moment to settle in before the first flash
 const IDLE_MS = 2 * 60 * 60 * 1000; // a game nobody has touched for 2 hours is replaced
 const VERSION = 5; // the memory garden, with a garden sized for the family
@@ -107,7 +114,7 @@ export function checkEnd(game) {
   if (game.guess) return;
   const queue = game.queue ?? [];
   if (queue.length > 0 && queue.every((id) => game.guessed?.[id])) game.status = "won";
-  else if (game.night >= NIGHT_STEPS) game.status = "lost";
+  else if (game.night >= nightSteps(game)) game.status = "lost";
 }
 
 // Start a game if there isn't one (or the last one went quiet, or is from

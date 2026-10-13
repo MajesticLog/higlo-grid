@@ -260,6 +260,7 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 /* One square holding one or more circles; --cols is set in render.js
    (1 circle: full size, 2-4: a 2x2 layout, 5-9: 3x3...). */
 .square {
+  z-index: 3; /* players above the zone's glow (.zone) */
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
   place-items: center;
@@ -1268,8 +1269,56 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   100% { transform: scale(1); opacity: 0.85; }
 }
 
+/* "Ready?" before a flash: smaller than a number so it fits, and gone
+   before the flash (1.6s; keep in sync with READY_MS in rounds.js). */
+#countdown.ready {
+  font-size: min(17vw, 15vh);
+  animation: ready-pop 1.6s ease-out both;
+}
+
+@keyframes ready-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  15%  { transform: scale(1.1); opacity: 1; }
+  25%  { transform: scale(1); }
+  65%  { opacity: 1; }
+  100% { transform: scale(1.08); opacity: 0; }
+}
+
+/* The zone the flash shows (rounds.js): a soft gold glow around the whole
+   area, never red. It pulses while "Ready?" is up, glows during the flash,
+   and fades as the grass comes back. */
+.zone {
+  z-index: 2; /* above the pictures, under the players */
+  pointer-events: none;
+  margin: 1px;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 4px #ffd54f,
+    0 0 18px 8px rgba(255, 213, 79, 0.7),
+    inset 0 0 16px 4px rgba(255, 213, 79, 0.45);
+}
+
+.zone.pulse { animation: zone-pulse 0.8s ease-in-out infinite alternate; }
+.zone.fading { animation: zone-fade 0.8s ease-out both; }
+
+@keyframes zone-pulse {
+  from { opacity: 0.55; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes zone-fade {
+  to { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #countdown { animation: none; }
+  #countdown.ready { animation: ready-fade 1.6s linear both; } /* still gone before the flash */
+  .zone.pulse { animation: none; }
+}
+
+@keyframes ready-fade {
+  0%, 70% { opacity: 1; }
+  100%    { opacity: 0; }
 }
 
 /* --- Message bubbles (messages.js) --- */
@@ -1503,10 +1552,8 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 
 .card.wrong { opacity: 0.85; }
 
-/* After a miss: where the picture was, in a gold ring. */
-.card.missed {
-  box-shadow: 0 0 0 3px #ffb300, 0 0 12px 4px rgba(255, 179, 0, 0.6);
-}
+/* After a miss, the zone's pictures show again: plain cards (.card.again),
+   inside the zone's gold outline. */
 
 /* The card with the picture to find, in the status bar. */
 #target {
