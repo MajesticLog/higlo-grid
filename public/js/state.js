@@ -11,6 +11,7 @@ export const state = {
   memories: {}, // memoryId -> {text, prompt, name, animal, color, createdAt, foundAt?}
   floats: new Map(), // playerId -> {icon, startedAt}: a ❤️ floating above them
   bubbles: new Map(), // playerId -> {text, startedAt}: a message above them (messages.js)
+  arriving: {}, // tab -> {name, animal, color}: in the lobby or the tutorial, not in the garden yet
 };
 
 // Where I stand in the current game, kept for this tab only, so a refresh

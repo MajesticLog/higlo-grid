@@ -459,6 +459,8 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   font-size: 16px;
 }
 
+#patch-size[aria-pressed="true"] { border-color: #8bc34a; background: #f1f8e9; }
+
 #new-game button {
   min-height: 44px;
   min-width: 64px;
@@ -929,6 +931,19 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 .end-prompt { font-size: 14px; font-style: italic; color: #666; }
 .end-text { font-size: 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .end-by { font-size: 15px; font-weight: 700; }
+
+/* In the chest: the clues it was found with, and everyone's answers. */
+.chest-clues { margin: 6px 0 0; font-size: 15px; color: #555; }
+#chest-list ul.chest-answers { margin: 4px 0 0; padding: 0; list-style: none; }
+#chest-list ul.chest-answers li {
+  margin: 2px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  font-size: 15px;
+  color: #444;
+}
 
 .end-buttons {
   display: flex;
@@ -2026,6 +2041,25 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   line-height: 1.5;
 }
 
+/* A square the sheep left standing: a white outline of the picture it hides
+   and a dashed ring, readable without telling greens apart. */
+.spotted {
+  margin: 3%;
+  border-radius: 10%;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85);
+  outline: 2px dashed rgba(255, 255, 255, 0.9);
+  outline-offset: -8px;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  pointer-events: none;
+}
+.spotted .icon {
+  font-size: 50cqi;
+  filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+  opacity: 0.9;
+}
+
 /* The sheep placed this round, munching in the middle of what it grazed. */
 .sheep-sitting {
   display: grid;
@@ -2087,13 +2121,13 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
 }
 
 /* The sheep's first round: the same pulse, so it's noticed. */
-#sheep.hint, #tut-sheep.hint, #tut-tools .glow {
+#sheep.hint, #tut-sheep.hint, #tut-ready.hint, #tut-tools .glow {
   border-color: #f4c430;
   animation: help-glow 0.9s ease-in-out infinite alternate;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #help.glow, #sheep.hint, #tut-sheep.hint, #tut-tools .glow { animation: none; box-shadow: 0 0 0 4px rgba(244, 196, 48, 0.6); }
+  #help.glow, #sheep.hint, #tut-sheep.hint, #tut-ready.hint, #tut-tools .glow, .tut-tap { animation: none; box-shadow: 0 0 0 4px rgba(244, 196, 48, 0.6); }
   #help.glow::after { animation: none; }
 }
 
@@ -2171,6 +2205,32 @@ body[data-night="6"] { background: #0e1a3a; color: #eee; }
   width: min(88vw, max(calc(100vh - 330px), 260px), 420px);
 }
 .tut-hit { z-index: 10; cursor: pointer; }
+/* "Tap here": where the player should go next in the tutorial. */
+.tut-tap {
+  position: relative;
+  z-index: 9;
+  margin: 2%;
+  border-radius: 50%;
+  border: 4px solid #f4c430;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 14px 4px rgba(244, 196, 48, 0.6);
+  pointer-events: none;
+  animation: help-glow 0.9s ease-in-out infinite alternate;
+}
+.tut-tap::after {
+  content: "👆 Tap here";
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #f4c430;
+  color: #222;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
 /* Who joins and leaves in the tutorial: over the top of the garden, so the
    bar stays readable. */
 #tut-toasts {

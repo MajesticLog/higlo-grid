@@ -1,6 +1,6 @@
 // Lobby: pick an animal and a colour, then write a memory and 3 clues to it.
 // The clues get hidden in the field; the memory is what the others guess.
-import { push, onValue, onDisconnect, runTransaction, serverTimestamp } from "./firebase.js";
+import { push, set, remove, onValue, onDisconnect, runTransaction, serverTimestamp } from "./firebase.js";
 import { sessionId, sessionRef, playersRef } from "./session.js";
 
 export const COLOURS = [
@@ -323,6 +323,25 @@ document.getElementById("skip").addEventListener("click", () => {
 });
 document.getElementById("write-back").addEventListener("click", () => finishWriting?.("back"));
 
+// In the lobby, the others know I'm coming (arriving/<tab>, announce.js):
+// the first round waits for me (rounds.js). Gone when I join (main.js), or
+// if I close the page.
+export function markArriving() {
+  const ref = sessionRef(`arriving/${tab.id}`);
+  onDisconnect(ref).remove();
+  set(ref, {
+    name: playerName().slice(0, 20),
+    animal: ANIMALS[choice.animals] ?? "",
+    color: COLOURS[choice.colors]?.value ?? "",
+    at: serverTimestamp(),
+  });
+}
+export function arrived() {
+  const ref = sessionRef(`arriving/${tab.id}`);
+  onDisconnect(ref).cancel();
+  remove(ref);
+}
+
 // --- The whole lobby: resolves with {animal, color} once I'm ready for the field ---
 export async function runLobby() {
   // Start from this tab's choice (a refresh) or my last visit's.
@@ -339,12 +358,14 @@ export async function runLobby() {
   const resuming = tab.choice && tab.memoryDone && claimed.every(Boolean);
   if (!resuming) {
     lobby.hidden = false;
+    markArriving();
     // Name, animal and colour, then the memory; "Back" goes round again.
     for (;;) {
       pickStep.hidden = false;
       writeStep.hidden = true;
       await new Promise((resolve) => pickDone.addEventListener("click", resolve, { once: true }));
       tab.choice = { ...choice, name: playerName() };
+      markArriving(); // now with my name, animal and colour
       write("sessionStorage", TAB_KEY, tab);
       write("localStorage", LAST_KEY, tab.choice);
       if (tab.memoryDone) break;

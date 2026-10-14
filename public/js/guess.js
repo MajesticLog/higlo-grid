@@ -14,7 +14,7 @@
 // In the game: guess {memory, phase: "guessing" | "judging", answers, verdicts}
 // while it's on; guessed {memoryId: "guessed" | "revealed"} once done; and
 // lastGuess, the result everyone sees for a moment.
-import { update, runTransaction } from "./firebase.js";
+import { set, update, runTransaction } from "./firebase.js";
 import { sessionRef, myId } from "./session.js";
 import { state } from "./state.js";
 import { now, nextGuess, checkEnd, startBetween, currentMemory, cluesOf } from "./game.js";
@@ -89,7 +89,23 @@ function changeGuess(edit) {
     update(sessionRef(`memories/${seen.memory}`), {
       foundAt: last.at, revealedAt: last.at, guessed: last.guessed, gameId: game.id,
     });
+    // The answers given, kept with it for the chest. Written on their own, so
+    // a database that doesn't accept them yet never stops the memory above.
+    if (last.answers) set(sessionRef(`memories/${seen.memory}/answers`), keptAnswers(last));
   });
+}
+
+// What each player answered ("the beach", said out loud, not sure), and what
+// the author said: right (true), not this time (false), or nothing.
+function keptAnswers(last) {
+  return Object.fromEntries(Object.entries(last.answers).map(([id, a]) => {
+    const kept = { name: a.name ?? "", animal: a.animal ?? "" };
+    if (a.text) kept.text = String(a.text).slice(0, 80);
+    if (a.aloud) kept.aloud = true;
+    if (a.pass) kept.pass = true;
+    if (typeof last.verdicts?.[id] === "boolean") kept.right = last.verdicts[id];
+    return [id, kept];
+  }));
 }
 
 // Nobody but its author is here to guess (playing alone): they choose to
@@ -183,7 +199,10 @@ earlyButton.addEventListener("click", () => changeGuess((game) => {
 function judge(playerId, yes) {
   changeGuess((game) => {
     if (game.guess.phase !== "judging") return false;
-    if (yes) return finish(game, true);
+    if (yes) {
+      game.guess.verdicts[playerId] = true; // kept with the answers, for the chest
+      return finish(game, true);
+    }
     game.guess.verdicts[playerId] = false;
     const answers = Object.entries(game.guess.answers);
     const open = answers.some(([id, a]) => a.aloud || (!a.pass && game.guess.verdicts[id] !== false));

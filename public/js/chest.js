@@ -96,6 +96,7 @@ function fill() {
         span.textContent = text;
         item.append(span);
       }
+      item.append(...cluesAndAnswers(m));
       item.append(noteBox(m.id, { folded: true }));
       items.append(item);
     }
@@ -107,6 +108,37 @@ function fill() {
     ? `🌱 ${waiting} ${waiting === 1 ? "memory is" : "memories are"} still hidden in the field.`
     : "";
   saveButton.hidden = games.length === 0;
+}
+
+// The clues it was found with, and what everyone answered.
+const answerLine = (a) => {
+  const who = `${a.animal ?? ""} ${a.name ?? ""}`.trim();
+  const said = a.pass ? "🤷 wasn't sure" : a.aloud ? "🗣️ said it out loud" : `“${a.text ?? ""}”`;
+  const mark = a.right === true ? " ✅" : a.right === false ? " ❌" : "";
+  return `${who}: ${said}${mark}`;
+};
+const answersOf = (m) => Object.values(m.answers ?? {});
+
+function cluesAndAnswers(m) {
+  const parts = [];
+  if (m.clues?.length) {
+    const clues = document.createElement("p");
+    clues.className = "chest-clues";
+    clues.textContent = `🔍 ${m.clues.join(" · ")}`;
+    parts.push(clues);
+  }
+  if (answersOf(m).length) {
+    const answers = document.createElement("ul");
+    answers.className = "chest-answers";
+    answers.setAttribute("aria-label", "The answers given");
+    for (const a of answersOf(m)) {
+      const li = document.createElement("li");
+      li.textContent = `💭 ${answerLine(a)}`;
+      answers.append(li);
+    }
+    parts.push(answers);
+  }
+  return parts;
 }
 
 function open() {
@@ -137,6 +169,8 @@ function savePage() {
           <p class="prompt">${escape(m.prompt ?? "")}</p>
           <p class="text">${escape(m.text)}</p>
           <p class="by">${escape(author(m))}</p>
+          ${m.clues?.length ? `<p class="clues">🔍 ${escape(m.clues.join(" · "))}</p>` : ""}
+          ${answersOf(m).map((a) => `<p class="answer">💭 ${escape(answerLine(a))}</p>`).join("")}
           ${notesOf(m.id).map((n) => `<p class="note">📝 ${escape(noteLine(n))}</p>`).join("")}
         </article>`).join("")}
     </section>`).join("");
@@ -157,6 +191,8 @@ function savePage() {
   .by { margin: 0; font-weight: 700; }
   .players { margin: -4px 0 8px; color: #777; font-size: 14px; }
   .note { margin: 6px 0 0; color: #444; font-size: 15px; }
+  .clues { margin: 6px 0 0; color: #555; font-size: 15px; }
+  .answer { margin: 4px 0 0; color: #444; font-size: 15px; }
 </style>
 </head>
 <body><main><h1>🧺 Our family memories</h1>${sections}</main></body>

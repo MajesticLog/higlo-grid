@@ -1,7 +1,7 @@
 // Entry point: lobby, then join the field, keep the player list, wire up the controls.
 import { db, ref, get, set, update, remove, onValue, onDisconnect } from "./firebase.js";
 import { SIZE, setSize, sessionRef, playersRef, myRef, myId } from "./session.js";
-import { runLobby } from "./lobby.js";
+import { runLobby, arrived } from "./lobby.js";
 import { syncGame, spawnSquare, gridSize, now } from "./game.js";
 import { state, rememberPosition, savedPosition } from "./state.js";
 import { render } from "./render.js";
@@ -22,6 +22,7 @@ document.getElementById("link").textContent = location.href;
 // The lobby first: pick an animal and a colour, hide a memory.
 Object.assign(state.me, await runLobby());
 await offerTutorial(); // the first time on this device: "Play the tutorial" or "Join the game"
+arrived(); // in the garden now: the first round no longer waits for me
 document.getElementById("field").hidden = false;
 hintHelp(); // the ❓ glows for anyone who hasn't opened the rules yet
 // Back on my square after a refresh in the same game; otherwise the start row.

@@ -24,15 +24,20 @@ import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS, MI
 
 const BUSY_WAIT_MS = 30000; // the next flash waits for open windows, but not forever
 export const ZONE = 3; // the flash shows a ZONE x ZONE area of the garden
+// Easier (game.easy, the "Smaller patch" button): 3 wide, 2 high, 6 pictures
+// instead of 9, for young children and grandparents.
+const EASY = { w: 3, h: 2 };
+// A zone's size: {x, y, w, h}; zones from before sizes are ZONE x ZONE.
+export const zoneWidth = (zone) => zone?.w ?? ZONE;
+export const zoneHeight = (zone) => zone?.h ?? ZONE;
 export const READY_MS = 1600; // the zone glows and "Ready?" pops up, then fades out
 // After "Ready?" has gone, before the flash: only the patch glowing, a
-// moment to settle (250 ms felt abrupt, then 1.2 s still short, playtest 7).
-export const READY_GAP_MS = 2000;
-export const FLASH_MS = 5000; // the zone shows its pictures
+// moment to settle (250 ms felt abrupt; 1.2, 2 and 2.5 s still short, playtest 7).
+export const READY_GAP_MS = 3000;
+export const FLASH_MS = 6000; // the zone shows its pictures (5 s was short for the youngest and oldest)
 export const PAUSE_MS = 1200; // after the flash, before the card: nobody moves yet
 const FLASH_LEAD_MS = 800; // a round's flash starts a little after it's decided, so every device has it
 const RESULT_MS = 3500; // after the replay, before the next flash: the result and the clue card
-const READY_WAIT_MS = 20000; // after the first Ready, how long the others have
 const gameRef = sessionRef("game");
 
 export const inReach = (x, y) => x >= 0 && y >= 0 && x < SIZE && y < SIZE;
@@ -83,7 +88,7 @@ export function zoneSquares(game, zone) {
   if (!zone) return all;
   return all.filter((k) => {
     const [x, y] = k.split("_").map(Number);
-    return x >= zone.x && x < zone.x + ZONE && y >= zone.y && y < zone.y + ZONE;
+    return x >= zone.x && x < zone.x + zoneWidth(zone) && y >= zone.y && y < zone.y + zoneHeight(zone);
   });
 }
 
@@ -95,15 +100,17 @@ export function zoneSquares(game, zone) {
 function pickZone(game, needed) {
   const size = game.size ?? SIZE;
   const middle = middleSquares(size);
+  const { w, h } = game.easy ? EASY : { w: ZONE, h: ZONE };
   const options = [];
-  for (let y = 0; y + ZONE <= size; y++) {
-    for (let x = 0; x + ZONE <= size; x++) {
+  for (let y = 0; y + h <= size; y++) {
+    for (let x = 0; x + w <= size; x++) {
       if (game.lastZone === key(x, y)) continue;
-      if (middle.some((m) => m.x >= x && m.x < x + ZONE && m.y >= y && m.y < y + ZONE)) continue;
+      if (middle.some((m) => m.x >= x && m.x < x + w && m.y >= y && m.y < y + h)) continue;
+      const zone = { x, y, w, h };
       const counts = new Map();
-      for (const k of zoneSquares(game, { x, y })) counts.set(game.board[k], (counts.get(game.board[k]) ?? 0) + 1);
+      for (const k of zoneSquares(game, zone)) counts.set(game.board[k], (counts.get(game.board[k]) ?? 0) + 1);
       for (const [kind, count] of counts) {
-        if (kind !== game.lastTarget) options.push({ zone: { x, y }, target: kind, count });
+        if (kind !== game.lastTarget) options.push({ zone, target: kind, count });
       }
     }
   }
@@ -206,14 +213,19 @@ function readyToPlay() {
 }
 
 let startingGame = false;
+// Anyone still in the lobby (or the tutorial), other than me.
+export const stillArriving = () => Object.entries(state.arriving ?? {})
+  .filter(([tab]) => tab !== state.me.tab).map(([, p]) => p);
+
 function maybeStartGame() {
   const game = state.game;
+  if (stillArriving().length > 0) return; // nobody starts without them
   const everyone = (g) => state.players.length > 0 && state.players.every((p) => g.playReady?.[p.id]);
   const due = (g) => everyone(g) || (g.firstReadyAt && now() - g.firstReadyAt > START_WAIT_MS);
   if (startingGame || !due(game)) return;
   startingGame = true;
   runTransaction(gameRef, (g) => {
-    if (!g || g.id !== game.id || g.started !== false || !due(g)) return;
+    if (!g || g.id !== game.id || g.started !== false || !due(g) || stillArriving().length > 0) return;
     g.started = true;
     g.size = sizeFor(state.players.length);
     g.board = newBoard(g.size);
@@ -298,6 +310,23 @@ export function grazedSquares(game = state.game) {
   return out;
 }
 
+// The squares a sheep left standing because they hide this round's picture:
+// they show its outline, so nobody has to tell short grass from tall by
+// colour alone (playtest: colour vision).
+export function sheepSpotted(game = state.game) {
+  const out = new Set();
+  for (const k of Object.values(game?.grazing ?? {})) {
+    const [cx, cy] = k.split("_").map(Number);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const sq = key(cx + dx, cy + dy);
+        if (game.board[sq] !== undefined && game.board[sq] === game.flash?.target) out.add(sq);
+      }
+    }
+  }
+  return out;
+}
+
 // --- Choosing a square ---
 // Tap a square (or move with the arrows): that's my pick, not ready yet. No
 // two players can pick the same square.
@@ -337,18 +366,35 @@ export function ready() {
   changeRound((game) => {
     const pick = game.picks[myId] ?? { x: state.me.x, y: state.me.y };
     game.picks[myId] = { x: pick.x, y: pick.y, ready: true };
-    game.deadline ??= now() + READY_WAIT_MS; // the first Ready starts the clock
   });
 }
 
 document.getElementById("ready").addEventListener("click", ready);
 
+// "Smaller patch": anyone can switch it, for everyone, from the next flash.
+const patchButton = document.getElementById("patch-size");
+patchButton.addEventListener("click", () => {
+  const seen = state.game?.id;
+  runTransaction(gameRef, (game) => {
+    if (!game || game.id !== seen) return;
+    game.easy = !game.easy || null;
+    return game;
+  });
+});
+export function renderPatchButton() {
+  const easy = Boolean(state.game?.easy);
+  patchButton.hidden = !state.joined || !state.game || state.game.status !== "playing";
+  patchButton.setAttribute("aria-pressed", String(easy));
+  patchButton.textContent = easy ? "🌱 Smaller patch: on" : "🌱 Smaller patch";
+}
+
 // --- Ending a round ---
 function roundOver(game) {
   if (game.phase !== "flash" || !game.flash || now() < game.flash.at + FLASH_MS + PAUSE_MS) return false;
   const picks = game.picks ?? {};
-  const allReady = state.players.length > 0 && state.players.every((p) => picks[p.id]?.ready);
-  return allReady || (game.deadline != null && now() >= game.deadline);
+  // Everyone ready: no clock (playtest: hard for older people and young
+  // children). Someone who has stepped away can be waited for with ⏸️.
+  return state.players.length > 0 && state.players.every((p) => picks[p.id]?.ready);
 }
 
 // The squares a player walks through on the way, along the same staircase
@@ -460,4 +506,3 @@ setInterval(() => {
   maybeStartRound();
 }, 200);
 
-export { READY_WAIT_MS };

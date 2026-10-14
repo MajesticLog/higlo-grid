@@ -80,6 +80,19 @@
                 "$other": { ".validate": false }
               }
             },
+            // What everyone answered when it was found (guess.js), for the chest.
+            "answers": {
+              "$pid": {
+                ".validate": "newData.hasChildren(['name'])",
+                "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+                "animal": { ".validate": "newData.isString() && newData.val().length <= 16" },
+                "text": { ".validate": "newData.isString() && newData.val().length <= 80" },
+                "aloud": { ".validate": "newData.isBoolean()" },
+                "pass": { ".validate": "newData.isBoolean()" },
+                "right": { ".validate": "newData.isBoolean()" },
+                "$other": { ".validate": false }
+              }
+            },
             // Notes on a found memory (notes.js): added, never changed.
             "notes": {
               "$nid": {

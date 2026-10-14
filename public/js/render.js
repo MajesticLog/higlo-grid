@@ -4,8 +4,8 @@ import { state } from "./state.js";
 import { now, nightSteps, skyStep, SKY_DUSK, PICTURES, currentMemory, cluesOf, fitGrid } from "./game.js";
 import { SIZE } from "./session.js";
 import {
-  READY_WAIT_MS, someoneReading, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, flashReady,
-  zoneSquares, ZONE,
+  someoneReading, stillArriving, choosing, sheepLeft, inSheepMode, roundPhase, targetPicture, grazedSquares, sheepSpotted, flashReady,
+  zoneSquares, zoneWidth, zoneHeight, renderPatchButton,
 } from "./rounds.js";
 import { queueCard } from "./card.js";
 import {
@@ -62,6 +62,7 @@ export function render() {
   renderSky();
   renderStatus();
   renderTimer();
+  renderPatchButton();
   renderPause();
 }
 
@@ -97,6 +98,7 @@ function drawTiles() {
   // Squares a sheep has grazed this round: not the picture, so short grass.
   if (phase === "choose") {
     for (const k of grazedSquares(game)) tile(k, "grass");
+    for (const k of sheepSpotted(game)) spotted(k, PICTURES[game.flash.target]);
   }
   // The replay: each chosen square shows its picture as its player lands.
   if (replayActive()) {
@@ -148,8 +150,8 @@ function drawZone() {
   if (!zone) return;
   const el = document.createElement("div");
   el.className = `zone ${look}`;
-  el.style.gridColumn = `${zone.x + 1} / span ${ZONE}`;
-  el.style.gridRow = `${zone.y + 1} / span ${ZONE}`;
+  el.style.gridColumn = `${zone.x + 1} / span ${zoneWidth(zone)}`;
+  el.style.gridRow = `${zone.y + 1} / span ${zoneHeight(zone)}`;
   grid.append(el);
 }
 
@@ -158,6 +160,15 @@ function tile(k, className) {
   const el = document.createElement("div");
   el.className = `tile ${className}`;
   place(el, ...squareOf(k));
+  grid.append(el);
+}
+
+// A square the sheep left standing: the outline of the picture it hides.
+function spotted(k, icon) {
+  const el = document.createElement("div");
+  el.className = "spotted";
+  place(el, ...squareOf(k));
+  el.append(iconSpan(icon));
   grid.append(el);
 }
 
@@ -495,7 +506,6 @@ function say(main, detail = "") {
   statusDetail.textContent = detail;
 }
 const timer = document.getElementById("timer");
-const timerFill = timer.firstElementChild;
 
 // "Clues for 🐶 Mathilde's memory: 1 of 3"
 function cluesLine(game) {
@@ -543,6 +553,9 @@ function renderStatus() {
     readyButton.hidden = Boolean(mine);
     readyButton.textContent = "✓ Ready to play";
     const count = total > 1 ? ` · ${readyCount} of ${total} ready` : "";
+    // Someone still in the lobby: the game waits for them.
+    const coming = stillArriving().map((p) => `${p.animal ?? ""} ${p.name || "Someone"}`.trim());
+    if (mine && coming.length) return say("✓ Ready! Waiting for the others…", `${coming.join(", ")} ${coming.length === 1 ? "is" : "are"} getting ready to join`);
     return mine
       ? say("✓ Ready! Waiting for the others…", `Walk around while you wait${count}`)
       : say("🌱 Ready to play?", `Read the rules by tapping ❓${count}`);
@@ -622,14 +635,10 @@ function sheepHint(round) {
   return true;
 }
 
-// After the first Ready, a calm bar shows the time left (no numbers).
+// No clock after the first Ready any more (playtest: hard for older people
+// and young children): the bar stays hidden, keeping its space.
 export function renderTimer() {
-  const deadline = state.game?.deadline;
-  const off = !deadline || !choosing();
-  timer.style.visibility = off ? "hidden" : "visible"; // keeps its space either way
-  if (off) return;
-  const left = Math.max(0, deadline - now());
-  timerFill.style.width = `${(left / READY_WAIT_MS) * 100}%`;
+  timer.style.visibility = "hidden";
 }
 
 // A message in the bar's second line for a moment (a square already taken).

@@ -14,14 +14,13 @@ import { set, remove, onDisconnect, serverTimestamp } from "./firebase.js";
 import { sessionRef, myRef } from "./session.js";
 import { state } from "./state.js";
 import { PICTURES, spawnSquare } from "./game.js";
-import { READY_MS, READY_GAP_MS } from "./rounds.js";
+import { READY_MS, READY_GAP_MS, FLASH_MS } from "./rounds.js";
 import { playDing, playGoodbye, playBleat, playMunch, playTwinkle, playMiss } from "./sound.js";
 
 const SEEN_KEY = "higlo:tutorial-seen";
 const SIZE = 5;
 const START = { x: 2, y: 4 }; // everyone starts at the bottom, in the middle
 const ZONE = { x: 1, y: 0 }; // the golden patch: columns 1-3, rows 0-2
-const FLASH_MS = 4000;
 const GRANDMA = { id: "grandma", name: "Grandma", animal: "🐻", color: "#8d6e63" };
 const SAM = { id: "sam", name: "Sam", animal: "🐰", color: "#5c6bc0" }; // family or a friend
 
@@ -63,6 +62,8 @@ const fresh = () => ({
   wrong: new Set(), // shown, but not the one to find
   picks: {}, // id -> {x, y}
   grazed: new Set(),
+  spotted: new Set(), // left standing by the sheep: the picture's outline
+  tap: null, // {x, y}: "Tap here"
   sheepAt: null,
   target: null,
   sheep: false, // in sheep mode
@@ -78,6 +79,17 @@ function draw() {
     const el = document.createElement("div");
     el.className = "tile grass";
     place(el, ...k.split("_").map(Number));
+    grid.append(el);
+  }
+  for (const k of t.spotted) {
+    const [x, y] = k.split("_").map(Number);
+    const el = document.createElement("div");
+    el.className = "spotted";
+    place(el, x, y);
+    const icon = document.createElement("span");
+    icon.className = "icon";
+    icon.textContent = PICTURES[at(x, y)];
+    el.append(icon);
     grid.append(el);
   }
   for (const k of t.shown) {
@@ -143,6 +155,12 @@ function draw() {
     }
     grid.append(square);
   }
+  if (t.tap) {
+    const el = document.createElement("div");
+    el.className = "tut-tap";
+    place(el, t.tap.x, t.tap.y);
+    grid.append(el);
+  }
   // Taps: one invisible button per square, on top.
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
@@ -207,6 +225,7 @@ sheepButton.addEventListener("click", () => {
   if (sheepButton.hidden || sheepButton.disabled) return;
   t.sheep = !t.sheep;
   if (t.sheep) playBleat();
+  if (t.target && !t.picks.me) t.tap = t.sheep ? { x: 0, y: 2 } : null; // a spot with snails around
   say(t.sheep ? "🐑 Where should your sheep graze?" : `Find a ${t.target}`,
     t.sheep ? "Tap a square: it eats the grass all around it" : "");
   draw();
@@ -230,7 +249,9 @@ function pickHere(x, y) {
   if (x === START.x && y === START.y) return nudge(); // nothing hides there
   stopReminding();
   t.picks.me = { x, y };
+  t.tap = null;
   readyButton.disabled = false;
+  readyButton.classList.add("hint"); // and now: Ready
   draw();
 }
 
@@ -268,6 +289,9 @@ const stopReminding = () => {
 // Everyone walks to their square; the pictures show. Returns: found?
 async function reveal(needed) {
   stopReminding();
+  t.tap = null;
+  t.spotted.clear(); // the real pictures show now
+  readyButton.classList.remove("hint");
   readyButton.hidden = true;
   sheepButton.hidden = true;
   onSquare = null;
@@ -293,6 +317,7 @@ function reset() {
   t.shown.clear();
   t.wrong.clear();
   t.grazed.clear();
+  t.spotted.clear();
   t.sheepAt = null;
   t.target = null;
   t.picks = {};
@@ -301,12 +326,13 @@ function reset() {
 
 // A round's choosing: the card, Grandma's pick, mine, then Ready.
 // Grandma goes to grandmaAt, or to her second choice if I'm already there.
-async function choose(picture, [grandmaAt, grandmaElse] = [], line = "") {
+async function choose(picture, [grandmaAt, grandmaElse] = [], line = "", tap = null) {
   t.target = picture;
   say(`Find a ${picture} together`, line);
   readyButton.hidden = false;
   readyButton.disabled = true;
   onSquare = pickHere; // taps count straight away
+  t.tap = tap; // "Tap here", so it's clear it's my turn
   const chosen = until();
   chosen.catch(() => { /* skipped: the step below stops too */ });
   draw();
@@ -350,7 +376,7 @@ async function lesson() {
   // 2. Find it together: one square each. Until I pick, the patch shows
   // again every few seconds.
   const finding = choose(PICTURES[TULIP], [{ x: 3, y: 2 }, { x: 1, y: 0 }],
-    `Tap where you saw one, then ✓ Ready. One square each: ${GRANDMA.animal} Grandma takes one too`);
+    `Tap where you saw one, then ✓ Ready. One square each: ${GRANDMA.animal} Grandma takes one too`, { x: 1, y: 0 });
   remindPatch().catch(() => { /* skipped */ });
   await finding;
   await reveal(1);
@@ -360,7 +386,7 @@ async function lesson() {
   reset();
 
   // 3. A miss: the day moves on.
-  await choose(PICTURES[SNAIL], [{ x: 2, y: 2 }, { x: 3, y: 3 }], "There wasn't one in the patch… pick any square, then ✓ Ready");
+  await choose(PICTURES[SNAIL], [{ x: 2, y: 2 }, { x: 3, y: 3 }], "There wasn't one in the patch… pick any square, then ✓ Ready", { x: 0, y: 0 });
   const lucky = await reveal(1);
   t.night = 1;
   draw();
@@ -384,13 +410,18 @@ async function lesson() {
         t.sheep = false;
         t.sheepAt = { x, y };
         t.grazed.clear();
+        t.spotted.clear();
+        t.tap = null;
         let snails = 0;
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
             const k = at(x + dx, y + dy);
             if (k === null) continue;
-            if (k === SNAIL) snails += 1;
-            else t.grazed.add(`${x + dx}_${y + dy}`);
+            if (k === SNAIL) {
+              snails += 1;
+              t.spotted.add(`${x + dx}_${y + dy}`);
+              t.tap ??= { x: x + dx, y: y + dy };
+            } else t.grazed.add(`${x + dx}_${y + dy}`);
           }
         }
         playMunch();
@@ -405,7 +436,7 @@ async function lesson() {
       };
     });
     sheepButton.hidden = true;
-    say(`The grass still tall hides a ${t.target}`, "Tap it, then ✓ Ready");
+    say(`The sheep shows you where to go`, `The white ${t.target} outline is the spot. Tap it, then ✓ Ready`);
     readyButton.hidden = false;
     readyButton.disabled = true;
     onSquare = (x, y) => { t.sheepAt = null; pickHere(x, y); };

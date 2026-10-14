@@ -9,7 +9,7 @@
 import { onValue } from "./firebase.js";
 import { myId, sessionRef } from "./session.js";
 import { state } from "./state.js";
-import { showFloat, showGoodbye } from "./render.js";
+import { render, showFloat, showGoodbye } from "./render.js";
 import { playDing, playGoodbye } from "./sound.js";
 
 const TOAST_MS = 6000; // must match the toast animation in style.css
@@ -21,15 +21,16 @@ const leaving = new Map(); // tab -> timer for a "has left" waiting to be said
 
 const who = (p) => `${p.animal ?? ""} ${p.name ?? ""}`.trim() || "Someone";
 
-// Getting ready to join: tab -> {name, animal, color}.
-let arriving = {};
+// Getting ready to join (the lobby or the tutorial): state.arriving, tab ->
+// {name, animal, color}. The first round waits for them (rounds.js).
 onValue(sessionRef("arriving"), (snap) => {
   const now = snap.val() ?? {};
   for (const [tab, p] of Object.entries(now)) {
-    if (arriving[tab] || tab === state.me.tab || !state.joined) continue;
+    if (state.arriving[tab] || tab === state.me.tab || !state.joined) continue;
     toast(`${who(p)} is getting ready to join…`, p.color, "arriving");
   }
-  arriving = now;
+  state.arriving = now;
+  render();
 });
 
 function toast(text, color, kind) {
@@ -67,7 +68,7 @@ export function playersChanged(players) {
     const key = p.tab ?? p.id;
     leaving.set(key, setTimeout(() => {
       leaving.delete(key);
-      if (p.tab && arriving[p.tab]) return; // stepped out for the tutorial
+      if (p.tab && state.arriving[p.tab]) return; // stepped out for the tutorial
       toast(`👋 ${who(p)} has left the game`, p.color, "leave");
       playGoodbye();
       showGoodbye(key, p);
