@@ -49,5 +49,5 @@ Done 12 October: the generated sounds were rendered to WAV files in `public/sfx/
 - ~~Balance simulated, not yet playtested: 7x7, 7 traps, night at 7.~~ Discarded: that was the field (v3); the memory garden's balance is in "Next" above. Replay length with 4 players and the 20 s timer after the first Ready still to try.
 - QR code next to the share link (needs a small library: ask first).
 - Kinder wrong guesses (show ❌ only to the author), French, screen-reader support, a child-as-expert role, a garden that persists between games.
-- The 20 s timer after the first Ready is calm (no numbers, no red), but a slow player can still be counted as not ready.
+- ~~The 20 s timer after the first Ready~~ Removed 14 October: a round waits for everyone's Ready. Someone idle in the garden holds the round up (⏸️ or leaving solves it); someone idling in the lobby holds up the first round.
 - Visually impaired players aren't supported yet: the game relies on seeing pictures.
