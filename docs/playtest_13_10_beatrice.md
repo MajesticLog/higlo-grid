@@ -17,3 +17,15 @@ Checked in the code, the database and both sites, 13 October 2026, late evening.
 - We played on the test link, which had the sheep reset (the live site didn't have it yet).
 - Zoé used her sheep for the first memory. In the database, the game went through two memories (Boopsie's revealed, then Jo and co's found without its author), and no sheep was marked as used afterwards, so a reset did happen at some point. The exact path where the sheep stayed gone wasn't found.
 - Fix: each sheep now remembers the memory it was used for, and is back as soon as the game plays for another one, however it got there. It no longer depends on the break between memories. Deployed to the test link and the live site the same evening, so every link runs the same code.
+
+
+**What we changed**
+
+Built and checked on the test link on 13 and 14 October, then live.
+
+- Everyone's chosen square shows in their colour with their animal, and mine with "You".
+- Tapping a square someone else chose says so: "🐻 Grandma is on that square: one each!".
+- The bar says "Find a 🌷 together" and how many need to find one.
+- The card to find is labelled "Find" and pulses; the sheep's button is just 🐑.
+- A twinkle when a round is found, a soft "aww" when it's missed.
+- A one-minute tutorial in a practice garden, learning by doing: offered once after the memory step, and from ❓. "Tap here" shows where to go next. The others see "… is getting ready to join".

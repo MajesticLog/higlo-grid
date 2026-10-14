@@ -1,3 +1,5 @@
+## Review of the field (v3), 12 October
+
 I went through the game against your research documents and the brief, and ran a few thousand simulated games for the difficulty. In short: the game matches the research best on
   talk and gentleness. Its weak points are how much there is to learn, small tap targets on phones, and difficulty. As it stands it's a bit too hard, and long for two players.
 
@@ -151,3 +153,12 @@ I went through the game against your research documents and the brief, and ran a
 
 - **Zones and bigger families (13 October).** The flash now shows a 3 × 3 zone that holds the picture to find: 2 of it for 2 players, 3 for 3 or 4 players. A round is found when half the players (rounded up) are on the picture, so 3 is enough to win, but with 4 players one person can never stand on the right picture, and only 3 out of 4 taking part isn't much fun. Since the brief says the game will be tried from 2 or 3 devices, it's kept like this for now. For bigger families, the fix would be to let players share a square, or to make the middle square a "safe" square where anyone unsure can stay.
 - **Choosing squares outside the zone (13 October).** Players can choose any square in the garden that they remember holding the picture, not only squares in the zone that just flashed. That rewards remembering earlier rounds, but it also means the zone is a hint rather than a rule. I'm on the fence, and leaving it as it is for now.
+
+### Notes from 13 and 14 October (drafted by Claude Code, to check)
+
+- **The test link and the live site share one database.** A family link opened on either leads to the same game, played by whichever code each person loaded. Mixed versions can disagree (one waits for a break between memories, the other doesn't). Keeping both sites on the same code avoids it.
+- **The sheep that didn't come back.** Claude Code never found the exact path where it stayed gone. Rather than keep chasing it, each sheep now remembers which memory it was used for, which works whatever path the game takes.
+- **Checking without playing.** Most changes were checked in a headless browser before the test link: a load check for script errors, and screenshots of the tutorial played by a small autopilot. It caught a tutorial step that ignored quick taps, and an outline drawn over the real picture. It doesn't replace two devices and real people: every change still went through a playtest or a check by Zoé before going live.
+- **Where Claude Code got it wrong:** it mentioned a `?fast` test option that doesn't exist (caught while writing the README); to close its own headless browser, it used a command that could also close parts of Zoé's Chrome; and it took "Perfect" as the go-ahead to deploy the database rules, when it could have asked again.
+- **Accessibility from the playtests.** No timer after Ready, a longer flash with time to settle before it, a smaller patch, outlines rather than shades of green for the sheep, and a tutorial that shows where to tap: each came from watching a 4-year-old, an 11-year-old, grandparents and a parent with weaker colour vision play, more than from the research.
+

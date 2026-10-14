@@ -4,7 +4,7 @@
 
 A small game for a family or friends playing together from different homes, on phones, tablets or computers. Everyone hides a memory behind three clues ("🏖️ By the sea", "🍦 Ice cream", "☔ It rained"). Then, together in a garden, they remember where pictures hide under the grass: each round, a golden patch shows its pictures for a few seconds, a card asks for one, and everyone goes to a different square where they think it is. Find it together and you earn a clue to someone's memory; miss it and the day moves on towards night, when the wolf sends everyone to bed. With three clues, everyone guesses the memory, out loud or typed, and the person who wrote it says if they got it. Found memories go into the family's memory chest.
 
-No accounts, no install, no reaction races, nobody eliminated. Touch and click first; arrow keys and Enter work too.
+No accounts, no install, no reaction races, no timer once someone is ready, nobody eliminated. Touch and click first; arrow keys and Enter work too. A one-minute tutorial teaches it by playing, and "🌱 Smaller patch" makes it easier for young children and grandparents.
 
 ## Where things are
 

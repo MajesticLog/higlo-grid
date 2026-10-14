@@ -21,13 +21,16 @@ smoothly. The uncompressed originals are kept out of the repository.
 |---|---|
 | `fanfare.wav` | Every memory found: fireflies and "What a team!" |
 | `howl.wav` | Full night: the wolf comes out |
-| `twinkle.wav` | A memory is guessed |
+| `twinkle.wav` | A round is found, or a memory is guessed |
 | `ding.wav` | Someone joins the garden |
 | `goodbye.wav` | Someone leaves the garden |
 | `sheep.wav` | Choosing to send your sheep, and when it trots off |
 | `rooster.wav` | The first round of a game starts |
 | `munch.wav` | The sheep grazing |
 | `theremin.wav` | A UFO wobbles across (sometimes, once past dusk) |
+
+A missed round plays a soft "aww" (two low notes sliding down) made in the
+browser, with no file: `playMiss` in `js/sound.js`.
 
 ### Music and ambience
 
