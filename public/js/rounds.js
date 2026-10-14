@@ -25,7 +25,9 @@ import { replayActive, COUNT_MS, STEP_MS, PAUSE_MS as WALK_PAUSE_MS, SHOW_MS, MI
 const BUSY_WAIT_MS = 30000; // the next flash waits for open windows, but not forever
 export const ZONE = 3; // the flash shows a ZONE x ZONE area of the garden
 export const READY_MS = 1600; // the zone glows and "Ready?" pops up, then fades out
-const READY_GAP_MS = 250; // after "Ready?" has gone, before the flash: nothing in the way
+// After "Ready?" has gone, before the flash: only the patch glowing, a
+// moment to settle (250 ms felt abrupt, then 1.2 s still short, playtest 7).
+export const READY_GAP_MS = 2000;
 export const FLASH_MS = 5000; // the zone shows its pictures
 export const PAUSE_MS = 1200; // after the flash, before the card: nobody moves yet
 const FLASH_LEAD_MS = 800; // a round's flash starts a little after it's decided, so every device has it

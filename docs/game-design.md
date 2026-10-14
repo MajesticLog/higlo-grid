@@ -159,7 +159,7 @@ See docs/best_practices.md and docs/benchmark.md.
 
 Grid: 7*7 for everyone (for now), everyone starting on the centre square and back to it after each round
 Pictures: 6 kinds, 8 of each (48 squares)
-Flash: a 3*3 patch (not the middle) glowing gold, "Ready?" (1.6 s), then its pictures for 5 seconds, then about 1 second before the card
+Flash: a 3*3 patch (not the middle) glowing gold, "Ready?" (1.6 s), the glow alone (2 s), then its pictures for 5 seconds, then about 1 second before the card
 Missed round: the whole patch shows again for 4 seconds
 Found: half the players rounded up, on different squares
 Misses before the wolf: players + 3, at least 5

@@ -14,6 +14,7 @@ import { set, remove, onDisconnect, serverTimestamp } from "./firebase.js";
 import { sessionRef, myRef } from "./session.js";
 import { state } from "./state.js";
 import { PICTURES, spawnSquare } from "./game.js";
+import { READY_MS, READY_GAP_MS } from "./rounds.js";
 import { playDing, playGoodbye, playBleat, playMunch, playTwinkle, playMiss } from "./sound.js";
 
 const SEEN_KEY = "higlo:tutorial-seen";
@@ -251,7 +252,7 @@ async function remindPatch() {
     if (!t.remind) break;
     t.zone = "pulse";
     draw();
-    await wait(1200);
+    await wait(READY_GAP_MS + 800);
     if (!t.remind) break;
     showPatch(true);
     await wait(FLASH_MS);
@@ -335,8 +336,8 @@ async function lesson() {
   t.zone = "pulse";
   say("👀 Look at the golden patch!");
   draw();
-  shout("Ready?", 1600);
-  await wait(1800);
+  shout("Ready?", READY_MS);
+  await wait(READY_MS + READY_GAP_MS); // as in the game
   t.zone = "steady";
   showPatch(true);
   say("👀 Remember the pictures, together", "They hide again in a moment");
